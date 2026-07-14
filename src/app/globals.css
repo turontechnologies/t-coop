@@ -147,6 +147,32 @@
   ::selection {
     @apply bg-primary/20 text-foreground;
   }
+
+  button:not(:disabled, [data-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([data-disabled="true"]),
+  [role="tab"],
+  a[href],
+  label[for],
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [data-disabled="true"],
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  button:not(:disabled, [role="menuitem"], [data-disabled="true"]) {
+    transition-property: transform, background-color, color, box-shadow;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  button:not(:disabled, [role="menuitem"], [data-disabled="true"]):active {
+    transform: scale(0.97);
+  }
 }
 
 @theme {
@@ -171,4 +197,21 @@
       transform: translateY(0);
     }
   }
+}
+
+[data-sonner-toaster] {
+  --width: 380px;
+}
+
+[data-sonner-toast] {
+  border-radius: var(--radius-xl) !important;
+  box-shadow:
+    0 10px 30px -8px rgb(0 0 0 / 0.18),
+    0 0 0 1px var(--border) !important;
+  padding: 14px 16px !important;
+  backdrop-filter: blur(8px);
+}
+
+[data-sonner-toast] [data-icon] {
+  align-items: center;
 }

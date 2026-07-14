@@ -51,7 +51,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {OPTIONS.map(({ value, label, icon: Icon }) => (
-          <DropdownMenuItem key={value} onSelect={() => setTheme(value)}>
+          <DropdownMenuItem key={value} onClick={() => setTheme(value)}>
             <Icon className="size-4" aria-hidden="true" />
             <span>{label}</span>
           </DropdownMenuItem>

@@ -4,11 +4,13 @@ export interface LoginRequest {
   keepLoggedIn: boolean;
 }
 
+export type UserRole = "super_admin" | "admin" | "member";
+
 export interface AuthenticatedMember {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
 }
 
 export interface LoginResponse {

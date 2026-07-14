@@ -2,22 +2,18 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  Loader2,
-  TriangleAlert,
-} from "lucide-react";
+import { Eye, EyeOff, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DemoAccounts } from "@/components/features/auth/demo-accounts";
 import { useLogin } from "@/hooks/use-login";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -40,32 +36,40 @@ const fieldVariants = {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [success, setSuccess] = useState(false);
   const membershipIdInputId = useId();
   const passwordInputId = useId();
 
+  const router = useRouter();
   const setKeepLoggedIn = useAuthStore((state) => state.setKeepLoggedIn);
+  const setMember = useAuthStore((state) => state.setMember);
   const login = useLogin();
 
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { membershipId: "", password: "", keepLoggedIn: false },
   });
 
+  const fillDemoAccount = (membershipId: string, password: string) => {
+    setValue("membershipId", membershipId, { shouldValidate: true });
+    setValue("password", password, { shouldValidate: true });
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     login.reset();
     try {
       const response = await login.mutateAsync(values);
       setKeepLoggedIn(values.keepLoggedIn);
-      setSuccess(true);
+      setMember(response.member);
       toast.success("Signed in successfully", {
-        description: `Verification code sent for ${response.member.id}.`,
+        description: `Welcome back, ${response.member.name}.`,
       });
+      router.push("/dashboard");
     } catch (error) {
       toast.error("Sign in failed", {
         description:
@@ -75,31 +79,6 @@ export function LoginForm() {
   });
 
   const busy = isSubmitting || login.isPending;
-
-  if (success) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card px-6 py-12 text-center"
-        role="status"
-      >
-        <span className="flex size-12 items-center justify-center rounded-full bg-accent text-accent-foreground">
-          <CheckCircle2 className="size-6" aria-hidden="true" />
-        </span>
-        <div className="space-y-1.5">
-          <p className="text-base font-semibold text-foreground">
-            You&apos;re verified
-          </p>
-          <p className="text-sm text-muted-foreground">
-            One-time password verification is next — that screen is coming in
-            the next milestone.
-          </p>
-        </div>
-      </motion.div>
-    );
-  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
@@ -245,6 +224,8 @@ export function LoginForm() {
           Register Co-operative
         </Link>
       </motion.p>
+
+      <DemoAccounts onSelect={fillDemoAccount} />
     </form>
   );
 }
