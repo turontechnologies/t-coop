@@ -42,6 +42,20 @@ verifying a one-time code stands in for re-authentication after a reset.
   full "same logo everywhere" rule. `<LogoMark />` (the standalone diamond,
   recolored via `currentColor`) remains the right choice anywhere only the
   mark, not the wordmark, belongs — e.g. the favicon.
+- **Login and Register share one animated shell, not two disconnected
+  pages.** A segmented `<AuthModeSwitch>` (Login / Register, sliding active
+  highlight) sits above the form on both routes; picking one navigates
+  there and the brand panel physically swaps sides — left for login, right
+  for register, via a `reversed` prop on `<AuthLayout>` that flips a CSS
+  `order` — while both panes fade + slide in from the direction they moved
+  from. This reads as one continuous "auth experience" rather than two
+  independently designed pages, and replaces what used to be a plain
+  "New to T-Coop? Register" text link (removed from both forms — the
+  switch now owns that job). See
+  [theming-and-motion.md](./theming-and-motion.md#the-login--register-side-swap)
+  for why this is a fresh-mount directional animation rather than a true
+  cross-navigation shared-element transition, and why that distinction
+  matters here.
 - **Two-tier color tokens for accessibility.** Brand green used as a _fill_
   (buttons: `#00543D` bg + white text) stays identical across themes because
   its own internal contrast is what matters (~9:1). Brand green used as
@@ -70,9 +84,15 @@ verifying a one-time code stands in for re-authentication after a reset.
 ## Components
 
 - `src/app/(auth)/login/page.tsx` — route entry, metadata, heading.
-- `src/app/(auth)/layout.tsx` — wraps all auth routes in `AuthLayout`.
-- `src/components/layouts/auth-layout.tsx` — responsive split-screen shell.
-- `src/components/features/auth/auth-brand-panel.tsx` — left brand panel
+- `src/app/(auth)/layout.tsx` — client component; reads the pathname to
+  decide `reversed`/`formClassName`, wraps `/login` and `/register` in
+  `AuthLayout`.
+- `src/components/layouts/auth-layout.tsx` — the shared, responsive
+  split-screen shell for both `/login` and `/register`, including the
+  side-swap animation.
+- `src/components/features/auth/auth-mode-switch.tsx` — the Login/Register
+  segmented control.
+- `src/components/features/auth/auth-brand-panel.tsx` — the brand panel
   (logo, headline, trust highlights, decorative grid/glow background).
 - `src/components/features/auth/login-form.tsx` — the form itself: RHF + Zod
   validation, password visibility toggle, "keep me logged in" checkbox,
@@ -159,6 +179,7 @@ src/components/layouts/auth-layout.tsx
 src/components/features/auth/auth-brand-panel.tsx
 src/components/features/auth/login-form.tsx
 src/components/features/auth/demo-accounts.tsx
+src/components/features/auth/auth-mode-switch.tsx
 src/components/brand/logo.tsx
 src/components/brand/logo-mark.tsx
 src/components/brand/route-transition.tsx

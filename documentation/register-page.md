@@ -25,6 +25,12 @@ against the mock backend — not a static form.
   login's `max-w-sm` was ever meant to hold) while leaving `/login` alone.
   The heading now lives in `page.tsx` — `RegisterForm` is just the fields,
   mirroring how `LoginPage` / `LoginForm` are split.
+- **Switching to/from `/login` is a first-class, animated interaction, not
+  a text link.** `<AuthModeSwitch>` sits above the form on both routes; the
+  brand panel swaps to the right-hand side for `/register`
+  (`AuthLayout`'s `reversed` prop). The old "Already have an account?
+  Login" footer link is gone — the switch replaces it. Full mechanics in
+  [theming-and-motion.md](./theming-and-motion.md#the-login--register-side-swap).
 - **Fields match the reference exactly:** Membership ID, Co-operative name,
   First/Last name (two-column), Email, Phone/Country (two-column), a
   terms-of-use + privacy-policy checkbox, "Create Account" submit, and an

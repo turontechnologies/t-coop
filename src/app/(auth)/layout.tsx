@@ -11,7 +11,10 @@ export default function AuthRouteLayout({ children }: { children: ReactNode }) {
 
   return (
     <AppLaunchGate>
-      <AuthLayout formClassName={isRegister ? "max-w-md" : undefined}>
+      <AuthLayout
+        formClassName={isRegister ? "max-w-md" : undefined}
+        reversed={isRegister}
+      >
         {children}
       </AuthLayout>
     </AppLaunchGate>

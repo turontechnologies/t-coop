@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -296,22 +295,6 @@ export function RegisterForm() {
           )}
         </Button>
       </motion.div>
-
-      <motion.p
-        custom={7}
-        initial="hidden"
-        animate="visible"
-        variants={fieldVariants}
-        className="text-center text-sm text-muted-foreground"
-      >
-        Already have an account?{" "}
-        <Link
-          href="/login"
-          className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
-        >
-          Login
-        </Link>
-      </motion.p>
     </form>
   );
 }

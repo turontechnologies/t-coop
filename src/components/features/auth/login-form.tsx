@@ -215,22 +215,6 @@ export function LoginForm() {
         </Button>
       </motion.div>
 
-      <motion.p
-        custom={4}
-        initial="hidden"
-        animate="visible"
-        variants={fieldVariants}
-        className="text-center text-sm text-muted-foreground"
-      >
-        New to T-Coop?{" "}
-        <Link
-          href="/register"
-          className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
-        >
-          Register Co-operative
-        </Link>
-      </motion.p>
-
       <DemoAccounts onSelect={fillDemoAccount} />
     </form>
   );
