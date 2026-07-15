@@ -127,6 +127,20 @@ for admin/member) as a Recharts `AreaChart`.
   updates.
 - Sidebar nav items and dropdown menus use the global button press-feedback
   and the existing shadcn open/close transitions (`tw-animate-css`).
+- The mobile sidebar (the off-canvas drawer below `lg:`) has two coordinated
+  motions: the backdrop is a Framer Motion `<AnimatePresence>` fade (it used
+  to be conditionally rendered with no transition at all — it just popped
+  in/out), and the drawer itself slides via a Tailwind transform transition
+  tuned to a smoother ease-out-expo-style curve (`duration-300
+ease-[cubic-bezier(0.22,1,0.36,1)]`) rather than the default. The drawer
+  stays CSS-driven rather than also moving to Framer Motion because it needs
+  to respect the `lg:` breakpoint (always open, in-flow, on desktop) —
+  Framer Motion's `animate` prop has no way to say "unless the viewport is
+  wide," but a static `lg:translate-x-0` Tailwind class handles that for
+  free.
+- Logging out plays the same `<RouteTransition>` used elsewhere in the app
+  rather than an instant redirect — see
+  [theming-and-motion.md](./theming-and-motion.md#route-transitions).
 
 ## State Management
 

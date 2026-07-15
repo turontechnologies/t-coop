@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye, EyeOff, TriangleAlert } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +87,9 @@ export function CreateNewPasswordForm() {
         variants={fieldVariants}
         className="space-y-1.5 text-center"
       >
+        <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
+          <LockKeyhole className="size-5" aria-hidden="true" />
+        </span>
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           Create New Password
         </h2>

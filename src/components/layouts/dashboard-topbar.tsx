@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { CalendarDays, ChevronDown, LogOut, Menu, User } from "lucide-react";
 import {
   DropdownMenu,
@@ -12,24 +11,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { NotificationMenu } from "@/components/layouts/notification-menu";
-import { useAuthStore } from "@/store/auth.store";
 import { formatTodayLong, getInitials } from "@/lib/format";
 import type { AuthenticatedMember } from "@/types/auth";
 
 interface DashboardTopbarProps {
   member: AuthenticatedMember;
   onMenuClick: () => void;
+  onLogout: () => void;
 }
 
-export function DashboardTopbar({ member, onMenuClick }: DashboardTopbarProps) {
-  const router = useRouter();
-  const logout = useAuthStore((state) => state.logout);
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
-
+export function DashboardTopbar({
+  member,
+  onMenuClick,
+  onLogout,
+}: DashboardTopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
       <div className="flex items-center gap-3">
@@ -95,7 +90,7 @@ export function DashboardTopbar({ member, onMenuClick }: DashboardTopbarProps) {
               My Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+            <DropdownMenuItem variant="destructive" onClick={onLogout}>
               <LogOut className="size-4" aria-hidden="true" />
               Logout
             </DropdownMenuItem>

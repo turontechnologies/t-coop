@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -91,6 +91,9 @@ export function VerifyOtpForm() {
         variants={fieldVariants}
         className="space-y-1.5 text-center"
       >
+        <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
+          <ShieldCheck className="size-5" aria-hidden="true" />
+        </span>
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           O.T.P Verification
         </h2>

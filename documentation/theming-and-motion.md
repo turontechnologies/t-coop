@@ -149,6 +149,15 @@ inset-0 z-50`) takeover used at every major auth hand-off:
 - OTP verified → create-new-password (`verify-otp-form.tsx`)
 - Password reset → login (`create-new-password-form.tsx`)
 - Registration submitted → login (`register-form.tsx`)
+- Logout → login (`dashboard-shell.tsx`) — copy is exit-flavored ("Signing
+  you out," "Redirecting to login"), deliberately not reusing the login
+  transition's "Welcome back" copy, which reads backwards on the way out.
+  Same session-clearing-order lesson as the password-reset flow applies
+  here too: `logout()` (which nulls the auth store's `member`) only fires
+  inside `onComplete`, after the transition has already played — clearing
+  it earlier would trip `(dashboard)/layout.tsx`'s own guard effect and
+  redirect away before the transition finishes, the same bug documented in
+  [password-recovery.md](./password-recovery.md#design-decisions).
 
 It renders `<AnimatedLogo>` for a fixed `duration` (default 2200ms) and then
 calls `onComplete`, which the caller uses to navigate. The delay is
@@ -239,11 +248,24 @@ of these two patterns it needs — don't invent a third timing mechanism.
 (`next.config.ts` whitelists `res.cloudinary.com` under
 `images.remotePatterns`) after the local SVG was reported to render
 incompletely. Both assets share the same design: a green diamond mark plus
-a **white** wordmark, meaning `<Logo>` is only safe on permanently dark/green
-surfaces — exactly its two current call sites (`auth-brand-panel.tsx`,
-`centered-auth-layout.tsx`), which don't change with the app's light/dark
-toggle. `<LogoMark>` (the standalone diamond, recolored via `currentColor`)
-is the theme-safe choice for anywhere else, e.g. the dashboard sidebar/topbar.
-If the wordmark is ever needed on a theme-reactive surface, it will need
-either a dark-mode variant asset or a permanent brand-colored backing chip
-— a plain white PNG will disappear on a light background.
+a **white** wordmark — meaning `<Logo>` on its own is only safe on
+permanently dark/green surfaces.
+
+**Used consistently everywhere now, not just the two brand panels**, by
+following one rule: any surface that's already permanently dark/green gets
+`<Logo>` as-is; any surface that's theme-reactive (would go white-on-white
+in light mode) gets `<Logo>` wrapped in a small `bg-sidebar` chip — the
+`--sidebar` token is dark green in both light and dark mode (see
+[Theme tokens](#theme-tokens)), so the chip itself never needs to react to
+the toggle.
+
+| Location                          | Surface                                 | Treatment                           |
+| --------------------------------- | --------------------------------------- | ----------------------------------- |
+| `auth-brand-panel.tsx`            | Always brand-green                      | `<Logo>` directly                   |
+| `centered-auth-layout.tsx` header | Always brand-green                      | `<Logo>` directly                   |
+| `dashboard-sidebar.tsx` header    | Always dark (`bg-sidebar`, both themes) | `<Logo>` directly                   |
+| `auth-layout.tsx` mobile header   | Theme-reactive (the form pane)          | `<Logo>` inside a `bg-sidebar` chip |
+
+`<LogoMark>` (the standalone diamond, recolored via `currentColor`) is
+still the right choice anywhere only the mark — not the wordmark — belongs,
+e.g. the favicon.

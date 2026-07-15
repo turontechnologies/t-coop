@@ -5,7 +5,7 @@ import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { KeyRound, Loader2, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +62,9 @@ export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
         variants={fieldVariants}
         className="space-y-1.5 text-center"
       >
+        <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-accent text-accent-foreground">
+          <KeyRound className="size-5" aria-hidden="true" />
+        </span>
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           Forgot your password?
         </h2>

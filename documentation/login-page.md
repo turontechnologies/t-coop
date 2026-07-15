@@ -33,11 +33,15 @@ verifying a one-time code stands in for re-authentication after a reset.
 - **Brand green is contained to the auth panel, buttons, links, and focus
   rings.** Everything else (inputs, borders, page background) uses Tailwind
   Slate neutrals, per the brand guidance.
-- **The provided `Logo.svg` is used as-is** on the green panel (it was
-  authored in white, designed for a dark-green surface — exactly what this
-  panel is). A separate `<LogoMark />` component (built from the same nested
-  diamond geometry, recolored via `currentColor`) is used on neutral
-  surfaces: the mobile header and the favicon.
+- **The wordmark logo is used as-is** on the green panel (it's authored in
+  white, designed for a dark-green surface — exactly what this panel is).
+  The mobile header (a theme-reactive surface) wraps the same logo in a
+  small permanent `bg-sidebar` chip instead of swapping to a different mark
+  — see
+  [theming-and-motion.md](./theming-and-motion.md#wordmark-asset) for the
+  full "same logo everywhere" rule. `<LogoMark />` (the standalone diamond,
+  recolored via `currentColor`) remains the right choice anywhere only the
+  mark, not the wordmark, belongs — e.g. the favicon.
 - **Two-tier color tokens for accessibility.** Brand green used as a _fill_
   (buttons: `#00543D` bg + white text) stays identical across themes because
   its own internal contrast is what matters (~9:1). Brand green used as
