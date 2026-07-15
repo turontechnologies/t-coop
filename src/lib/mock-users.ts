@@ -35,8 +35,27 @@ export const MOCK_USERS: MockUser[] = [
     member: {
       id: "MB-0001",
       name: "Tunde Bakare",
-      email: "tunde.bakare@t-coop.com",
+      email: "adedarasapok@gmail.com",
       role: "member",
     },
   },
 ];
+
+export function verifyMockUserPassword(
+  memberId: string,
+  currentPassword: string,
+): boolean {
+  return MOCK_USERS.some(
+    (user) => user.member.id === memberId && user.password === currentPassword,
+  );
+}
+
+export function updateMockUserPassword(
+  memberId: string,
+  newPassword: string,
+): boolean {
+  const match = MOCK_USERS.find((user) => user.member.id === memberId);
+  if (!match) return false;
+  match.password = newPassword;
+  return true;
+}

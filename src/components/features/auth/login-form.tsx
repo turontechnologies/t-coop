@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,8 +14,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DemoAccounts } from "@/components/features/auth/demo-accounts";
+import { RouteTransition } from "@/components/brand/route-transition";
 import { useLogin } from "@/hooks/use-login";
 import { useAuthStore } from "@/store/auth.store";
+import { usePasswordResetStore } from "@/store/password-reset.store";
 import {
   loginSchema,
   type LoginFormValues,
@@ -36,13 +38,19 @@ const fieldVariants = {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [signedInName, setSignedInName] = useState<string | null>(null);
   const membershipIdInputId = useId();
   const passwordInputId = useId();
 
   const router = useRouter();
   const setKeepLoggedIn = useAuthStore((state) => state.setKeepLoggedIn);
   const setMember = useAuthStore((state) => state.setMember);
+  const clearResetSession = usePasswordResetStore((state) => state.clear);
   const login = useLogin();
+
+  useEffect(() => {
+    clearResetSession();
+  }, [clearResetSession]);
 
   const {
     register,
@@ -66,10 +74,7 @@ export function LoginForm() {
       const response = await login.mutateAsync(values);
       setKeepLoggedIn(values.keepLoggedIn);
       setMember(response.member);
-      toast.success("Signed in successfully", {
-        description: `Welcome back, ${response.member.name}.`,
-      });
-      router.push("/dashboard");
+      setSignedInName(response.member.name);
     } catch (error) {
       toast.error("Sign in failed", {
         description:
@@ -79,6 +84,15 @@ export function LoginForm() {
   });
 
   const busy = isSubmitting || login.isPending;
+
+  if (signedInName) {
+    return (
+      <RouteTransition
+        messages={[`Welcome back, ${signedInName}`, "Preparing your dashboard"]}
+        onComplete={() => router.push("/dashboard")}
+      />
+    );
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">

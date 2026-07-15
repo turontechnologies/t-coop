@@ -17,3 +17,12 @@ export interface LoginResponse {
   member: AuthenticatedMember;
   requiresOtp: boolean;
 }
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetResponse {
+  member: AuthenticatedMember;
+  otp: string;
+}

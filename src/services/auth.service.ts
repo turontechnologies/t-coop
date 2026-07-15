@@ -1,6 +1,11 @@
 import { apiClient } from "@/lib/axios";
 import { MOCK_USERS } from "@/lib/mock-users";
-import type { LoginRequest, LoginResponse } from "@/types/auth";
+import type {
+  LoginRequest,
+  LoginResponse,
+  PasswordResetRequest,
+  PasswordResetResponse,
+} from "@/types/auth";
 
 export const authService = {
   async login(payload: LoginRequest): Promise<LoginResponse> {
@@ -10,6 +15,20 @@ export const authService = {
 
     const { data } = await apiClient.post<LoginResponse>(
       "/auth/login",
+      payload,
+    );
+    return data;
+  },
+
+  async requestPasswordReset(
+    payload: PasswordResetRequest,
+  ): Promise<PasswordResetResponse> {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true") {
+      return mockRequestPasswordReset(payload);
+    }
+
+    const { data } = await apiClient.post<PasswordResetResponse>(
+      "/auth/forgot-password",
       payload,
     );
     return data;
@@ -38,5 +57,28 @@ async function mockLogin({
   return {
     member: match.member,
     requiresOtp: false,
+  };
+}
+
+async function mockRequestPasswordReset({
+  email,
+}: PasswordResetRequest): Promise<PasswordResetResponse> {
+  await new Promise((resolve) => setTimeout(resolve, 900));
+
+  const match = MOCK_USERS.find(
+    (user) => user.member.email.toLowerCase() === email.trim().toLowerCase(),
+  );
+
+  if (!match) {
+    throw new Error(
+      "We couldn't find an account with that email address. Please enter a valid registered email.",
+    );
+  }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+  return {
+    member: match.member,
+    otp,
   };
 }
