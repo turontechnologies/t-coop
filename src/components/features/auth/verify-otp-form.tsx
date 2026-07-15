@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { RouteTransition } from "@/components/brand/route-transition";
 import { useForgotPassword } from "@/hooks/use-forgot-password";
 import { usePasswordResetStore } from "@/store/password-reset.store";
+import { fieldVariants } from "@/lib/animations";
 import {
   verifyOtpSchema,
   type VerifyOtpFormValues,
@@ -83,7 +84,13 @@ export function VerifyOtpForm() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1.5 text-center">
+      <motion.div
+        custom={0}
+        initial="hidden"
+        animate="visible"
+        variants={fieldVariants}
+        className="space-y-1.5 text-center"
+      >
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           O.T.P Verification
         </h2>
@@ -91,7 +98,7 @@ export function VerifyOtpForm() {
           A one-time password has been sent to your registered email{" "}
           <span className="font-semibold text-foreground">{email}</span>
         </p>
-      </div>
+      </motion.div>
 
       <motion.form
         key={shakeKey}
@@ -153,7 +160,13 @@ export function VerifyOtpForm() {
         </Button>
       </motion.form>
 
-      <div className="space-y-2 text-center text-sm">
+      <motion.div
+        custom={2}
+        initial="hidden"
+        animate="visible"
+        variants={fieldVariants}
+        className="space-y-2 text-center text-sm"
+      >
         <p className="text-muted-foreground">
           Didn&apos;t get the code?{" "}
           <button
@@ -172,7 +185,7 @@ export function VerifyOtpForm() {
         >
           Return to login
         </Link>
-      </div>
+      </motion.div>
     </div>
   );
 }

@@ -14,10 +14,10 @@ interface LogoProps {
 export function Logo({ className, priority }: LogoProps) {
   return (
     <Image
-      src="/logo-full.svg"
+      src="https://res.cloudinary.com/djstai84f/image/upload/v1784102518/Logo_1_kspxky.png"
       alt="T-Coop"
-      width={178}
-      height={48}
+      width={179}
+      height={42}
       priority={priority}
       className={cn("h-8 w-auto", className)}
     />

@@ -18,23 +18,12 @@ import { RouteTransition } from "@/components/brand/route-transition";
 import { useLogin } from "@/hooks/use-login";
 import { useAuthStore } from "@/store/auth.store";
 import { usePasswordResetStore } from "@/store/password-reset.store";
+import { markAppIntroShown } from "@/lib/app-intro";
+import { fieldVariants } from "@/lib/animations";
 import {
   loginSchema,
   type LoginFormValues,
 } from "@/lib/validations/auth.schema";
-
-const fieldVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: (index: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: 0.08 * index,
-      duration: 0.4,
-      ease: "easeOut" as const,
-    },
-  }),
-};
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -89,7 +78,10 @@ export function LoginForm() {
     return (
       <RouteTransition
         messages={[`Welcome back, ${signedInName}`, "Preparing your dashboard"]}
-        onComplete={() => router.push("/dashboard")}
+        onComplete={() => {
+          markAppIntroShown();
+          router.push("/dashboard");
+        }}
       />
     );
   }

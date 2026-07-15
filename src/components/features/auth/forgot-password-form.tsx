@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForgotPassword } from "@/hooks/use-forgot-password";
+import { fieldVariants } from "@/lib/animations";
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
@@ -54,7 +55,13 @@ export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1.5 text-center">
+      <motion.div
+        custom={0}
+        initial="hidden"
+        animate="visible"
+        variants={fieldVariants}
+        className="space-y-1.5 text-center"
+      >
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           Forgot your password?
         </h2>
@@ -62,10 +69,16 @@ export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
           Enter the email linked to your account and we&apos;ll send you a
           one-time password to verify it&apos;s you.
         </p>
-      </div>
+      </motion.div>
 
       <form onSubmit={onSubmit} noValidate className="space-y-5">
-        <div className="space-y-2">
+        <motion.div
+          custom={1}
+          initial="hidden"
+          animate="visible"
+          variants={fieldVariants}
+          className="space-y-2"
+        >
           <Label htmlFor={emailInputId}>Email address</Label>
           <Input
             id={emailInputId}
@@ -99,26 +112,39 @@ export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
               </motion.p>
             ) : null}
           </AnimatePresence>
-        </div>
+        </motion.div>
 
-        <Button
-          type="submit"
-          className="h-11 w-full text-base"
-          size="lg"
-          disabled={busy}
+        <motion.div
+          custom={2}
+          initial="hidden"
+          animate="visible"
+          variants={fieldVariants}
         >
-          {busy ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Sending OTP…
-            </>
-          ) : (
-            "Send OTP"
-          )}
-        </Button>
+          <Button
+            type="submit"
+            className="h-11 w-full text-base"
+            size="lg"
+            disabled={busy}
+          >
+            {busy ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Sending OTP…
+              </>
+            ) : (
+              "Send OTP"
+            )}
+          </Button>
+        </motion.div>
       </form>
 
-      <div className="space-y-2 text-center text-sm">
+      <motion.div
+        custom={3}
+        initial="hidden"
+        animate="visible"
+        variants={fieldVariants}
+        className="space-y-2 text-center text-sm"
+      >
         <p className="text-muted-foreground">
           New to T-Coop?{" "}
           <Link
@@ -134,7 +160,7 @@ export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
         >
           Return to login
         </Link>
-      </div>
+      </motion.div>
     </div>
   );
 }

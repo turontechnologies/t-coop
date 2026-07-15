@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AppLaunchGate } from "@/components/brand/app-launch-gate";
 import { CenteredAuthLayout } from "@/components/layouts/centered-auth-layout";
 
 export default function PasswordRecoveryLayout({
@@ -6,5 +7,9 @@ export default function PasswordRecoveryLayout({
 }: {
   children: ReactNode;
 }) {
-  return <CenteredAuthLayout>{children}</CenteredAuthLayout>;
+  return (
+    <AppLaunchGate>
+      <CenteredAuthLayout>{children}</CenteredAuthLayout>
+    </AppLaunchGate>
+  );
 }

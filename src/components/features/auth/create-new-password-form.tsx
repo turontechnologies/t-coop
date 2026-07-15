@@ -17,6 +17,7 @@ import {
   updateMockUserPassword,
   verifyMockUserPassword,
 } from "@/lib/mock-users";
+import { fieldVariants } from "@/lib/animations";
 import {
   createNewPasswordSchema,
   type CreateNewPasswordFormValues,
@@ -79,64 +80,104 @@ export function CreateNewPasswordForm() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1.5 text-center">
+      <motion.div
+        custom={0}
+        initial="hidden"
+        animate="visible"
+        variants={fieldVariants}
+        className="space-y-1.5 text-center"
+      >
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           Create New Password
         </h2>
         <p className="text-sm text-muted-foreground">Welcome to T-Coop</p>
-      </div>
+      </motion.div>
 
       <form onSubmit={onSubmit} noValidate className="space-y-5">
-        <PasswordField
-          id={currentPasswordId}
-          label="Current Password"
-          revealed={reveal.current}
-          onToggleReveal={() =>
-            setReveal((state) => ({ ...state, current: !state.current }))
-          }
-          disabled={busy}
-          error={errors.currentPassword?.message}
-          registration={register("currentPassword")}
-          autoComplete="current-password"
-        />
-
-        <PasswordField
-          id={newPasswordId}
-          label="New Password"
-          revealed={reveal.next}
-          onToggleReveal={() =>
-            setReveal((state) => ({ ...state, next: !state.next }))
-          }
-          disabled={busy}
-          error={errors.newPassword?.message}
-          registration={register("newPassword")}
-          autoComplete="new-password"
-        />
-
-        <PasswordField
-          id={confirmPasswordId}
-          label="Confirm Password"
-          revealed={reveal.confirm}
-          onToggleReveal={() =>
-            setReveal((state) => ({ ...state, confirm: !state.confirm }))
-          }
-          disabled={busy}
-          error={errors.confirmPassword?.message}
-          registration={register("confirmPassword")}
-          autoComplete="new-password"
-        />
-
-        <Button
-          type="submit"
-          className="h-11 w-full text-base"
-          size="lg"
-          disabled={busy}
+        <motion.div
+          custom={1}
+          initial="hidden"
+          animate="visible"
+          variants={fieldVariants}
         >
-          Login
-        </Button>
+          <PasswordField
+            id={currentPasswordId}
+            label="Current Password"
+            revealed={reveal.current}
+            onToggleReveal={() =>
+              setReveal((state) => ({ ...state, current: !state.current }))
+            }
+            disabled={busy}
+            error={errors.currentPassword?.message}
+            registration={register("currentPassword")}
+            autoComplete="current-password"
+          />
+        </motion.div>
+
+        <motion.div
+          custom={2}
+          initial="hidden"
+          animate="visible"
+          variants={fieldVariants}
+        >
+          <PasswordField
+            id={newPasswordId}
+            label="New Password"
+            revealed={reveal.next}
+            onToggleReveal={() =>
+              setReveal((state) => ({ ...state, next: !state.next }))
+            }
+            disabled={busy}
+            error={errors.newPassword?.message}
+            registration={register("newPassword")}
+            autoComplete="new-password"
+          />
+        </motion.div>
+
+        <motion.div
+          custom={3}
+          initial="hidden"
+          animate="visible"
+          variants={fieldVariants}
+        >
+          <PasswordField
+            id={confirmPasswordId}
+            label="Confirm Password"
+            revealed={reveal.confirm}
+            onToggleReveal={() =>
+              setReveal((state) => ({ ...state, confirm: !state.confirm }))
+            }
+            disabled={busy}
+            error={errors.confirmPassword?.message}
+            registration={register("confirmPassword")}
+            autoComplete="new-password"
+          />
+        </motion.div>
+
+        <motion.div
+          custom={4}
+          initial="hidden"
+          animate="visible"
+          variants={fieldVariants}
+        >
+          <Button
+            type="submit"
+            className="h-11 w-full text-base"
+            size="lg"
+            disabled={busy}
+          >
+            Login
+          </Button>
+        </motion.div>
       </form>
 
-      <div className="space-y-2 text-center text-sm">
+      <motion.div
+        custom={5}
+        initial="hidden"
+        animate="visible"
+        variants={fieldVariants}
+        className="space-y-2 text-center text-sm"
+      >
         <p className="text-muted-foreground">
           New to T-Coop?{" "}
           <Link
@@ -153,7 +194,7 @@ export function CreateNewPasswordForm() {
         >
           Return to login
         </Link>
-      </div>
+      </motion.div>
     </div>
   );
 }

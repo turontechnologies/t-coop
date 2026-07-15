@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { useMinimumDuration } from "@/hooks/use-minimum-duration";
+import { hasAppIntroShown } from "@/lib/app-intro";
 import { useAuthStore } from "@/store/auth.store";
 
 export default function DashboardRouteLayout({
@@ -15,7 +16,15 @@ export default function DashboardRouteLayout({
   const router = useRouter();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const member = useAuthStore((state) => state.member);
-  const showDashboard = useMinimumDuration(hasHydrated && !!member, 1600);
+
+  // Evaluated once per mount: a fresh page load/reload always resets this,
+  // so a direct or reloaded visit gets the full branded intro. Arriving via
+  // an already-animated transition (e.g. straight from login) skips it.
+  const [needsFullIntro] = useState(() => !hasAppIntroShown());
+  const showDashboard = useMinimumDuration(
+    hasHydrated && !!member,
+    needsFullIntro ? 5000 : 300,
+  );
 
   useEffect(() => {
     if (hasHydrated && !member) {

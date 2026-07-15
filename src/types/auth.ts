@@ -26,3 +26,17 @@ export interface PasswordResetResponse {
   member: AuthenticatedMember;
   otp: string;
 }
+
+export interface RegisterCooperativeRequest {
+  membershipId: string;
+  coopName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  country: string;
+}
+
+export interface RegisterCooperativeResponse {
+  membershipId: string;
+}

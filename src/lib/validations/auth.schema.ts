@@ -41,3 +41,24 @@ export const createNewPasswordSchema = z
 export type CreateNewPasswordFormValues = z.infer<
   typeof createNewPasswordSchema
 >;
+
+export const registerCooperativeSchema = z.object({
+  membershipId: z.string().trim().min(1, "Enter a membership ID"),
+  coopName: z.string().trim().min(1, "Enter your co-operative name"),
+  firstName: z.string().trim().min(1, "Enter your first name"),
+  lastName: z.string().trim().min(1, "Enter your last name"),
+  email: z.email("Enter a valid email address"),
+  phone: z
+    .string()
+    .trim()
+    .min(7, "Enter a valid phone number")
+    .regex(/^[\d+\s-]+$/, "Enter a valid phone number"),
+  country: z.string().min(1, "Select a country"),
+  agreeToTerms: z.boolean().refine((value) => value === true, {
+    message: "You must agree to the terms to continue",
+  }),
+});
+
+export type RegisterCooperativeFormValues = z.infer<
+  typeof registerCooperativeSchema
+>;

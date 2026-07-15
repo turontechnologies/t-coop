@@ -43,3 +43,5 @@ next-env.d.ts
 # agent-local instruction files (not part of the project)
 CLAUDE.md
 AGENTS.md
+
+.vercel
