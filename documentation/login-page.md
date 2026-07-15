@@ -8,11 +8,16 @@ authentication experience appropriate for an enterprise fintech SaaS product.
 
 ## Purpose
 
-Authenticate a co-operative member with a **Membership ID** and **Password**,
-then hand off to OTP verification (built in the next milestone). The page
-must read as a brand moment — the one screen where a bold green presence is
-appropriate — while staying fast, accessible, and honest about its current
-(mocked) backend.
+Authenticate a co-operative member with a **Membership ID** and **Password**
+against one of three hardcoded demo roles (see [Demo Accounts](#demo-accounts)),
+then route straight into the role-appropriate dashboard (see
+[dashboard.md](./dashboard.md)). The page must read as a brand moment — the
+one screen where a bold green presence is appropriate — while staying fast,
+accessible, and honest about its current (mocked) backend.
+
+OTP is not part of the primary login flow — it's reserved for the password
+recovery path (see [password-recovery.md](./password-recovery.md)), where
+verifying a one-time code stands in for re-authentication after a reset.
 
 ## Design Decisions
 
@@ -41,15 +46,22 @@ appropriate — while staying fast, accessible, and honest about its current
   fails WCAG AA against a near-black `#020617` background. All token pairs
   were checked against WCAG AA (4.5:1 text, 3:1 UI components).
 - **Mock auth service, not a stub UI.** Rather than leaving the form
-  non-functional, `authService.login` simulates a network round trip via
-  `NEXT_PUBLIC_USE_MOCK_AUTH=true` (the current default via the mock
-  fallback), so the loading/success/error states are all real and
-  demoable. Swapping in a real backend is a one-line change in
-  `src/services/auth.service.ts` + setting `NEXT_PUBLIC_API_URL`.
-- **No navigation to `/otp` yet.** Since the OTP screen isn't built in this
-  milestone, a successful login shows an inline confirmation state instead
-  of routing to a page that doesn't exist. This will become a
-  `router.push("/otp")` once that route ships.
+  non-functional, `authService.login` simulates a network round trip
+  (behind `NEXT_PUBLIC_USE_MOCK_AUTH=true`, set in `.env.local` — see the
+  root [README](../README.md#demo-accounts)), so the loading/success/error
+  states are all real and demoable. Swapping in a real backend is a one-line
+  change in `src/services/auth.service.ts` + setting `NEXT_PUBLIC_API_URL`.
+- **A "demo accounts" picker ships on the form itself.** Three hardcoded
+  roles (`src/lib/mock-users.ts`) are the only way to authenticate. Rather
+  than expect a presenter to memorize/type credentials live,
+  `<DemoAccounts>` renders one clickable row per role that autofills the
+  membership ID and password via `setValue(..., { shouldValidate: true })`.
+- **Successful login skips a confirmation screen and transitions straight
+  into the app.** `setMember()` fires immediately, then a full-screen
+  `<RouteTransition>` (animated logo, fixed ~2.2s) plays before
+  `router.push("/dashboard")` — see
+  [theming-and-motion.md](./theming-and-motion.md#route-transitions) for why
+  that hand-off is deliberately timed rather than instant.
 
 ## Components
 
@@ -60,8 +72,16 @@ appropriate — while staying fast, accessible, and honest about its current
   (logo, headline, trust highlights, decorative grid/glow background).
 - `src/components/features/auth/login-form.tsx` — the form itself: RHF + Zod
   validation, password visibility toggle, "keep me logged in" checkbox,
-  loading/error/success states.
+  loading/error states, and the post-success `<RouteTransition>`.
+- `src/components/features/auth/demo-accounts.tsx` — the click-to-autofill
+  demo credentials panel.
 - `src/components/brand/logo.tsx` / `logo-mark.tsx` — reusable brand marks.
+- `src/components/brand/route-transition.tsx` — shared full-screen transition
+  used on every major auth hand-off, not just login.
+- `src/components/brand/app-launch-gate.tsx` — wraps `AuthLayout` (via
+  `src/app/(auth)/layout.tsx`) so a cold load or refresh of `/login` plays a
+  branded intro too. See
+  [theming-and-motion.md](./theming-and-motion.md#loading--splash-system).
 - `src/components/theme/theme-toggle.tsx` — light/dark/system switcher
   (top-right of the form pane).
 - shadcn/ui primitives used: `Button`, `Input`, `Label`, `Checkbox`,
@@ -78,8 +98,9 @@ Framer Motion, kept subtle and purposeful:
   than popping in.
 - Submit button: shows a spinning `Loader2` icon and disables the form while
   the mutation is pending.
-- Success state: the form cross-fades into a confirmation card
-  (scale + fade).
+- On success, the form is replaced by `<RouteTransition>` — the T-Coop mark
+  draws itself in on a loop with a status-message crossfade — held for a
+  fixed duration before navigating away, rather than an instant redirect.
 
 ## Responsive Behavior
 
@@ -114,9 +135,12 @@ Framer Motion, kept subtle and purposeful:
   `authService.login` in a TanStack Query `useMutation` — no `useEffect`
   fetching.
 - **Global state:** `useAuthStore` (Zustand, `src/store/auth.store.ts`)
-  persists the "keep me logged in" preference to `localStorage`; the
-  authenticated member itself is intentionally _not_ persisted here yet
-  (that lands with session/token handling in a later milestone).
+  persists both the "keep me logged in" preference and the authenticated
+  `member` to `localStorage`, so a page refresh doesn't drop the session.
+  The store also tracks `hasHydrated` (set via `onRehydrateStorage`) so
+  consumers — chiefly the dashboard's auth guard — can tell the difference
+  between "not logged in" and "haven't finished reading localStorage yet"
+  and avoid a false redirect to `/login` on first paint.
 
 ## Files Created
 
@@ -130,19 +154,27 @@ src/app/globals.css                       (brand color tokens)
 src/components/layouts/auth-layout.tsx
 src/components/features/auth/auth-brand-panel.tsx
 src/components/features/auth/login-form.tsx
+src/components/features/auth/demo-accounts.tsx
 src/components/brand/logo.tsx
 src/components/brand/logo-mark.tsx
+src/components/brand/route-transition.tsx
+src/components/brand/app-launch-gate.tsx
 src/components/theme/theme-provider.tsx
 src/components/theme/theme-toggle.tsx
 src/components/providers/query-provider.tsx
 src/lib/axios.ts
+src/lib/mock-users.ts
 src/lib/validations/auth.schema.ts
 src/services/auth.service.ts
 src/hooks/use-login.ts
 src/store/auth.store.ts
 src/types/auth.ts
-public/logo-full.svg
 ```
+
+`public/logo-full.svg` was the original wordmark asset; `<Logo>` now points at
+a hosted image instead (see
+[theming-and-motion.md](./theming-and-motion.md#wordmark-asset)), so the file
+is unused but left in place.
 
 ## Dependencies
 
@@ -161,17 +193,20 @@ publishes a fix.
 
 ## Future Improvements
 
-- Wire real navigation to `/otp` once that page exists, passing the
-  membership ID forward (likely via a short-lived value in the auth store
-  rather than a query param).
 - Replace `authService`'s mock branch with a real endpoint once the backend
   is available; delete the mock once `NEXT_PUBLIC_API_URL` is set in every
-  environment.
+  environment. All three demo roles, the forgot-password flow, and the
+  register flow route through the same `authService` — swapping the backend
+  in is a single-file change (`src/services/auth.service.ts`).
 - Add rate-limit / lockout messaging for repeated failed attempts once the
   backend supports it.
 - Consider a `prefers-reduced-motion` check to shorten/disable the stagger
   animations for users who request it (currently relies on Framer Motion's
   defaults, which do not auto-respect this).
+- `/register` currently ends with "registration received" messaging rather
+  than an instant, usable account — see
+  [register-page.md](./register-page.md#design-decisions) for why, and what
+  a real backend integration would change.
 
 ## Developer Notes
 
@@ -186,3 +221,11 @@ publishes a fix.
   uses base-ui's `render` prop (`<Trigger render={<Button />}>`), not Radix's
   `asChild` — worth knowing before copying patterns from Radix-based shadcn
   examples found elsewhere.
+- **`DropdownMenuItem` takes `onClick`, not `onSelect`.** Radix's menu item
+  uses `onSelect`; base-ui's does not — it's a real, unrelated native DOM
+  event (text selection) that TypeScript accepts without complaint, so a
+  Radix-habit `onSelect` handler silently never fires. This broke the theme
+  toggle, a dashboard filter, and the profile menu's logout before it was
+  caught by literally clicking through the app instead of trusting the code
+  — full account in
+  [theming-and-motion.md](./theming-and-motion.md#the-onselect-vs-onclick-bug).
