@@ -64,17 +64,19 @@ page reload, since there's no backend to persist to).
 
 ## Routes
 
-| Route                  | Purpose                                             | Docs                                                         |
-| ---------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
-| `/login`               | Sign in with a membership ID + password             | [login-page.md](./documentation/login-page.md)               |
-| `/forgot-password`     | Request a one-time password by email                | [password-recovery.md](./documentation/password-recovery.md) |
-| `/verify-otp`          | Enter the OTP sent (simulated) to your email        | [password-recovery.md](./documentation/password-recovery.md) |
-| `/create-new-password` | Set a new password after OTP verification           | [password-recovery.md](./documentation/password-recovery.md) |
-| `/register`            | Register a new co-operative                         | [register-page.md](./documentation/register-page.md)         |
-| `/dashboard`           | Role-aware dashboard (super admin / admin / member) | [dashboard.md](./documentation/dashboard.md)                 |
-| `/profile`             | View/edit your own member details (any role)        | [profile-page.md](./documentation/profile-page.md)           |
-| `/savings`             | Savings & Contributions (role-aware; real Paystack) | [savings-page.md](./documentation/savings-page.md)           |
-| `/savings/[id]`        | Individual savings record detail                    | [savings-page.md](./documentation/savings-page.md)           |
+| Route                  | Purpose                                                   | Docs                                                         |
+| ---------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
+| `/login`               | Sign in with a membership ID + password                   | [login-page.md](./documentation/login-page.md)               |
+| `/forgot-password`     | Request a one-time password by email                      | [password-recovery.md](./documentation/password-recovery.md) |
+| `/verify-otp`          | Enter the OTP sent (simulated) to your email              | [password-recovery.md](./documentation/password-recovery.md) |
+| `/create-new-password` | Set a new password after OTP verification                 | [password-recovery.md](./documentation/password-recovery.md) |
+| `/register`            | Register a new co-operative                               | [register-page.md](./documentation/register-page.md)         |
+| `/dashboard`           | Role-aware dashboard (super admin / admin / member)       | [dashboard.md](./documentation/dashboard.md)                 |
+| `/profile`             | View/edit your own member details (any role)              | [profile-page.md](./documentation/profile-page.md)           |
+| `/savings`             | Savings & Contributions (role-aware; real Paystack)       | [savings-page.md](./documentation/savings-page.md)           |
+| `/savings/[id]`        | Individual savings record detail                          | [savings-page.md](./documentation/savings-page.md)           |
+| `/loans`               | Loans (role-aware; eligibility + application flow)        | [loans-page.md](./documentation/loans-page.md)               |
+| `/loans/[id]`          | Individual loan detail (repayment schedule, transactions) | [loans-page.md](./documentation/loans-page.md)               |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -110,7 +112,7 @@ src/
   hooks/                     one hook per mutation, + small UI-timing hooks
   lib/                       mock data, validation schemas, small utilities
   services/                  auth/profile/etc. services — the seam a real backend plugs into
-  store/                     Zustand stores (auth session, password-reset session, savings records)
+  store/                     Zustand stores (auth session, password-reset session, savings records, loan records)
   types/                     shared domain types
 ```
 
@@ -130,11 +132,13 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Dashboard (super admin / admin / member views)
 - [x] My Profile (view/edit, all roles)
 - [x] Savings & Contributions (role-aware views, real Paystack checkout, savings detail page)
+- [x] Loans (role-aware views, eligibility-based application flow, repayment schedule + transactions detail page)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)
+- [ ] Admin loan approval action (loans stay "Awaiting Approval" indefinitely — see loans-page.md)
 - [ ] Real photo upload for the profile avatar (Cloudinary — in progress)
-- [ ] The dashboard's other non-Dashboard nav items (Co-operatives, Loans, Settings, etc.)
+- [ ] The dashboard's other non-Dashboard nav items (Co-operatives, Subscriptions, Settings, etc.)
 
 ## Known Gotchas
 

@@ -12,11 +12,13 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/profile": "My Profile",
   "/savings": "Savings & Contributions",
+  "/loans": "Loans",
 };
 
 function getPageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
   if (pathname.startsWith("/savings/")) return "Savings Details";
+  if (pathname.startsWith("/loans/")) return "Loan Details";
   return "Dashboard";
 }
 
