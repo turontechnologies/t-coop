@@ -6,6 +6,11 @@ export const profileSchema = z.object({
     .trim()
     .length(11, "BVN must be 11 digits")
     .regex(/^\d+$/, "BVN must contain numbers only"),
+  nin: z
+    .string()
+    .trim()
+    .length(11, "NIN must be 11 digits")
+    .regex(/^\d+$/, "NIN must contain numbers only"),
   firstName: z.string().trim().min(1, "Enter your first name"),
   lastName: z.string().trim().min(1, "Enter your last name"),
   otherName: z.string().trim().optional(),

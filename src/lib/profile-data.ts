@@ -8,6 +8,7 @@ const PROFILES: Record<string, ProfileRecord> = {
   "SA-0001": {
     membershipId: "SA-0001",
     bvn: "22134455667",
+    nin: "11223344556",
     firstName: "Falola",
     lastName: "Mayowa",
     otherName: "",
@@ -24,6 +25,7 @@ const PROFILES: Record<string, ProfileRecord> = {
   "AD-0001": {
     membershipId: "AD-0001",
     bvn: "22198765432",
+    nin: "22334455667",
     firstName: "Chidinma",
     lastName: "Eze",
     otherName: "Ngozi",
@@ -40,6 +42,7 @@ const PROFILES: Record<string, ProfileRecord> = {
   "MB-0001": {
     membershipId: "MB-0001",
     bvn: "10298283639",
+    nin: "33445566778",
     firstName: "Tunde",
     lastName: "Bakare",
     otherName: "Jonathan",
@@ -57,6 +60,7 @@ const PROFILES: Record<string, ProfileRecord> = {
 
 const FALLBACK: Omit<ProfileRecord, "membershipId"> = {
   bvn: "00000000000",
+  nin: "00000000000",
   firstName: "",
   lastName: "",
   otherName: "",

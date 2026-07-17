@@ -1,16 +1,35 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type UseFormRegisterReturn } from "react-hook-form";
+import {
+  Controller,
+  useForm,
+  type Control,
+  type FieldPath,
+  type UseFormRegisterReturn,
+} from "react-hook-form";
 import { motion } from "framer-motion";
-import { BadgeCheck, ChevronDown, Loader2, TriangleAlert } from "lucide-react";
+import { BadgeCheck, Loader2, Pencil, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUpdateProfile } from "@/hooks/use-update-profile";
 import { COUNTRIES } from "@/lib/countries";
 import type { ProfileRecord } from "@/lib/profile-data";
@@ -18,7 +37,6 @@ import {
   profileSchema,
   type ProfileFormValues,
 } from "@/lib/validations/profile.schema";
-import { cn } from "@/lib/utils";
 
 interface ProfileDetailsFormProps {
   memberId: string;
@@ -29,24 +47,29 @@ export function ProfileDetailsForm({
   memberId,
   profile,
 }: ProfileDetailsFormProps) {
+  const [editing, setEditing] = useState(false);
+  const [displayProfile, setDisplayProfile] = useState(profile);
   const membershipIdFieldId = useId();
   const updateProfile = useUpdateProfile();
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: profile,
+    defaultValues: displayProfile,
   });
 
   const onSubmit = handleSubmit(async (values) => {
     updateProfile.reset();
     try {
       await updateProfile.mutateAsync({ memberId, values });
+      setDisplayProfile({ membershipId: memberId, ...values });
       reset(values);
+      setEditing(false);
       toast.success("Profile updated successfully");
     } catch (error) {
       toast.error("Couldn't update your profile", {
@@ -56,11 +79,21 @@ export function ProfileDetailsForm({
   });
 
   const handleCancel = () => {
-    reset(profile);
-    toast.info("Changes discarded");
+    reset(displayProfile);
+    setEditing(false);
   };
 
   const busy = isSubmitting || updateProfile.isPending;
+
+  if (!editing) {
+    return (
+      <ProfileReadOnlyView
+        memberId={memberId}
+        profile={displayProfile}
+        onEdit={() => setEditing(true)}
+      />
+    );
+  }
 
   return (
     <motion.form
@@ -81,7 +114,20 @@ export function ProfileDetailsForm({
             required
             registration={register("bvn")}
             error={errors.bvn?.message}
-            disabled
+            disabled={busy}
+            trailing={
+              <span className="flex items-center gap-1 text-xs font-medium text-success">
+                <BadgeCheck className="size-3.5" aria-hidden="true" />
+                Verified
+              </span>
+            }
+          />
+          <ProfileField
+            label="National Identification Number (NIN)"
+            required
+            registration={register("nin")}
+            error={errors.nin?.message}
+            disabled={busy}
             trailing={
               <span className="flex items-center gap-1 text-xs font-medium text-success">
                 <BadgeCheck className="size-3.5" aria-hidden="true" />
@@ -111,7 +157,8 @@ export function ProfileDetailsForm({
           />
           <ProfileSelect
             label="Gender"
-            registration={register("gender")}
+            control={control}
+            name="gender"
             error={errors.gender?.message}
             disabled={busy}
             options={["Male", "Female", "Other"]}
@@ -148,7 +195,8 @@ export function ProfileDetailsForm({
           />
           <ProfileSelect
             label="Country"
-            registration={register("country")}
+            control={control}
+            name="country"
             error={errors.country?.message}
             disabled={busy}
             options={COUNTRIES}
@@ -212,7 +260,7 @@ export function ProfileDetailsForm({
           type="button"
           variant="ghost"
           onClick={handleCancel}
-          disabled={busy || !isDirty}
+          disabled={busy}
         >
           Cancel
         </Button>
@@ -228,6 +276,115 @@ export function ProfileDetailsForm({
         </Button>
       </div>
     </motion.form>
+  );
+}
+
+interface ProfileReadOnlyViewProps {
+  memberId: string;
+  profile: ProfileRecord;
+  onEdit: () => void;
+}
+
+function ProfileReadOnlyView({
+  memberId,
+  profile,
+  onEdit,
+}: ProfileReadOnlyViewProps) {
+  const verifiedBadge = (
+    <span className="flex items-center gap-1 text-xs font-medium text-success">
+      <BadgeCheck className="size-3.5" aria-hidden="true" />
+      Verified
+    </span>
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="space-y-6"
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>Personal Information</CardTitle>
+          <CardAction>
+            <Button size="sm" variant="outline" onClick={onEdit}>
+              <Pencil className="size-3.5" aria-hidden="true" />
+              Edit
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ProfileViewField
+            label="Bank Verification Number (BVN)"
+            value={profile.bvn}
+            trailing={verifiedBadge}
+          />
+          <ProfileViewField
+            label="National Identification Number (NIN)"
+            value={profile.nin}
+            trailing={verifiedBadge}
+          />
+          <ProfileViewField label="First Name" value={profile.firstName} />
+          <ProfileViewField label="Last Name" value={profile.lastName} />
+          <ProfileViewField label="Other Name" value={profile.otherName} />
+          <ProfileViewField label="Gender" value={profile.gender} />
+          <ProfileViewField label="Phone" value={profile.phone} />
+          <ProfileViewField label="Email" value={profile.email} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Address</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ProfileViewField label="Home Address" value={profile.homeAddress} />
+          <ProfileViewField label="Country" value={profile.country} />
+          <ProfileViewField label="State" value={profile.state} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Social Links</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ProfileViewField label="Facebook" value={profile.facebook} />
+          <ProfileViewField label="Twitter" value={profile.twitter} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Membership</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ProfileViewField label="Membership ID" value={memberId} />
+          <ProfileViewField label="Guarantor" value={profile.guarantor} />
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+interface ProfileViewFieldProps {
+  label: string;
+  value?: string;
+  trailing?: ReactNode;
+}
+
+function ProfileViewField({ label, value, trailing }: ProfileViewFieldProps) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        {trailing}
+      </div>
+      <p className="text-sm font-medium text-foreground">
+        {value && value.trim() ? value : "—"}
+      </p>
+    </div>
   );
 }
 
@@ -282,7 +439,8 @@ interface ProfileSelectProps {
   disabled?: boolean;
   error?: string;
   options: readonly string[];
-  registration: UseFormRegisterReturn;
+  control: Control<ProfileFormValues>;
+  name: FieldPath<ProfileFormValues>;
 }
 
 function ProfileSelect({
@@ -291,7 +449,8 @@ function ProfileSelect({
   disabled,
   error,
   options,
-  registration,
+  control,
+  name,
 }: ProfileSelectProps) {
   const id = useId();
   return (
@@ -300,27 +459,32 @@ function ProfileSelect({
         {label}
         {required ? <span className="ml-0.5 text-destructive">*</span> : null}
       </Label>
-      <div className="relative">
-        <select
-          id={id}
-          disabled={disabled}
-          aria-invalid={!!error}
-          className={cn(
-            "h-11 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 pr-8 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30",
-          )}
-          {...registration}
-        >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-      </div>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <Select
+            value={field.value ?? ""}
+            onValueChange={(value) => field.onChange(value ?? "")}
+            disabled={disabled}
+          >
+            <SelectTrigger
+              id={id}
+              className="h-11 w-full"
+              aria-invalid={!!error}
+            >
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      />
       <FieldError message={error} />
     </div>
   );
