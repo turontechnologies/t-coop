@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { useMinimumDuration } from "@/hooks/use-minimum-duration";
 import { hasAppIntroShown } from "@/lib/app-intro";
 import { useAuthStore } from "@/store/auth.store";
+
+const PAGE_TITLES: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/profile": "My Profile",
+};
 
 export default function DashboardRouteLayout({
   children,
@@ -14,6 +19,7 @@ export default function DashboardRouteLayout({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const member = useAuthStore((state) => state.member);
 
@@ -41,7 +47,7 @@ export default function DashboardRouteLayout({
   }
 
   return (
-    <DashboardShell member={member} page="Dashboard">
+    <DashboardShell member={member} page={PAGE_TITLES[pathname] ?? "Dashboard"}>
       {children}
     </DashboardShell>
   );

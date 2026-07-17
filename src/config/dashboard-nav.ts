@@ -44,7 +44,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
   member: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
-    { label: "My Profile", icon: User },
+    { label: "My Profile", href: "/profile", icon: User },
     { label: "Savings & Contributions", icon: PiggyBank },
     { label: "Loans", icon: Landmark },
     { label: "Support", icon: LifeBuoy },

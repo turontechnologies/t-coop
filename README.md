@@ -59,6 +59,7 @@ page reload, since there's no backend to persist to).
 | `/create-new-password` | Set a new password after OTP verification           | [password-recovery.md](./documentation/password-recovery.md) |
 | `/register`            | Register a new co-operative                         | [register-page.md](./documentation/register-page.md)         |
 | `/dashboard`           | Role-aware dashboard (super admin / admin / member) | [dashboard.md](./documentation/dashboard.md)                 |
+| `/profile`             | View/edit your own member details (any role)        | [profile-page.md](./documentation/profile-page.md)           |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -112,9 +113,11 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Forgot password → OTP → new password
 - [x] Register co-operative
 - [x] Dashboard (super admin / admin / member views)
+- [x] My Profile (view/edit, all roles)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/auth.service.ts`)
-- [ ] The dashboard's non-Dashboard nav items (Co-operatives, Loans, Settings, etc.)
+- [ ] Real photo upload for the profile avatar (Cloudinary — in progress)
+- [ ] The dashboard's other non-Dashboard nav items (Co-operatives, Loans, Settings, etc.)
 
 ## Known Gotchas
 
