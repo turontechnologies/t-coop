@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SAVINGS_TYPES, type SavingsRecord } from "@/lib/savings-data";
+import { findSavingsTypeRange, type SavingsRecord } from "@/lib/savings-data";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +39,6 @@ const STATUS_OPTIONS = [
   "Failed",
 ] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
-
-function minMaxFor(savingsType: string) {
-  return SAVINGS_TYPES.find((type) => type.name === savingsType);
-}
 
 export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
   const router = useRouter();
@@ -204,7 +200,7 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
               </tr>
             ) : (
               pageRecords.map((record) => {
-                const range = minMaxFor(record.savingsType);
+                const range = findSavingsTypeRange(record.savingsType);
                 return (
                   <tr
                     key={record.id}

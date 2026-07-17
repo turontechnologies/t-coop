@@ -1,16 +1,35 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PiggyBank, Upload } from "lucide-react";
+import { PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AddSavingsModal } from "@/components/features/savings/add-savings-modal";
+import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
 import { PaymentSuccessModal } from "@/components/features/savings/payment-success-modal";
 import { SavingsRecordsTable } from "@/components/features/savings/savings-records-table";
 import { openPaystackCheckout } from "@/lib/paystack";
 import { formatNaira } from "@/lib/format";
+import { findSavingsTypeRange, type SavingsRecord } from "@/lib/savings-data";
+import type { ExportColumn } from "@/lib/table-export";
+import type { ImportedSavingsRow } from "@/lib/savings-import";
 import { useSavingsStore } from "@/store/savings.store";
+
+const EXPORT_COLUMNS: ExportColumn<SavingsRecord>[] = [
+  { header: "Savings Type", accessor: (record) => record.savingsType },
+  {
+    header: "Minimum Savings",
+    accessor: (record) => findSavingsTypeRange(record.savingsType)?.min ?? "",
+  },
+  {
+    header: "Maximum Savings",
+    accessor: (record) => findSavingsTypeRange(record.savingsType)?.max ?? "",
+  },
+  { header: "Savings Amount", accessor: (record) => record.amount },
+  { header: "Date", accessor: (record) => record.date },
+  { header: "Status", accessor: (record) => record.status },
+];
 
 interface MemberSavingsViewProps {
   memberId: string;
@@ -77,6 +96,26 @@ export function MemberSavingsView({
     }
   };
 
+  const handleImport = (importedRows: ImportedSavingsRow[]) => {
+    let runningTotal = total;
+    importedRows.forEach((row, index) => {
+      runningTotal += row.amount;
+      const reference = `IMPORT-${Date.now()}-${index}`;
+      addRecord({
+        id: reference,
+        memberId,
+        memberName,
+        savingsType: row.savingsType,
+        amount: row.amount,
+        balanceAfter: runningTotal,
+        method: "Manual Upload",
+        transactionId: reference,
+        date: row.date,
+        status: row.status,
+      });
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -102,18 +141,13 @@ export function MemberSavingsView({
         <CardContent>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-foreground">{heading}</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                toast.info("Coming soon", {
-                  description: "Export/import isn't wired up yet.",
-                })
-              }
-            >
-              <Upload className="size-3.5" aria-hidden="true" />
-              Export / Import
-            </Button>
+            <ExportImportMenu
+              rows={memberRecords}
+              columns={EXPORT_COLUMNS}
+              filenamePrefix={`savings-${memberId}`}
+              exportTitle={`${memberName} — Savings & Contributions`}
+              onImport={handleImport}
+            />
           </div>
           <SavingsRecordsTable records={memberRecords} />
         </CardContent>

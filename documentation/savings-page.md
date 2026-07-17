@@ -84,6 +84,24 @@ confirmation, and the individual savings record detail page.
   is now a shadcn primitive rather than a native form element, matching
   the standing rule that the whole app should read as one designed
   system, not a mix of styled and browser-default controls.
+- **Export is real, and Import requires the approved template first.**
+  "Export / Import" (per-member table and the admin aggregate view) is a
+  `<ExportImportMenu>` dropdown (`src/components/features/savings/export-import-menu.tsx`)
+  that generates real files client-side via `xlsx` (CSV/Excel) and
+  `jspdf`/`jspdf-autotable` (PDF) — see `src/lib/table-export.ts`. Import
+  is deliberately template-gated: "Import from template" stays disabled
+  (with a session-scoped `sessionStorage` flag, not a hard block that
+  would annoy repeat use) until "Download import template" has been
+  clicked at least once, so a member can't upload an arbitrary file and
+  guess at the expected shape. `src/lib/savings-import.ts` generates that
+  template (an `.xlsx` with a `Template` sheet + a `Valid Savings Types`
+  reference sheet) and parses/validates whatever gets re-uploaded — unknown
+  Savings Type names, out-of-range amounts, and unparseable dates are
+  rejected per-row (not the whole file) with a toast summarizing how many
+  rows imported vs. were skipped and why. Imported records are tagged
+  `method: "Manual Upload"` (the value already existed on
+  `SavingsRecord.method`, unused until now) so they're visually
+  distinguishable from a real Paystack payment on the details page.
 
 ## Flow
 
@@ -116,9 +134,17 @@ Any row in a records table → /savings/[id] → Savings Details page
   status filter, date range, pagination, clickable rows.
 - `src/components/features/savings/add-savings-modal.tsx` /
   `payment-success-modal.tsx` — the two dialogs.
+- `src/components/features/savings/export-import-menu.tsx` — the
+  Export/Import dropdown, reused by both the per-member table and the
+  admin aggregate view (generic over row shape via `ExportColumn<T>`).
 - `src/lib/paystack.ts` — the Paystack Inline wrapper.
-- `src/lib/savings-data.ts` — savings type definitions (name + min/max) and
-  seed records.
+- `src/lib/savings-data.ts` — savings type definitions (name + min/max),
+  the `findSavingsTypeRange` lookup shared by the table and export
+  columns, and seed records.
+- `src/lib/table-export.ts` — generic CSV/Excel/PDF export (`xlsx`,
+  `jspdf` + `jspdf-autotable`).
+- `src/lib/savings-import.ts` — import template generation + parsing/
+  validation for `<ExportImportMenu>`'s Import flow.
 - `src/store/savings.store.ts` — the reactive record store.
 - `src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`, `popover.tsx`,
   `calendar.tsx` — new shared primitives (see Design Decisions).
@@ -155,6 +181,7 @@ Savings" via Base UI's `Tabs.Indicator`.
   crediting anything. That requires a backend and the secret key, neither
   of which exist yet — flagged here rather than silently shipped as if it
   were production-ready.
-- `<SavingsRecordsTable>` and `<MembersSavingsOverview>`'s "Export/Import"
-  buttons are inert (toast only), matching the same honesty pattern used
-  for the dashboard's not-yet-built nav items.
+- Import only adds new records — there's no bulk edit/delete of existing
+  ones, and a large file (hundreds of rows) would add that many individual
+  Zustand store updates in a synchronous loop rather than a single batched
+  update, since nothing has needed that scale yet.

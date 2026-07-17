@@ -10,6 +10,10 @@ export const SAVINGS_TYPES: SavingsTypeDef[] = [
   { name: "Premium Savings", min: 500_000, max: 1_000_000 },
 ];
 
+export function findSavingsTypeRange(name: string): SavingsTypeDef | undefined {
+  return SAVINGS_TYPES.find((type) => type.name === name);
+}
+
 export type SavingsStatus = "Success" | "Pending" | "Failed";
 
 export interface SavingsRecord {

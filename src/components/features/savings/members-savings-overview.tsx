@@ -1,13 +1,24 @@
 "use client";
 
 import { useMemo } from "react";
-import { Upload, Wallet } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { SAVINGS_TYPES } from "@/lib/savings-data";
+import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
+import { SAVINGS_TYPES, type SavingsTypeDef } from "@/lib/savings-data";
 import { formatNaira } from "@/lib/format";
+import type { ExportColumn } from "@/lib/table-export";
 import { useSavingsStore } from "@/store/savings.store";
+
+interface SavingsTypeTotal extends SavingsTypeDef {
+  total: number;
+}
+
+const EXPORT_COLUMNS: ExportColumn<SavingsTypeTotal>[] = [
+  { header: "Savings Type", accessor: (type) => type.name },
+  { header: "Minimum Savings", accessor: (type) => type.min },
+  { header: "Maximum Savings", accessor: (type) => type.max },
+  { header: "Total Savings & Contributions", accessor: (type) => type.total },
+];
 
 export function MembersSavingsOverview() {
   const records = useSavingsStore((state) => state.records);
@@ -49,18 +60,12 @@ export function MembersSavingsOverview() {
             <h3 className="text-sm font-semibold text-foreground">
               Members Savings
             </h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                toast.info("Coming soon", {
-                  description: "Export/import isn't wired up yet.",
-                })
-              }
-            >
-              <Upload className="size-3.5" aria-hidden="true" />
-              Export / Import
-            </Button>
+            <ExportImportMenu
+              rows={totalsByType}
+              columns={EXPORT_COLUMNS}
+              filenamePrefix="members-savings-overview"
+              exportTitle="Members Savings Overview"
+            />
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-border">
