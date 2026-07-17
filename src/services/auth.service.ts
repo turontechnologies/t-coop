@@ -5,8 +5,6 @@ import type {
   LoginResponse,
   PasswordResetRequest,
   PasswordResetResponse,
-  RegisterCooperativeRequest,
-  RegisterCooperativeResponse,
 } from "@/types/auth";
 
 export const authService = {
@@ -31,20 +29,6 @@ export const authService = {
 
     const { data } = await apiClient.post<PasswordResetResponse>(
       "/auth/forgot-password",
-      payload,
-    );
-    return data;
-  },
-
-  async registerCooperative(
-    payload: RegisterCooperativeRequest,
-  ): Promise<RegisterCooperativeResponse> {
-    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true") {
-      return mockRegisterCooperative(payload);
-    }
-
-    const { data } = await apiClient.post<RegisterCooperativeResponse>(
-      "/auth/register",
       payload,
     );
     return data;
@@ -97,23 +81,4 @@ async function mockRequestPasswordReset({
     member: match.member,
     otp,
   };
-}
-
-async function mockRegisterCooperative({
-  membershipId,
-}: RegisterCooperativeRequest): Promise<RegisterCooperativeResponse> {
-  await new Promise((resolve) => setTimeout(resolve, 1100));
-
-  const isTaken = MOCK_USERS.some(
-    (user) =>
-      user.membershipId.toLowerCase() === membershipId.trim().toLowerCase(),
-  );
-
-  if (isTaken) {
-    throw new Error(
-      "That membership ID is already registered. Please choose another.",
-    );
-  }
-
-  return { membershipId };
 }

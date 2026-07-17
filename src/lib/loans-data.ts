@@ -3,6 +3,8 @@ export interface LoanTypeDef {
   interestRate: number;
   maxAmount: number;
   durationMonths: number;
+  /** Eligible amount = min(maxAmount, totalSavings * eligibilityPercent / 100). */
+  eligibilityPercent: number;
 }
 
 export const LOAN_TYPES: LoanTypeDef[] = [
@@ -11,18 +13,21 @@ export const LOAN_TYPES: LoanTypeDef[] = [
     interestRate: 5,
     maxAmount: 50_000,
     durationMonths: 3,
+    eligibilityPercent: 300,
   },
   {
     name: "Education Loan",
     interestRate: 7,
     maxAmount: 200_000,
     durationMonths: 6,
+    eligibilityPercent: 200,
   },
   {
     name: "Business Loan",
     interestRate: 10,
     maxAmount: 500_000,
     durationMonths: 12,
+    eligibilityPercent: 100,
   },
 ];
 
@@ -41,7 +46,10 @@ export function computeEligibleAmount(
   totalSavings: number,
   loanType: LoanTypeDef,
 ): number {
-  return Math.min(loanType.maxAmount, Math.max(totalSavings * 2, 10_000));
+  return Math.min(
+    loanType.maxAmount,
+    Math.max(totalSavings * (loanType.eligibilityPercent / 100), 10_000),
+  );
 }
 
 export interface LoanTerms {

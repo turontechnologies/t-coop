@@ -27,7 +27,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   super_admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
-    { label: "Co-operatives", icon: Building2 },
+    { label: "Co-operatives", href: "/co-operatives", icon: Building2 },
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
     { label: "Loans", href: "/loans", icon: Landmark },
     { label: "Subscriptions", icon: CreditCard },

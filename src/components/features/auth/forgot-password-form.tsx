@@ -146,17 +146,8 @@ export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
         initial="hidden"
         animate="visible"
         variants={fieldVariants}
-        className="space-y-2 text-center text-sm"
+        className="text-center text-sm"
       >
-        <p className="text-muted-foreground">
-          New to T-Coop?{" "}
-          <Link
-            href="/register"
-            className="font-semibold text-primary underline-offset-4 hover:underline focus-visible:underline"
-          >
-            Register Co-operative
-          </Link>
-        </p>
         <Link
           href="/login"
           className="font-medium text-primary underline-offset-4 hover:underline focus-visible:underline"
