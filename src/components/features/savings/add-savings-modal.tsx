@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SAVINGS_TYPES } from "@/lib/savings-data";
 
 interface AddSavingsModalProps {
@@ -58,28 +65,22 @@ export function AddSavingsModal({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor={typeId}>Savings Type</Label>
-            <div className="relative">
-              <select
-                id={typeId}
-                value={savingsType}
-                onChange={(event) => setSavingsType(event.target.value)}
-                disabled={busy}
-                className="h-11 w-full appearance-none rounded-lg border border-input bg-transparent px-2.5 pr-8 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30"
-              >
-                <option value="" disabled>
-                  Select
-                </option>
+            <Select
+              value={savingsType}
+              onValueChange={(value) => setSavingsType(value ?? "")}
+              disabled={busy}
+            >
+              <SelectTrigger id={typeId} className="h-11 w-full">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
                 {SAVINGS_TYPES.map((type) => (
-                  <option key={type.name} value={type.name}>
+                  <SelectItem key={type.name} value={type.name}>
                     {type.name}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-            </div>
+              </SelectContent>
+            </Select>
             {selectedType ? (
               <p className="text-xs text-muted-foreground">
                 Save between ₦{selectedType.min.toLocaleString()} and ₦

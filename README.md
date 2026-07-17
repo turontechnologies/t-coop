@@ -150,3 +150,10 @@ them when the feature's behavior changes, not just when it's first built.
 - `zod` is pinned to `4.0.0` — `@hookform/resolvers@5.4.0`'s types don't
   structurally match newer `zod@4.4.x` internals. Runtime is unaffected;
   revisit when `@hookform/resolvers` publishes a fix.
+- **`Calendar`'s focus prop is `autoFocus`, not `initialFocus`.** This
+  project's `react-day-picker` is v10, which renamed the prop; older
+  shadcn snippets/docs still show `initialFocus`. Passing the old name
+  isn't a type error — React just silently drops an unrecognized prop —
+  so the calendar quietly loses its open-focus behavior instead of
+  failing loudly. See [savings-page.md](./documentation/savings-page.md)
+  for where this first showed up.

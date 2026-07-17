@@ -2,12 +2,31 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import type { DateRange } from "react-day-picker";
+import { CalendarIcon, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SAVINGS_TYPES, type SavingsRecord } from "@/lib/savings-data";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+function toIsoDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
 interface SavingsRecordsTableProps {
   records: SavingsRecord[];
@@ -30,10 +49,12 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+
+  const dateFrom = dateRange?.from ? toIsoDate(dateRange.from) : "";
+  const dateTo = dateRange?.to ? toIsoDate(dateRange.to) : "";
 
   const filtered = useMemo(() => {
     return records.filter((record) => {
@@ -76,44 +97,77 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
           />
         </div>
 
-        <select
+        <Select
           value={status}
-          onChange={(event) => {
-            setStatus(event.target.value as (typeof STATUS_OPTIONS)[number]);
+          onValueChange={(value) => {
+            setStatus(value as (typeof STATUS_OPTIONS)[number]);
             setPage(1);
           }}
-          className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option === "All statuses" ? "By status" : option}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger size="sm" className="w-35">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option === "All statuses" ? "By status" : option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <input
-            type="date"
-            aria-label="From date"
-            value={dateFrom}
-            onChange={(event) => {
-              setDateFrom(event.target.value);
-              setPage(1);
-            }}
-            className="h-9 rounded-lg border border-input bg-transparent px-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-          />
-          <span>–</span>
-          <input
-            type="date"
-            aria-label="To date"
-            value={dateTo}
-            onChange={(event) => {
-              setDateTo(event.target.value);
-              setPage(1);
-            }}
-            className="h-9 rounded-lg border border-input bg-transparent px-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-          />
-        </div>
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="font-normal text-muted-foreground data-[has-range=true]:text-foreground"
+                data-has-range={!!(dateFrom || dateTo)}
+              />
+            }
+          >
+            <CalendarIcon className="size-3.5" aria-hidden="true" />
+            {dateRange?.from ? (
+              dateRange.to ? (
+                <>
+                  {formatDateLong(dateRange.from)} –{" "}
+                  {formatDateLong(dateRange.to)}
+                </>
+              ) : (
+                formatDateLong(dateRange.from)
+              )
+            ) : (
+              "Date range"
+            )}
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={(range) => {
+                setDateRange(range);
+                setPage(1);
+              }}
+              numberOfMonths={2}
+              autoFocus
+            />
+            {dateRange?.from ? (
+              <div className="flex justify-end border-t border-border p-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setDateRange(undefined);
+                    setPage(1);
+                  }}
+                >
+                  Clear
+                </Button>
+              </div>
+            ) : null}
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -200,57 +254,62 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span>View</span>
-          <select
-            value={pageSize}
-            onChange={(event) => {
-              setPageSize(Number(event.target.value));
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => {
+              setPageSize(Number(value));
               setPage(1);
             }}
-            className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
           >
-            {PAGE_SIZE_OPTIONS.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger size="sm" className="w-16">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span>per page</span>
         </div>
 
         <div className="flex items-center gap-1">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+            className="text-muted-foreground"
             aria-label="Previous page"
           >
             <ChevronLeft className="size-4" />
-          </button>
+          </Button>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-            <button
+            <Button
               key={num}
               type="button"
+              variant={num === currentPage ? "default" : "ghost"}
+              size="icon"
               onClick={() => setPage(num)}
-              className={cn(
-                "flex size-8 items-center justify-center rounded-lg text-sm font-medium",
-                num === currentPage
-                  ? "bg-primary text-primary-foreground"
-                  : "text-foreground hover:bg-muted",
-              )}
+              className="text-sm font-medium"
             >
               {num}
-            </button>
+            </Button>
           ))}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+            className="text-muted-foreground"
             aria-label="Next page"
           >
             <ChevronRight className="size-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

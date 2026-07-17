@@ -51,13 +51,19 @@ confirmation, and the individual savings record detail page.
   total, not a giant list of every member's individual transactions (that
   already exists per-member on their own page). `<MembersSavingsOverview>`
   reflects that: it sums `records` by `savingsType` across everyone.
-- **A new `Dialog` and `Tabs` primitive were added**
-  (`src/components/ui/dialog.tsx`, `src/components/ui/tabs.tsx`) — neither
-  existed yet. Both are thin wrappers around `@base-ui/react`'s `Dialog`
-  and `Tabs`, styled to match the rest of `src/components/ui/` (same
-  `data-open`/`data-closed` animation classes as `dropdown-menu.tsx`), not
-  one-off modal/tab code local to this feature — the next screen that
-  needs a modal or tabs reuses these instead of inventing another.
+- **New `Dialog`, `Tabs`, `Select`, `Popover`, and `Calendar` primitives
+  were added** (`src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`,
+  `popover.tsx`, `calendar.tsx`) via `pnpm dlx shadcn@latest add`, not
+  hand-authored — the CLI generates them against this project's
+  `base-nova`/`@base-ui/react` style (`components.json`) so they match the
+  rest of `src/components/ui/` (same `data-open`/`data-closed` animation
+  classes as `dropdown-menu.tsx`) automatically. None of these are
+  one-off code local to this feature — every future screen that needs a
+  modal, tabs, a select, or a date picker reuses these instead of
+  inventing another. `Calendar` pulls in `react-day-picker`; its focus
+  prop is `autoFocus`, not the `initialFocus` name older shadcn examples
+  use — the older name is silently dropped as an unrecognized prop rather
+  than a type error, worth knowing before copying old snippets.
 - **Savings records live in a Zustand store, not a plain module array.**
   Every other mock mutation in this app (password reset, profile edits)
   uses a plain mutable module-level object, which is enough because
@@ -70,12 +76,14 @@ confirmation, and the individual savings record detail page.
   data lifetime.
 - **Filters are real, not decorative.** Search, status, and date-range in
   `<SavingsRecordsTable>` actually filter the client-side array; pagination
-  actually slices it. The date range is two plain native `<input
-type="date">` fields rather than a popover calendar — there's no
-  Popover primitive in this codebase yet, and building one just for a date
-  range here would have been the wrong amount of new surface area (the
-  same reasoning already applied to the country/gender selects elsewhere
-  using native `<select>`).
+  actually slices it. Status (here and in the "Add to Savings" modal's
+  Savings Type field) and page-size use the shadcn `Select`; the date
+  range uses a `Popover` + `Calendar` (`mode="range"`, two-month view)
+  instead of the two plain native `<input type="date">` fields this
+  screen originally shipped with — every interactive control on this page
+  is now a shadcn primitive rather than a native form element, matching
+  the standing rule that the whole app should read as one designed
+  system, not a mix of styled and browser-default controls.
 
 ## Flow
 
@@ -112,8 +120,8 @@ Any row in a records table → /savings/[id] → Savings Details page
 - `src/lib/savings-data.ts` — savings type definitions (name + min/max) and
   seed records.
 - `src/store/savings.store.ts` — the reactive record store.
-- `src/components/ui/dialog.tsx`, `src/components/ui/tabs.tsx` — new
-  shared primitives (see Design Decisions).
+- `src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`, `popover.tsx`,
+  `calendar.tsx` — new shared primitives (see Design Decisions).
 
 ## Setup: Paystack
 
@@ -150,5 +158,3 @@ Savings" via Base UI's `Tabs.Indicator`.
 - `<SavingsRecordsTable>` and `<MembersSavingsOverview>`'s "Export/Import"
   buttons are inert (toast only), matching the same honesty pattern used
   for the dashboard's not-yet-built nav items.
-- The date-range filter doesn't validate `from <= to`; a real version
-  should.
