@@ -65,7 +65,11 @@ export function DashboardSidebar({
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = !!item.href && pathname === item.href;
+            const isActive =
+              !!item.href &&
+              (pathname === item.href ||
+                (item.href !== "/dashboard" &&
+                  pathname.startsWith(`${item.href}/`)));
 
             if (item.href) {
               return (

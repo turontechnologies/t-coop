@@ -11,7 +11,14 @@ import { useAuthStore } from "@/store/auth.store";
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/profile": "My Profile",
+  "/savings": "Savings & Contributions",
 };
+
+function getPageTitle(pathname: string): string {
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  if (pathname.startsWith("/savings/")) return "Savings Details";
+  return "Dashboard";
+}
 
 export default function DashboardRouteLayout({
   children,
@@ -47,7 +54,7 @@ export default function DashboardRouteLayout({
   }
 
   return (
-    <DashboardShell member={member} page={PAGE_TITLES[pathname] ?? "Dashboard"}>
+    <DashboardShell member={member} page={getPageTitle(pathname)}>
       {children}
     </DashboardShell>
   );

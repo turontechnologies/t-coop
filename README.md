@@ -32,6 +32,19 @@ Without it, the app posts to a real `/api/auth/*` endpoint that doesn't
 exist yet, and every auth flow fails silently against a 404. This is the
 single most common "why can't I log in" cause — check this first.
 
+**Real payments require a Paystack public key.** To pay for a new savings
+entry on `/savings`, add a **test-mode** public key to the same
+`.env.local`:
+
+```
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Never put a Paystack _secret_ key in a `NEXT_PUBLIC_*` variable. Without
+this one set, "Proceed" in the Add to Savings modal fails with a toast
+explaining what's missing rather than doing nothing silently. See
+[savings-page.md](./documentation/savings-page.md#setup-paystack).
+
 ## Demo Accounts
 
 There is no sign-up path into the app itself (see
@@ -60,6 +73,8 @@ page reload, since there's no backend to persist to).
 | `/register`            | Register a new co-operative                         | [register-page.md](./documentation/register-page.md)         |
 | `/dashboard`           | Role-aware dashboard (super admin / admin / member) | [dashboard.md](./documentation/dashboard.md)                 |
 | `/profile`             | View/edit your own member details (any role)        | [profile-page.md](./documentation/profile-page.md)           |
+| `/savings`             | Savings & Contributions (role-aware; real Paystack) | [savings-page.md](./documentation/savings-page.md)           |
+| `/savings/[id]`        | Individual savings record detail                    | [savings-page.md](./documentation/savings-page.md)           |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -94,8 +109,8 @@ src/
   config/                    role → nav item mapping
   hooks/                     one hook per mutation, + small UI-timing hooks
   lib/                       mock data, validation schemas, small utilities
-  services/                  authService — the one seam a real backend plugs into
-  store/                     Zustand stores (auth session, password-reset session)
+  services/                  auth/profile/etc. services — the seam a real backend plugs into
+  store/                     Zustand stores (auth session, password-reset session, savings records)
   types/                     shared domain types
 ```
 
@@ -114,8 +129,10 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Register co-operative
 - [x] Dashboard (super admin / admin / member views)
 - [x] My Profile (view/edit, all roles)
+- [x] Savings & Contributions (role-aware views, real Paystack checkout, savings detail page)
 - [x] Light/dark theme
-- [ ] Real backend integration (everything currently mocked in `src/services/auth.service.ts`)
+- [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
+- [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)
 - [ ] Real photo upload for the profile avatar (Cloudinary — in progress)
 - [ ] The dashboard's other non-Dashboard nav items (Co-operatives, Loans, Settings, etc.)
 

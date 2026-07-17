@@ -25,3 +25,18 @@ export function getInitials(name: string): string {
   const initials = parts.slice(0, 2).map((part) => part[0]?.toUpperCase());
   return initials.join("");
 }
+
+const NAIRA_FORMATTER = new Intl.NumberFormat("en-NG", {
+  maximumFractionDigits: 0,
+});
+
+export function formatNaira(amount: number): string {
+  return `₦${NAIRA_FORMATTER.format(amount)}`;
+}
+
+export function formatDateLong(date: Date = new Date()): string {
+  const day = date.getDate();
+  const month = MONTHS[date.getMonth()];
+  const year = date.getFullYear();
+  return `${month} ${day}, ${year}`;
+}
