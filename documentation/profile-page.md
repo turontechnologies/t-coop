@@ -9,11 +9,13 @@ not a one-off. Reachable by every role, not just members.
 
 ## Purpose
 
-Let the signed-in user view and edit their own KYC-style member details,
-matching the fields and density of the reference "Member Details" design,
-redesigned to look and behave like a real product screen rather than a
-static mockup — sectioned, validated, with fields that are realistically
-editable (or not).
+Let the signed-in user view their own KYC-style member details by default
+as plain read-only text — not a form waiting to be filled in — and only
+switch into an editable form when they deliberately choose to, via an
+Edit button. Matches the fields and density of the reference "Member
+Details" design, redesigned to look and behave like a real product screen
+rather than a static mockup — sectioned, validated, with every field
+(including BVN and NIN) genuinely editable once in edit mode.
 
 ## Design Decisions
 
@@ -30,18 +32,39 @@ editable (or not).
   sections with headings — Personal Information, Address, Social Links,
   Membership — so the form is scannable rather than a wall of inputs. Same
   fields, same data, better information hierarchy.
-- **Two fields are realistically read-only, not just styled to look
-  editable.** The reference showed every field, including BVN and
-  Membership ID, in identical editable-looking inputs. In a real product
-  neither would be user-editable: a BVN is bank-verified once and locked
-  (shown here with a "Verified" badge next to the label, disabled input);
-  a Membership ID is system-assigned. Everything else — name, contact,
-  address, social links, guarantor — stays editable. "User Access" from
-  the reference (a permission level) was dropped entirely rather than
-  faked as an editable field — a user editing their own permission level
-  isn't realistic, and the mock has nowhere legitimate to enforce that
-  boundary; it's represented instead as the read-only role badge in the
-  header card.
+- **Read-only by default, an explicit Edit action to change anything.**
+  The page loads as plain text — label above value, no inputs anywhere —
+  and an "Edit" button (`CardAction` in the Personal Information card
+  header) is the only way in. This isn't just visual: `<input>`/`<select>`
+  elements literally don't exist in the DOM until edit mode is entered —
+  verified in a real browser, not just by reading the JSX, since it's
+  easy to accidentally leave a disabled input in place instead of a true
+  read-only element. A member landing on this page to check their details
+  shouldn't see a wall of editable-looking fields and wonder whether
+  typing in one commits anything.
+- **BVN and NIN are both editable in edit mode, not permanently locked.**
+  An earlier version of this page kept BVN hard-`disabled` to simulate a
+  bank-verified, locked field. That's been reversed: the member can now
+  edit BVN and NIN like every other field once "Edit" is clicked — both
+  still carry a "Verified" badge next to the label as a visual cue, but
+  it's cosmetic, not a real block. NIN (National Identification Number)
+  is a new field alongside BVN, added to `profileSchema` and
+  `ProfileRecord` with the same 11-digit validation. Membership ID stays
+  genuinely read-only in both modes (system-assigned, shown as plain
+  `<Input disabled>` even inside the edit form) since a member changing
+  their own membership ID isn't realistic in either state. "User Access"
+  from the reference (a permission level) was dropped entirely rather
+  than faked as an editable field — a user editing their own permission
+  level isn't realistic, and the mock has nowhere legitimate to enforce
+  that boundary; it's represented instead as the read-only role badge in
+  the header card.
+- **Gender and Country use the shadcn `Select`, not a native `<select>`.**
+  This page originally shipped with a hand-styled native `<select>` (an
+  older pattern than the `/savings` and `/loans` builds that established
+  the shadcn-everywhere standard). Brought in line with the rest of the
+  app when this page was reworked — both fields are wired through RHF's
+  `Controller` since Base UI's `Select` isn't an uncontrolled native
+  element `register()` can attach to directly.
 - **Avatar is generated initials, not a photo.** Consistent with every
   other avatar in the app (topbar, recent activities) — see
   [theming-and-motion.md](./theming-and-motion.md#wordmark-asset) for the
@@ -49,14 +72,19 @@ editable (or not).
   The camera/edit-photo button is present (matching the affordance a real
   profile page would have) but surfaces a "coming soon" toast — see
   [Future Improvements](#future-improvements) for the real-upload plan.
-- **Save is genuinely gated on having unsaved changes.** Both "Cancel" and
-  "Update Details" are disabled until the form is dirty
+- **Save is gated on having unsaved changes; leaving edit mode isn't.**
+  "Update Details" stays disabled until the form is dirty
   (`formState.isDirty`) — a save button that's always clickable even with
   nothing changed is a small but real tell that a form isn't fully wired
-  up. "Cancel" resets to the last-saved values via RHF's `reset(profile)`
-  rather than navigating away, so the user doesn't lose their place.
-  Saving calls `reset(values)` on success too, so the button correctly
-  goes back to disabled until the _next_ edit.
+  up. "Cancel" is only gated on the in-flight save (`busy`), not
+  `isDirty`, since — now that edit mode is a distinct state the member
+  opted into — "Cancel" is also how they back out of edit mode entirely
+  with nothing changed, not only how they discard a change; it resets to
+  the last-saved values via RHF's `reset(displayProfile)` and returns to
+  the read-only view. Saving does the equivalent: `reset(values)` plus
+  updating local `displayProfile` state so the read-only view immediately
+  reflects the save without needing a page reload (the mock service
+  mutates a module-level object, which isn't itself reactive).
 - **Persists in-memory, same honesty as the rest of the mock.** `authService`'s
   sibling here is `src/services/profile.service.ts` —
   `updateProfileData()` (`src/lib/profile-data.ts`) mutates the same kind
@@ -88,8 +116,12 @@ access.
   pieces below.
 - `src/components/features/profile/profile-header-card.tsx` — avatar,
   name, role badge, email, membership ID.
-- `src/components/features/profile/profile-details-form.tsx` — the four
-  sectioned cards, RHF + Zod validation (`profileSchema`), Cancel/Save.
+- `src/components/features/profile/profile-details-form.tsx` — renders
+  either `ProfileReadOnlyView` (default; plain label/value pairs via
+  `ProfileViewField`, four sectioned cards, an "Edit" `CardAction`) or the
+  editable form (same four sections, RHF + Zod validation via
+  `profileSchema`, `ProfileField`/`ProfileSelect`, Cancel/Update Details),
+  toggled by local `editing` state in one component.
 - `src/hooks/use-update-profile.ts` — TanStack Query mutation wrapping
   `profileService.updateProfile`.
 - `src/lib/profile-data.ts` — mock profile records, one per demo account,
@@ -109,8 +141,9 @@ they can start typing). Page-level entrance still comes from the root
 - **Real photo upload via Cloudinary** is the next planned step — the
   camera button already sits in the right place, it just needs a real
   unsigned upload wired to it instead of the "coming soon" toast.
-- Membership ID and BVN are hardcoded read-only; once there's a real KYC
-  provider, BVN verification status should come from that provider rather
-  than being permanently `true`.
+- BVN/NIN "Verified" badges are hardcoded permanently `true`; once there's
+  a real KYC provider, that status (and whether the field should even be
+  user-editable after verification) should come from that provider
+  instead.
 - No confirmation prompt before "Cancel" discards edits — fine for a demo,
   worth adding once real users could lose meaningful unsaved work.
