@@ -112,20 +112,34 @@ panel) — and:
   `coopSavingsBySummaryType` (`src/lib/coop-data.ts`) computes it as a flat
   2% of each type's total — clearly labeled as a mock simplification here
   rather than left unexplained.
-- **Activate/Deactivate is a real, if simplified, mock action** — both at
-  the co-operative level (`CoopHeaderCard`'s "Disable Co-operative" /
-  "Activate Co-operative" button) and the individual member level (the
-  power-icon toggle on each row in the Members tab). Both mutate
-  `useCoopStore` and show a confirmation toast; neither is wired to any
-  cascading real-world effect (e.g. disabling a co-op doesn't currently
-  block its members from anything else in the mock), which is a fair
+- **Activate/Deactivate requires an explicit confirmation, not an
+  instant toggle.** Both the co-operative level (`CoopHeaderCard`'s
+  "Disable Co-operative" / "Activate Co-operative" button) and the
+  individual member level (the power-icon toggle on each row in the
+  Members tab) open a shadcn `AlertDialog` — added via
+  `pnpm dlx shadcn@latest add alert-dialog` — describing the consequence
+  ("Members won't be able to access their accounts…") before anything
+  mutates. This isn't a stock "are you sure?" wrapper: `AlertDialogAction`
+  in this Base UI port is a plain `Button`, not an auto-closing primitive,
+  so both call sites control `open`/`busy` state themselves — the dialog
+  stays open with a spinner through the (simulated) mutation and only
+  closes on success, the same real-busy-state discipline used for every
+  other async action in the app (Add to Savings, Take a Loan, etc.).
+  Confirmed in a real browser that Cancel leaves the status genuinely
+  unchanged and only the confirm action mutates it. Neither toggle is
+  wired to a cascading real-world effect (e.g. disabling a co-op doesn't
+  currently block its members from anything else in the mock) — a fair
   simplification for a demo but called out here rather than implied.
-- **The Members tab's edit (pencil) action is intentionally a "Coming
-  soon" toast, not a real inline edit.** Editing a member's role/details
-  is a materially different, larger feature (its own validation, its own
-  form) than the activate/deactivate toggle sitting right next to it — it
-  was left honestly unbuilt rather than a half-implemented edit that only
-  changes one field.
+- **The Members tab's edit (pencil) action opens a real form, not a
+  placeholder toast.** `EditMemberModal`
+  (`src/components/features/coop/edit-member-modal.tsx`) is a full
+  RHF + Zod (`editMemberSchema`) form — First/Last Name, Email, Role
+  (shadcn `Select`, Member/Admin), Guarantor, Country, State — pre-filled
+  from the member's current data via `defaultValues`, saving through the
+  store's `updateMember` action. One modal instance is mounted per
+  "currently editing" member (`useState<CoopMember | null>`) rather than
+  one static instance reused across rows, so it always opens fresh with
+  the clicked row's data instead of needing a `values`-sync workaround.
 - **Every table on this page follows the shadcn-everywhere convention**
   established on `/savings` and `/loans`: `Select` for status filters and
   page size, `Popover` + `Calendar` for date ranges, shadcn `Button` for
@@ -152,15 +166,20 @@ panel) — and:
   `CoopLoanRecord` types, seed data, and derived-summary helpers
   (`coopSavingsBySummaryType`, `coopLoansBySummaryType`, totals).
 - `src/store/coop.store.ts` — Zustand store: `cooperatives`, `addCooperative`,
-  `setCooperativeStatus`, `setMemberStatus`.
+  `setCooperativeStatus`, `setMemberStatus`, `updateMember`.
 - `src/lib/validations/coop.schema.ts` — `addCooperativeSchema` for the
-  "Add New Co-operative" form.
+  "Add New Co-operative" form, `editMemberSchema` for the Members tab's
+  edit dialog.
+- `src/components/ui/alert-dialog.tsx` — shadcn `AlertDialog` primitive,
+  added specifically for the Disable/Activate and member status
+  confirmations (first use of this primitive in the app).
 - `src/components/features/coop/` — `coop-list-table.tsx`,
   `add-cooperative-form.tsx`, `coop-header-card.tsx`,
-  `coop-members-table.tsx`, `coop-savings-summary-table.tsx`,
-  `coop-loans-summary-table.tsx`, `coop-savings-type-records-table.tsx`,
-  `coop-loan-type-records-table.tsx`, `coop-member-header-card.tsx`,
-  `coop-member-savings-table.tsx`, `coop-member-loans-table.tsx`.
+  `coop-members-table.tsx`, `edit-member-modal.tsx`,
+  `coop-savings-summary-table.tsx`, `coop-loans-summary-table.tsx`,
+  `coop-savings-type-records-table.tsx`, `coop-loan-type-records-table.tsx`,
+  `coop-member-header-card.tsx`, `coop-member-savings-table.tsx`,
+  `coop-member-loans-table.tsx`.
 - Reuses `src/components/features/savings/export-import-menu.tsx` (export
   only — no bulk import here, since this is oversight data, not a place an
   admin should be adding transactions in bulk) and
@@ -178,9 +197,9 @@ nested route under it.
 
 ## Future Improvements
 
-- The Members tab's edit action and "View Full Profile" are both honest
-  placeholders (see Design Decisions) — real implementations would need
-  their own forms/routes, not a quick addition to this page.
+- "View Full Profile" on the member detail page is still an honest
+  placeholder (see Design Decisions) — a real implementation would need
+  its own KYC route, not a quick addition to this page.
 - "Earnings on Savings" is a flat illustrative rate; a real product would
   need an actual dividend/interest accrual model shared with a real
   savings ledger.

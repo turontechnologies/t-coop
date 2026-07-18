@@ -1,10 +1,22 @@
 import { create } from "zustand";
 import {
   INITIAL_COOPERATIVES,
+  type CoopMember,
   type CoopMemberStatus,
   type CoopStatus,
   type Cooperative,
 } from "@/lib/coop-data";
+
+export type MemberEditableFields = Pick<
+  CoopMember,
+  | "firstName"
+  | "lastName"
+  | "email"
+  | "role"
+  | "guarantor"
+  | "country"
+  | "state"
+>;
 
 interface CoopState {
   cooperatives: Cooperative[];
@@ -14,6 +26,11 @@ interface CoopState {
     coopId: string,
     memberId: string,
     status: CoopMemberStatus,
+  ) => void;
+  updateMember: (
+    coopId: string,
+    memberId: string,
+    updates: MemberEditableFields,
   ) => void;
 }
 
@@ -35,6 +52,19 @@ export const useCoopStore = create<CoopState>((set) => ({
               ...coop,
               members: coop.members.map((member) =>
                 member.id === memberId ? { ...member, status } : member,
+              ),
+            }
+          : coop,
+      ),
+    })),
+  updateMember: (coopId, memberId, updates) =>
+    set((state) => ({
+      cooperatives: state.cooperatives.map((coop) =>
+        coop.id === coopId
+          ? {
+              ...coop,
+              members: coop.members.map((member) =>
+                member.id === memberId ? { ...member, ...updates } : member,
               ),
             }
           : coop,

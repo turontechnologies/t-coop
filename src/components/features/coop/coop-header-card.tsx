@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, CheckCircle2 } from "lucide-react";
+import { Ban, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Cooperative } from "@/lib/coop-data";
@@ -15,6 +26,7 @@ interface CoopHeaderCardProps {
 }
 
 export function CoopHeaderCard({ coop }: CoopHeaderCardProps) {
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const setCooperativeStatus = useCoopStore(
     (state) => state.setCooperativeStatus,
@@ -22,12 +34,13 @@ export function CoopHeaderCard({ coop }: CoopHeaderCardProps) {
 
   const isActive = coop.status === "Active";
 
-  const handleToggle = async () => {
+  const handleConfirm = async () => {
     setBusy(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
     const next = isActive ? "Disabled" : "Active";
     setCooperativeStatus(coop.id, next);
     setBusy(false);
+    setOpen(false);
     toast.success(
       next === "Disabled" ? "Co-operative disabled" : "Co-operative activated",
       { description: `${coop.name} is now ${next.toLowerCase()}.` },
@@ -41,19 +54,57 @@ export function CoopHeaderCard({ coop }: CoopHeaderCardProps) {
           <h2 className="text-sm font-semibold text-foreground">
             Co-operative Details
           </h2>
-          <Button
-            size="sm"
-            variant={isActive ? "destructive" : "secondary"}
-            onClick={handleToggle}
-            disabled={busy}
-          >
-            {isActive ? (
-              <Ban className="size-3.5" aria-hidden="true" />
-            ) : (
-              <CheckCircle2 className="size-3.5" aria-hidden="true" />
-            )}
-            {isActive ? "Disable Co-operative" : "Activate Co-operative"}
-          </Button>
+
+          <AlertDialog open={open} onOpenChange={setOpen}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  size="sm"
+                  variant={isActive ? "destructive" : "secondary"}
+                />
+              }
+            >
+              {isActive ? (
+                <Ban className="size-3.5" aria-hidden="true" />
+              ) : (
+                <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              )}
+              {isActive ? "Disable Co-operative" : "Activate Co-operative"}
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {isActive
+                    ? `Disable ${coop.name}?`
+                    : `Activate ${coop.name}?`}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {isActive
+                    ? "Members won't be able to access their accounts under this co-operative until it's reactivated."
+                    : "This co-operative and its members will regain full access."}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant={isActive ? "destructive" : "default"}
+                  disabled={busy}
+                  onClick={handleConfirm}
+                >
+                  {busy ? (
+                    <Loader2
+                      className="size-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : isActive ? (
+                    "Disable"
+                  ) : (
+                    "Activate"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">

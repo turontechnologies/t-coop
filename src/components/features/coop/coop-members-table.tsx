@@ -2,10 +2,22 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Power, Search } from "lucide-react";
+import { Loader2, Pencil, Power, Search } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
 import {
   coopMemberFullName,
   type CoopMember,
@@ -21,7 +33,7 @@ interface CoopMembersTableProps {
 export function CoopMembersTable({ coop }: CoopMembersTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const setMemberStatus = useCoopStore((state) => state.setMemberStatus);
+  const [editingMember, setEditingMember] = useState<CoopMember | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -33,24 +45,6 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
         member.id.toLowerCase().includes(query),
     );
   }, [coop.members, search]);
-
-  const handleToggleStatus = (event: React.MouseEvent, member: CoopMember) => {
-    event.stopPropagation();
-    const next = member.status === "Active" ? "Inactive" : "Active";
-    setMemberStatus(coop.id, member.id, next);
-    toast.success(
-      next === "Active"
-        ? `${coopMemberFullName(member)} activated`
-        : `${coopMemberFullName(member)} deactivated`,
-    );
-  };
-
-  const handleEdit = (event: React.MouseEvent, member: CoopMember) => {
-    event.stopPropagation();
-    toast.info("Coming soon", {
-      description: `Editing ${coopMemberFullName(member)} isn't wired up yet.`,
-    });
-  };
 
   return (
     <div className="space-y-4">
@@ -145,24 +139,19 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={(event) => handleEdit(event, member)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditingMember(member);
+                        }}
                         className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={`Edit ${coopMemberFullName(member)}`}
                       >
                         <Pencil className="size-3.5" aria-hidden="true" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={(event) => handleToggleStatus(event, member)}
-                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={
-                          member.status === "Active"
-                            ? `Deactivate ${coopMemberFullName(member)}`
-                            : `Activate ${coopMemberFullName(member)}`
-                        }
-                      >
-                        <Power className="size-3.5" aria-hidden="true" />
-                      </button>
+                      <ToggleMemberStatusAction
+                        coopId={coop.id}
+                        member={member}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -171,6 +160,90 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
           </tbody>
         </table>
       </div>
+
+      {editingMember ? (
+        <EditMemberModal
+          coopId={coop.id}
+          member={editingMember}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setEditingMember(null);
+          }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function ToggleMemberStatusAction({
+  coopId,
+  member,
+}: {
+  coopId: string;
+  member: CoopMember;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const setMemberStatus = useCoopStore((state) => state.setMemberStatus);
+  const isActive = member.status === "Active";
+  const fullName = coopMemberFullName(member);
+
+  const handleConfirm = async () => {
+    setBusy(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const next = isActive ? "Inactive" : "Active";
+    setMemberStatus(coopId, member.id, next);
+    setBusy(false);
+    setOpen(false);
+    toast.success(
+      next === "Active" ? `${fullName} activated` : `${fullName} deactivated`,
+    );
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger
+        render={
+          <button
+            type="button"
+            onClick={(event) => event.stopPropagation()}
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={
+              isActive ? `Deactivate ${fullName}` : `Activate ${fullName}`
+            }
+          />
+        }
+      >
+        <Power className="size-3.5" aria-hidden="true" />
+      </AlertDialogTrigger>
+      <AlertDialogContent onClick={(event) => event.stopPropagation()}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {isActive ? `Deactivate ${fullName}?` : `Activate ${fullName}?`}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {isActive
+              ? `${fullName} will no longer be able to access member features until reactivated.`
+              : `${fullName} will regain access to member features.`}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant={isActive ? "destructive" : "default"}
+            disabled={busy}
+            onClick={handleConfirm}
+          >
+            {busy ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : isActive ? (
+              "Deactivate"
+            ) : (
+              "Activate"
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

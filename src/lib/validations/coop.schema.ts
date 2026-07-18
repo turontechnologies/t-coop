@@ -17,3 +17,15 @@ export const addCooperativeSchema = z.object({
 });
 
 export type AddCooperativeFormValues = z.infer<typeof addCooperativeSchema>;
+
+export const editMemberSchema = z.object({
+  firstName: z.string().trim().min(1, "Enter a first name"),
+  lastName: z.string().trim().min(1, "Enter a last name"),
+  email: z.email("Enter a valid email address"),
+  role: z.enum(["Member", "Admin"]),
+  guarantor: z.string().trim().min(1, "Enter a guarantor"),
+  country: z.string().min(1, "Select a country"),
+  state: z.string().trim().min(1, "Enter a state"),
+});
+
+export type EditMemberFormValues = z.infer<typeof editMemberSchema>;
