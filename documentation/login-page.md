@@ -24,12 +24,12 @@ verifying a one-time code stands in for re-authentication after a reset.
 - **Split-screen layout, not a copy of the reference.** The uploaded design
   was a centered white card on a solid green background. We kept the
   _information architecture_ (Membership ID, password, "keep me logged in",
-  forgot password, register link) but reimagined the visual language as a
-  two-pane layout: a deep brand-green panel (logo, value proposition, trust
-  highlights) on the left, and a clean neutral form pane on the right. This
-  is the pattern used by Stripe, Ramp, Mercury, and Vercel for auth screens,
-  and it lets the brand green "have a moment" without flooding the rest of
-  the interface — the explicit brand constraint in the design brief.
+  forgot password) but reimagined the visual language as a two-pane layout:
+  a deep brand-green panel (logo, value proposition, trust highlights) on
+  the left, and a clean neutral form pane on the right. This is the pattern
+  used by Stripe, Ramp, Mercury, and Vercel for auth screens, and it lets
+  the brand green "have a moment" without flooding the rest of the
+  interface — the explicit brand constraint in the design brief.
 - **Brand green is contained to the auth panel, buttons, links, and focus
   rings.** Everything else (inputs, borders, page background) uses Tailwind
   Slate neutrals, per the brand guidance.
@@ -42,20 +42,16 @@ verifying a one-time code stands in for re-authentication after a reset.
   full "same logo everywhere" rule. `<LogoMark />` (the standalone diamond,
   recolored via `currentColor`) remains the right choice anywhere only the
   mark, not the wordmark, belongs — e.g. the favicon.
-- **Login and Register share one animated shell, not two disconnected
-  pages.** A segmented `<AuthModeSwitch>` (Login / Register, sliding active
-  highlight) sits above the form on both routes; picking one navigates
-  there and the brand panel physically swaps sides — left for login, right
-  for register, via a `reversed` prop on `<AuthLayout>` that flips a CSS
-  `order` — while both panes fade + slide in from the direction they moved
-  from. This reads as one continuous "auth experience" rather than two
-  independently designed pages, and replaces what used to be a plain
-  "New to T-Coop? Register" text link (removed from both forms — the
-  switch now owns that job). See
-  [theming-and-motion.md](./theming-and-motion.md#the-login--register-side-swap)
-  for why this is a fresh-mount directional animation rather than a true
-  cross-navigation shared-element transition, and why that distinction
-  matters here.
+- **`/login` is now the only entry point to `AuthLayout`.** Registering a
+  new co-operative used to live at a public `/register` route sharing this
+  same shell, with a segmented `<AuthModeSwitch>` and a physical brand-panel
+  side-swap between the two. That flow moved into the super-admin
+  dashboard (see [co-operatives-page.md](./co-operatives-page.md) — a
+  co-operative is now something a super admin adds from `/co-operatives`,
+  not something the public signs itself up for) and `<AuthModeSwitch>` was
+  deleted along with it, since there's nothing left to switch to.
+  `AuthLayout` went back to a single fixed brand-panel-left layout with no
+  `reversed`/`formClassName` props.
 - **Two-tier color tokens for accessibility.** Brand green used as a _fill_
   (buttons: `#00543D` bg + white text) stays identical across themes because
   its own internal contrast is what matters (~9:1). Brand green used as
@@ -84,14 +80,11 @@ verifying a one-time code stands in for re-authentication after a reset.
 ## Components
 
 - `src/app/(auth)/login/page.tsx` — route entry, metadata, heading.
-- `src/app/(auth)/layout.tsx` — client component; reads the pathname to
-  decide `reversed`/`formClassName`, wraps `/login` and `/register` in
-  `AuthLayout`.
-- `src/components/layouts/auth-layout.tsx` — the shared, responsive
-  split-screen shell for both `/login` and `/register`, including the
-  side-swap animation.
-- `src/components/features/auth/auth-mode-switch.tsx` — the Login/Register
-  segmented control.
+- `src/app/(auth)/layout.tsx` — wraps `/login` in `AppLaunchGate` +
+  `AuthLayout`. No longer needs to read the pathname now that `/register`
+  is gone.
+- `src/components/layouts/auth-layout.tsx` — the responsive split-screen
+  shell (brand panel left, form pane right).
 - `src/components/features/auth/auth-brand-panel.tsx` — the brand panel
   (logo, headline, trust highlights, decorative grid/glow background).
 - `src/components/features/auth/login-form.tsx` — the form itself: RHF + Zod
@@ -179,7 +172,6 @@ src/components/layouts/auth-layout.tsx
 src/components/features/auth/auth-brand-panel.tsx
 src/components/features/auth/login-form.tsx
 src/components/features/auth/demo-accounts.tsx
-src/components/features/auth/auth-mode-switch.tsx
 src/components/brand/logo.tsx
 src/components/brand/logo-mark.tsx
 src/components/brand/route-transition.tsx
@@ -220,18 +212,14 @@ publishes a fix.
 
 - Replace `authService`'s mock branch with a real endpoint once the backend
   is available; delete the mock once `NEXT_PUBLIC_API_URL` is set in every
-  environment. All three demo roles, the forgot-password flow, and the
-  register flow route through the same `authService` — swapping the backend
-  in is a single-file change (`src/services/auth.service.ts`).
+  environment. All three demo roles and the forgot-password flow route
+  through the same `authService` — swapping the backend in is a
+  single-file change (`src/services/auth.service.ts`).
 - Add rate-limit / lockout messaging for repeated failed attempts once the
   backend supports it.
 - Consider a `prefers-reduced-motion` check to shorten/disable the stagger
   animations for users who request it (currently relies on Framer Motion's
   defaults, which do not auto-respect this).
-- `/register` currently ends with "registration received" messaging rather
-  than an instant, usable account — see
-  [register-page.md](./register-page.md#design-decisions) for why, and what
-  a real backend integration would change.
 
 ## Developer Notes
 

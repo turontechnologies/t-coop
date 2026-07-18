@@ -148,7 +148,6 @@ inset-0 z-50`) takeover used at every major auth hand-off:
 - Login success → dashboard (`login-form.tsx`)
 - OTP verified → create-new-password (`verify-otp-form.tsx`)
 - Password reset → login (`create-new-password-form.tsx`)
-- Registration submitted → login (`register-form.tsx`)
 - Logout → login (`dashboard-shell.tsx`) — copy is exit-flavored ("Signing
   you out," "Redirecting to login"), deliberately not reusing the login
   transition's "Welcome back" copy, which reads backwards on the way out.
@@ -182,59 +181,6 @@ Framer Motion's `pathLength` animation, staggered, looping; a soft pulsing
 glow sits behind it; a status message crossfades between a short rotating
 list of phrases ("Preparing your workspace," "Securing your session," …)
 passed in via the `messages` prop.
-
-## The login / register side swap
-
-`/login` and `/register` share one `<AuthLayout>` shell. Switching between
-them via `<AuthModeSwitch>` (the segmented Login/Register control above the
-form) physically swaps which side the brand panel sits on — left for login,
-right for register — rather than just navigating to a differently-arranged
-page.
-
-**Why this can't be a true cross-navigation shared-layout animation.**
-Framer Motion's `layout` prop can smoothly animate an element moving from
-one position to another _if the same component instance persists across
-the change_. It doesn't here: `src/app/template.tsx` sits at the app root
-and, by design, remounts everything below it — including
-`src/app/(auth)/layout.tsx` — on every navigation, which is exactly what
-makes the global "every new page animates in" behavior work
-(see [Route transitions](#route-transitions)). That's the right tradeoff
-for the app as a whole, but it means `AuthLayout` itself never survives the
-`/login` → `/register` transition to hand off a smooth `layout` animation
-from.
-
-**The actual mechanism:** each fresh mount already "knows" which side it
-should be on (`reversed` — true for `/register`, computed in
-`(auth)/layout.tsx` from `usePathname()`), and animates in with a matching
-directional `initial`/`animate` on both panes:
-
-```tsx
-// brand panel
-initial={{ opacity: 0, x: reversed ? 48 : -48 }}
-// form pane
-initial={{ opacity: 0, x: reversed ? -48 : 48 }}
-```
-
-Both settle to `x: 0`. The brand panel's actual left/right position comes
-from a plain CSS `lg:order-2` (applied when `reversed`) — the animation
-only supplies the direction each pane appears to travel _from_. Combined,
-a click on the switch reads as one continuous swap even though it's
-technically two independent mounts: the outgoing page fades out (root
-template), the incoming one's panels slide in from the side that matches
-where they "should" have come from. This is a deliberate simulated
-continuity technique, not a shortcut — a literal shared-element transition
-was ruled out by the app's existing remount-per-navigation architecture,
-and chasing it further would have meant either duplicating the entire
-`AuthLayout` render tree into a single stateful component (defeating the
-point of having two routes) or ripping out the global per-navigation
-template. Neither trade was worth it for a two-second flourish.
-
-`<AuthModeSwitch>` (`src/components/features/auth/auth-mode-switch.tsx`)
-is a `role="tablist"` of two links; the active one gets a `layoutId`-driven
-highlight pill. Because the switch also remounts on navigation, that
-`layoutId` can't slide between the two tab positions either — it gets a
-small scale/opacity entrance instead of a slide. Same underlying
-constraint, same resolution.
 
 ## Loading / splash system
 

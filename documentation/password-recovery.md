@@ -69,8 +69,8 @@ persists in-memory and works to log in afterward.
   circular `bg-accent` chip (`KeyRound` for the email step, `ShieldCheck`
   for OTP, `LockKeyhole` for the new password, `Mail` for the "check your
   email" step) sits above the title on every screen in this flow, matching
-  the polish level of `/login` and `/register` rather than reading as a
-  plainer, secondary set of screens.
+  the polish level of `/login` rather than reading as a plainer, secondary
+  set of screens.
 
 ## Flow
 
@@ -101,9 +101,6 @@ screen, just a toast confirmation, to keep that secondary action lightweight.
   `<AppLaunchGate>` (cold-load splash) + `<CenteredAuthLayout>`.
 - `src/components/layouts/centered-auth-layout.tsx` — the shared green
   background / centered card / footer shell for these three pages.
-  `/register` originally used this too; it now shares `/login`'s
-  split-screen `<AuthLayout>` instead — see
-  [register-page.md](./register-page.md#design-decisions).
 - `src/components/features/auth/forgot-password-form.tsx` — the email step.
 - `src/components/features/auth/otp-email-preview.tsx` — the simulated
   email rendering.

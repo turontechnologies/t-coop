@@ -47,10 +47,11 @@ explaining what's missing rather than doing nothing silently. See
 
 ## Demo Accounts
 
-There is no sign-up path into the app itself (see
-[register-page.md](./documentation/register-page.md) for why) — these three
-hardcoded roles are the only way in. The login page also has a
-click-to-autofill panel for these, so you don't need to type them by hand.
+There is no public sign-up path into the app — these three hardcoded roles
+are the only way in. New co-operatives are added by a super admin from
+`/co-operatives` (see [co-operatives-page.md](./documentation/co-operatives-page.md)),
+not self-service. The login page also has a click-to-autofill panel for
+these three roles, so you don't need to type them by hand.
 
 | Role        | Membership ID | Password          | Lands on                        |
 | ----------- | ------------- | ----------------- | ------------------------------- |
@@ -64,19 +65,26 @@ page reload, since there's no backend to persist to).
 
 ## Routes
 
-| Route                  | Purpose                                                   | Docs                                                         |
-| ---------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
-| `/login`               | Sign in with a membership ID + password                   | [login-page.md](./documentation/login-page.md)               |
-| `/forgot-password`     | Request a one-time password by email                      | [password-recovery.md](./documentation/password-recovery.md) |
-| `/verify-otp`          | Enter the OTP sent (simulated) to your email              | [password-recovery.md](./documentation/password-recovery.md) |
-| `/create-new-password` | Set a new password after OTP verification                 | [password-recovery.md](./documentation/password-recovery.md) |
-| `/register`            | Register a new co-operative                               | [register-page.md](./documentation/register-page.md)         |
-| `/dashboard`           | Role-aware dashboard (super admin / admin / member)       | [dashboard.md](./documentation/dashboard.md)                 |
-| `/profile`             | View/edit your own member details (any role)              | [profile-page.md](./documentation/profile-page.md)           |
-| `/savings`             | Savings & Contributions (role-aware; real Paystack)       | [savings-page.md](./documentation/savings-page.md)           |
-| `/savings/[id]`        | Individual savings record detail                          | [savings-page.md](./documentation/savings-page.md)           |
-| `/loans`               | Loans (role-aware; eligibility + application flow)        | [loans-page.md](./documentation/loans-page.md)               |
-| `/loans/[id]`          | Individual loan detail (repayment schedule, transactions) | [loans-page.md](./documentation/loans-page.md)               |
+| Route                                           | Purpose                                                      | Docs                                                           |
+| ----------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- |
+| `/login`                                        | Sign in with a membership ID + password                      | [login-page.md](./documentation/login-page.md)                 |
+| `/forgot-password`                              | Request a one-time password by email                         | [password-recovery.md](./documentation/password-recovery.md)   |
+| `/verify-otp`                                   | Enter the OTP sent (simulated) to your email                 | [password-recovery.md](./documentation/password-recovery.md)   |
+| `/create-new-password`                          | Set a new password after OTP verification                    | [password-recovery.md](./documentation/password-recovery.md)   |
+| `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)          | [dashboard.md](./documentation/dashboard.md)                   |
+| `/profile`                                      | View your own member details, Edit to change them (any role) | [profile-page.md](./documentation/profile-page.md)             |
+| `/savings`                                      | Savings & Contributions (role-aware; real Paystack)          | [savings-page.md](./documentation/savings-page.md)             |
+| `/savings/[id]`                                 | Individual savings record detail                             | [savings-page.md](./documentation/savings-page.md)             |
+| `/loans`                                        | Loans (role-aware; eligibility + application flow)           | [loans-page.md](./documentation/loans-page.md)                 |
+| `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)    | [loans-page.md](./documentation/loans-page.md)                 |
+| `/co-operatives`                                | Super admin: list every co-operative, add a new one          | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`) | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs             | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| `/co-operatives/[id]/members/[memberId]`        | One member's own details + Savings/Loans tabs                | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| `/co-operatives/[id]/savings/[type]`            | All transactions of one savings product in the co-op         | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| `/co-operatives/[id]/savings/record/[recordId]` | Individual savings record detail (co-op scoped)              | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op       | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions    | [co-operatives-page.md](./documentation/co-operatives-page.md) |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -98,13 +106,18 @@ src/
   app/
     (auth)/                  split-screen layout — /login
     (password-recovery)/     centered layout — /forgot-password, /verify-otp,
-                              /create-new-password, /register
+                              /create-new-password
     (dashboard)/              role-aware dashboard, auth-guarded
+                              (co-operatives/ nested under here)
     layout.tsx, template.tsx, loading.tsx   root providers + page transitions
   components/
     brand/                   logo, animated loading mark, route transitions
     features/auth/           one form component per auth screen
+    features/coop/           co-operatives list/detail/member/drill-down components
     features/dashboard/      quick-summary cards, activity chart, activity list
+    features/loans/          loans list/modal/detail components
+    features/profile/        profile view + edit-toggle form
+    features/savings/        savings list/modal/detail + export-import menu
     layouts/                 the three shared page shells (auth / centered / dashboard)
     theme/                   next-themes provider + toggle
     ui/                      shadcn primitives (Base UI-based)
@@ -112,7 +125,8 @@ src/
   hooks/                     one hook per mutation, + small UI-timing hooks
   lib/                       mock data, validation schemas, small utilities
   services/                  auth/profile/etc. services — the seam a real backend plugs into
-  store/                     Zustand stores (auth session, password-reset session, savings records, loan records)
+  store/                     Zustand stores (auth session, password-reset session,
+                              savings records, loan records, co-operatives)
   types/                     shared domain types
 ```
 
@@ -128,17 +142,17 @@ them when the feature's behavior changes, not just when it's first built.
 
 - [x] Login (3 hardcoded roles, demo-account picker)
 - [x] Forgot password → OTP → new password
-- [x] Register co-operative
 - [x] Dashboard (super admin / admin / member views)
-- [x] My Profile (view/edit, all roles)
+- [x] My Profile (read-only by default, Edit toggle, all roles)
 - [x] Savings & Contributions (role-aware views, real Paystack checkout, savings detail page)
 - [x] Loans (role-aware views, eligibility-based application flow, repayment schedule + transactions detail page)
+- [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)
 - [ ] Admin loan approval action (loans stay "Awaiting Approval" indefinitely — see loans-page.md)
 - [ ] Real photo upload for the profile avatar (Cloudinary — in progress)
-- [ ] The dashboard's other non-Dashboard nav items (Co-operatives, Subscriptions, Settings, etc.)
+- [ ] The dashboard's other non-Dashboard nav items (Subscriptions, Settings, etc.)
 
 ## Known Gotchas
 

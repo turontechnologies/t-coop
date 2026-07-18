@@ -13,7 +13,10 @@ export default function CooperativesPage() {
     <div className="space-y-6 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
-        <Button render={<Link href="/co-operatives/new" />}>
+        <Button
+          nativeButton={false}
+          render={<Link href="/co-operatives/new" />}
+        >
           <Plus className="size-4" aria-hidden="true" />
           Add New Co-operative
         </Button>
