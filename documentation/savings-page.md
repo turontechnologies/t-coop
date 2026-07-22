@@ -103,7 +103,11 @@ work," not a completed removal; see
   the standing rule that the whole app should read as one designed
   system, not a mix of styled and browser-default controls.
 - **Export is real, and Import requires the approved template first.**
-  "Export / Import" is a `<ExportImportMenu>` dropdown (`src/components/features/savings/export-import-menu.tsx`)
+  "Export / Import" is a `<ExportImportMenu>` dropdown
+  (`src/components/features/shared/export-import-menu.tsx` — genericized
+  and moved out of this feature's folder once the Members Directory
+  needed a real import flow too; see
+  [members-directory-page.md](./members-directory-page.md#design-decisions))
   that generates real files client-side via `xlsx` (CSV/Excel) and
   `jspdf`/`jspdf-autotable` (PDF) — see `src/lib/table-export.ts`. Import
   is deliberately template-gated: "Import from template" stays disabled
@@ -153,8 +157,9 @@ Any row in a records table → /savings/[id] → Savings Details page
   status filter, date range, pagination, clickable rows.
 - `src/components/features/savings/add-savings-modal.tsx` /
   `payment-success-modal.tsx` — the two dialogs.
-- `src/components/features/savings/export-import-menu.tsx` — the
-  Export/Import dropdown (generic over row shape via `ExportColumn<T>`).
+- `src/components/features/shared/export-import-menu.tsx` — the
+  Export/Import dropdown (generic over row shape via `ExportColumn<T>`
+  and, separately, over the imported row shape via `ImportConfig<TImportRow>`).
 - `src/lib/paystack.ts` — the Paystack Inline wrapper.
 - `src/lib/savings-data.ts` — savings type definitions (name + min/max),
   the `findSavingsTypeRange` lookup shared by the table and export

@@ -6,14 +6,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AddSavingsModal } from "@/components/features/savings/add-savings-modal";
-import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { PaymentSuccessModal } from "@/components/features/savings/payment-success-modal";
 import { SavingsRecordsTable } from "@/components/features/savings/savings-records-table";
 import { openPaystackCheckout } from "@/lib/paystack";
 import { formatNaira } from "@/lib/format";
+import {
+  downloadSavingsImportTemplate,
+  parseSavingsImportFile,
+  type ImportedSavingsRow,
+} from "@/lib/savings-import";
 import { findSavingsTypeRange, type SavingsRecord } from "@/lib/savings-data";
 import type { ExportColumn } from "@/lib/table-export";
-import type { ImportedSavingsRow } from "@/lib/savings-import";
 import { useSavingsStore } from "@/store/savings.store";
 
 const EXPORT_COLUMNS: ExportColumn<SavingsRecord>[] = [
@@ -146,7 +150,13 @@ export function MemberSavingsView({
               columns={EXPORT_COLUMNS}
               filenamePrefix={`savings-${memberId}`}
               exportTitle={`${memberName} — Savings & Contributions`}
-              onImport={handleImport}
+              entityLabel="savings record"
+              importConfig={{
+                templateStorageKey: "savings-template-downloaded",
+                downloadTemplate: downloadSavingsImportTemplate,
+                parseFile: parseSavingsImportFile,
+                onImport: handleImport,
+              }}
             />
           </div>
           <SavingsRecordsTable records={memberRecords} />

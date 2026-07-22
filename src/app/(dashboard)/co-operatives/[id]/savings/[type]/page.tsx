@@ -6,7 +6,7 @@ import { ArrowLeft, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopSavingsTypeRecordsTable } from "@/components/features/coop/coop-savings-type-records-table";
-import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { findCooperative } from "@/lib/coop-data";
 import { formatNaira } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";

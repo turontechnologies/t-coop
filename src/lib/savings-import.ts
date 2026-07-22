@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { SAVINGS_TYPES, type SavingsStatus } from "@/lib/savings-data";
 import { triggerDownload } from "@/lib/table-export";
+import type { ImportRowError, ParsedImportResult } from "@/lib/table-import";
 
 const TEMPLATE_HEADERS = [
   "Savings Type",
@@ -17,15 +18,7 @@ export interface ImportedSavingsRow {
   status: SavingsStatus;
 }
 
-export interface ImportRowError {
-  row: number;
-  message: string;
-}
-
-export interface ParsedImportResult {
-  rows: ImportedSavingsRow[];
-  errors: ImportRowError[];
-}
+export type { ImportRowError };
 
 export function downloadSavingsImportTemplate() {
   const templateSheet = XLSX.utils.aoa_to_sheet([
@@ -73,7 +66,7 @@ function normalizeDate(value: unknown): string | null {
 
 export async function parseSavingsImportFile(
   file: File,
-): Promise<ParsedImportResult> {
+): Promise<ParsedImportResult<ImportedSavingsRow>> {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
   const sheetName =

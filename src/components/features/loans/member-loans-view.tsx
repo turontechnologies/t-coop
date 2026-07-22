@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoanRecordsTable } from "@/components/features/loans/loan-records-table";
 import { LoanSuccessModal } from "@/components/features/loans/loan-success-modal";
 import { TakeLoanModal } from "@/components/features/loans/take-loan-modal";
-import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import {
   findLoanType,
   computeLoanTerms,

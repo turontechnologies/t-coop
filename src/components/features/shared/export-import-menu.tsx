@@ -26,39 +26,53 @@ import {
   exportToPdf,
   type ExportColumn,
 } from "@/lib/table-export";
-import {
-  downloadSavingsImportTemplate,
-  parseSavingsImportFile,
-  type ImportedSavingsRow,
-} from "@/lib/savings-import";
+import type { ImportRowError } from "@/lib/table-import";
 
-interface ExportImportMenuProps<T> {
+export interface ImportConfig<TImportRow> {
+  /** sessionStorage key remembering "template downloaded" — keep unique per feature. */
+  templateStorageKey: string;
+  downloadTemplate: () => void;
+  parseFile: (
+    file: File,
+  ) => Promise<{ rows: TImportRow[]; errors: ImportRowError[] }>;
+  onImport: (rows: TImportRow[]) => void;
+}
+
+interface ExportImportMenuProps<T, TImportRow> {
   rows: T[];
   columns: ExportColumn<T>[];
   filenamePrefix: string;
   exportTitle: string;
-  onImport?: (rows: ImportedSavingsRow[]) => void;
+  /** Used in toast messages, e.g. "3 members imported" — defaults to "record". */
+  entityLabel?: string;
+  importConfig?: ImportConfig<TImportRow>;
 }
 
-export function ExportImportMenu<T>({
+export function ExportImportMenu<T, TImportRow = never>({
   rows,
   columns,
   filenamePrefix,
   exportTitle,
-  onImport,
-}: ExportImportMenuProps<T>) {
+  entityLabel = "record",
+  importConfig,
+}: ExportImportMenuProps<T, TImportRow>) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
 
   useEffect(() => {
+    if (!importConfig) return;
     setTemplateDownloaded(
-      sessionStorage.getItem("savings-template-downloaded") === "true",
+      sessionStorage.getItem(importConfig.templateStorageKey) === "true",
     );
-  }, []);
+  }, [importConfig]);
+
+  const plural = (count: number) =>
+    count === 1 ? entityLabel : `${entityLabel}s`;
 
   const handleDownloadTemplate = () => {
-    downloadSavingsImportTemplate();
-    sessionStorage.setItem("savings-template-downloaded", "true");
+    if (!importConfig) return;
+    importConfig.downloadTemplate();
+    sessionStorage.setItem(importConfig.templateStorageKey, "true");
     setTemplateDownloaded(true);
   };
 
@@ -77,7 +91,7 @@ export function ExportImportMenu<T>({
       exportToPdf(rows, columns, `${filenamePrefix}.pdf`, exportTitle);
     }
     toast.success("Export ready", {
-      description: `${rows.length} record${rows.length === 1 ? "" : "s"} exported as ${format.toUpperCase()}.`,
+      description: `${rows.length} ${plural(rows.length)} exported as ${format.toUpperCase()}.`,
     });
   };
 
@@ -86,18 +100,18 @@ export function ExportImportMenu<T>({
   ) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file || !onImport) return;
+    if (!file || !importConfig) return;
 
     try {
-      const { rows: parsedRows, errors } = await parseSavingsImportFile(file);
+      const { rows: parsedRows, errors } = await importConfig.parseFile(file);
 
       if (parsedRows.length > 0) {
-        onImport(parsedRows);
+        importConfig.onImport(parsedRows);
       }
 
       if (errors.length === 0 && parsedRows.length > 0) {
         toast.success("Import complete", {
-          description: `${parsedRows.length} record${parsedRows.length === 1 ? "" : "s"} imported.`,
+          description: `${parsedRows.length} ${plural(parsedRows.length)} imported.`,
         });
       } else if (parsedRows.length > 0 && errors.length > 0) {
         toast.warning("Import finished with some rows skipped", {
@@ -145,7 +159,7 @@ export function ExportImportMenu<T>({
             </DropdownMenuItem>
           </DropdownMenuGroup>
 
-          {onImport ? (
+          {importConfig ? (
             <>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
@@ -169,7 +183,7 @@ export function ExportImportMenu<T>({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {onImport ? (
+      {importConfig ? (
         <input
           ref={fileInputRef}
           type="file"

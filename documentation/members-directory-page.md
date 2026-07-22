@@ -85,16 +85,64 @@ you want to disable "{name}"?`, with the same busy-state-stays-open
   the same Edit/Disable actions) renders below `sm:`. This pattern isn't
   retrofitted onto the other tables — scoped to what was actually
   requested, not a blanket redesign.
-- **Export only, no bulk import, on the list page** — same reasoning as
-  the co-operatives module's savings/loan tables: this is a place an
-  admin reviews and manages members one at a time (edit dialog, add-member
-  form), not a CSV-ingestion pipeline. `ExportImportMenu` is used without
-  an `onImport` prop.
+- **Bulk import is real: download the template, fill it in, upload it,
+  get a specific result — not a stub.** Unlike the co-operatives module's
+  savings/loan tables (still export-only, since those are transaction
+  ledgers an admin shouldn't bulk-edit), a member directory is exactly
+  the kind of list an admin legitimately needs to onboard several people
+  into at once, so this got the same real template-gated import flow
+  `/savings` already established. `src/lib/member-import.ts` exports
+  `downloadMemberImportTemplate()` (an `.xlsx` with a `Template` sheet —
+  Membership ID, First Name, Last Name, Email Address, Role, Guarantor,
+  Country, State — plus a `Field Reference` sheet explaining each column)
+  and `parseMemberImportFile(file, existingMemberIds)`. Each row is
+  validated independently: a blank Membership ID skips the row silently
+  (treated as a spacer), everything else produces a specific per-row
+  error — duplicate Membership ID (checked against both the existing
+  directory and other rows already parsed from the same file), missing
+  First/Last Name, an invalid Email Address, or a Role outside
+  `Member`/`Admin`. The result is a friendly, specific toast either way:
+  "Import complete: N members imported," "Import finished with some rows
+  skipped: N imported, N skipped — row 4: Membership ID "MEM-0988-1" is
+  already in use, +1 more," or "Nothing imported" with the first error's
+  exact message — never a silent failure or a generic "something went
+  wrong." Verified in a real browser with a file mixing valid and invalid
+  rows to confirm the counts, the specific error text, and that the
+  table updates live.
+- **`parseFile` takes a second argument the generic menu doesn't know
+  about — solved with a closure, not a special case.** `ImportConfig.parseFile`
+  is typed `(file: File) => Promise<...>`, but duplicate-checking needs
+  the _current_ list of member IDs, which `ExportImportMenu` has no
+  reason to know about. `/members/page.tsx` closes over `members` when
+  building the `importConfig` prop
+  (`parseFile: (file) => parseMemberImportFile(file, members.map((m) => m.id))`),
+  so the check always uses fresh data without the shared component
+  needing feature-specific knowledge.
 - **The "+ Add New Members" list-page button hit the same Base UI
   footgun** already documented for `/co-operatives`: `Button` rendered as
   a `Link` via the `render` prop needs `nativeButton={false}`, or Base UI
   warns and the trigger loses native button semantics. Applied from the
   start here since it was already a known issue.
+- **`ExportImportMenu` moved out of `features/savings/` and became
+  genuinely generic**, rather than this page hand-rolling a second
+  export/import dropdown. It was already imported by seven call sites
+  across Savings, Loans, and Co-operatives despite living in a
+  savings-specific folder and being hard-coded to
+  `downloadSavingsImportTemplate`/`parseSavingsImportFile` — a real
+  reusability gap this feature exposed. It now lives at
+  `src/components/features/shared/export-import-menu.tsx` and takes an
+  optional `importConfig: { templateStorageKey, downloadTemplate,
+parseFile, onImport }` instead of a hard-coded savings import, plus an
+  `entityLabel` prop (defaults to `"record"`) so toast copy reads "3
+  members imported" here and "3 savings records imported" on `/savings`,
+  not a generic "3 records" everywhere. `ImportRowError` (the row-level
+  error shape both `savings-import.ts` and the new `member-import.ts`
+  return) moved to `src/lib/table-import.ts` for the same reason — one
+  shared shape, not two structurally-identical interfaces declared twice.
+  All seven existing call sites were migrated, and both the new
+  member-import flow and the pre-existing `/savings` import were
+  re-verified end-to-end in a real browser after the refactor, not just
+  typechecked.
 
 ## Routes
 
@@ -110,7 +158,15 @@ you want to disable "{name}"?`, with the same busy-state-stays-open
   directory-scoped data helpers.
 - `src/lib/bvn-lookup.ts` — the mock BVN → identity lookup service and
   `DEMO_BVNS`.
+- `src/lib/member-import.ts` — `downloadMemberImportTemplate`,
+  `parseMemberImportFile`, `ImportedMemberRow`.
+- `src/lib/table-import.ts` — the shared `ImportRowError`/
+  `ParsedImportResult<TRow>` shapes used by both `member-import.ts` and
+  `savings-import.ts`.
 - `src/lib/validations/member-directory.schema.ts` — `addMemberSchema`.
+- `src/components/features/shared/export-import-menu.tsx` — the
+  generalized `ExportImportMenu` (moved here from `features/savings/`;
+  see Design Decisions).
 - `src/components/features/coop/confirm-toggle-dialog.tsx` —
   `ConfirmToggleDialog`, the shared standardized confirmation dialog (new
   in this change, used by three different features now).
@@ -119,9 +175,8 @@ you want to disable "{name}"?`, with the same busy-state-stays-open
 - `src/components/features/members-directory/add-member-form.tsx` — the
   Add New Member form.
 - Reuses `src/components/features/coop/edit-member-modal.tsx`,
-  `coop-member-header-card.tsx`, `coop-member-savings-table.tsx`,
-  `coop-member-loans-table.tsx`, and
-  `src/components/features/savings/export-import-menu.tsx` unmodified.
+  `coop-member-header-card.tsx`, `coop-member-savings-table.tsx`, and
+  `coop-member-loans-table.tsx` unmodified.
 
 ## Navigation
 
@@ -137,5 +192,9 @@ you want to disable "{name}"?`, with the same busy-state-stays-open
 - The BVN lookup only recognizes three demo values — fine for a mock, but
   a real integration would call an actual verification provider and
   handle partial matches / rate limiting.
-- Bulk member import isn't wired (see Design Decisions) — worth
-  reconsidering once there's a real need to onboard many members at once.
+- Import only adds new members — no bulk edit/delete of existing ones,
+  matching the same limitation already documented for `/savings`' import.
+- A large import file would call the store's `addMember` once per row in
+  a synchronous loop (one Zustand update each) rather than a single
+  batched update — fine at the scale a demo needs, worth revisiting if
+  bulk imports of hundreds of rows become a real use case.

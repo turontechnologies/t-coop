@@ -192,10 +192,13 @@ panel) — and:
   `coop-savings-type-records-table.tsx`, `coop-loan-type-records-table.tsx`,
   `coop-member-header-card.tsx`, `coop-member-savings-table.tsx`,
   `coop-member-loans-table.tsx`.
-- Reuses `src/components/features/savings/export-import-menu.tsx` (export
+- Reuses `src/components/features/shared/export-import-menu.tsx` (export
   only — no bulk import here, since this is oversight data, not a place an
-  admin should be adding transactions in bulk) and
-  `generateRepaymentSchedule`/`generateLoanTransactions` from
+  admin should be adding transactions in bulk; moved from
+  `features/savings/` and genericized once the Members Directory needed
+  a real import flow too — see
+  [members-directory-page.md](./members-directory-page.md#design-decisions))
+  and `generateRepaymentSchedule`/`generateLoanTransactions` from
   `src/lib/loans-data.ts`.
 
 ## Navigation

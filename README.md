@@ -121,7 +121,8 @@ src/
     features/loans/          loans list/modal/detail components
     features/members-directory/  admin's own members list + add-member form
     features/profile/        profile view + edit-toggle form
-    features/savings/        savings list/modal/detail + export-import menu
+    features/savings/        savings list/modal/detail
+    features/shared/         cross-feature components (export/import menu)
     layouts/                 the three shared page shells (auth / centered / dashboard)
     theme/                   next-themes provider + toggle
     ui/                      shadcn primitives (Base UI-based)
@@ -151,7 +152,7 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Savings & Contributions (member view, real Paystack checkout, savings detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
 - [x] Loans (member view, eligibility-based application flow, repayment schedule + transactions detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
-- [x] Members Directory (admin: list, add with BVN auto-fill, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
+- [x] Members Directory (admin: list, add with BVN auto-fill, bulk import via template, export, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)

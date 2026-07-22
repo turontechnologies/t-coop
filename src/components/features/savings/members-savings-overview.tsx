@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { SAVINGS_TYPES, type SavingsTypeDef } from "@/lib/savings-data";
 import { formatNaira } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";

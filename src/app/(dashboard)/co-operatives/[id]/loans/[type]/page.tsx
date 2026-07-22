@@ -6,7 +6,7 @@ import { ArrowLeft, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopLoanTypeRecordsTable } from "@/components/features/coop/coop-loan-type-records-table";
-import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { findCooperative } from "@/lib/coop-data";
 import { formatNaira } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";

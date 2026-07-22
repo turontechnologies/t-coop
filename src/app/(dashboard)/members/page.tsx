@@ -3,11 +3,19 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ExportImportMenu } from "@/components/features/savings/export-import-menu";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { MembersDirectoryTable } from "@/components/features/members-directory/members-directory-table";
-import { getDirectoryMembers } from "@/lib/member-directory";
-import type { ExportColumn } from "@/lib/table-export";
 import type { CoopMember } from "@/lib/coop-data";
+import {
+  ADMIN_DIRECTORY_COOP_ID,
+  getDirectoryMembers,
+} from "@/lib/member-directory";
+import {
+  downloadMemberImportTemplate,
+  parseMemberImportFile,
+  type ImportedMemberRow,
+} from "@/lib/member-import";
+import type { ExportColumn } from "@/lib/table-export";
 import { useCoopStore } from "@/store/coop.store";
 
 const EXPORT_COLUMNS: ExportColumn<CoopMember>[] = [
@@ -20,7 +28,25 @@ const EXPORT_COLUMNS: ExportColumn<CoopMember>[] = [
 
 export default function MembersDirectoryPage() {
   const cooperatives = useCoopStore((state) => state.cooperatives);
+  const addMember = useCoopStore((state) => state.addMember);
   const members = getDirectoryMembers(cooperatives);
+
+  const handleImport = (importedRows: ImportedMemberRow[]) => {
+    importedRows.forEach((row) => {
+      const member: CoopMember = {
+        id: row.membershipId,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        role: row.role,
+        status: "Active",
+        guarantor: row.guarantor,
+        country: row.country,
+        state: row.state,
+      };
+      addMember(ADMIN_DIRECTORY_COOP_ID, member);
+    });
+  };
 
   return (
     <div className="space-y-6 pt-6">
@@ -35,6 +61,17 @@ export default function MembersDirectoryPage() {
               columns={EXPORT_COLUMNS}
               filenamePrefix="members-directory"
               exportTitle="Members Directory"
+              entityLabel="member"
+              importConfig={{
+                templateStorageKey: "members-template-downloaded",
+                downloadTemplate: downloadMemberImportTemplate,
+                parseFile: (file) =>
+                  parseMemberImportFile(
+                    file,
+                    members.map((member) => member.id),
+                  ),
+                onImport: handleImport,
+              }}
             />
             <Button nativeButton={false} render={<Link href="/members/new" />}>
               <Plus className="size-4" aria-hidden="true" />
