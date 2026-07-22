@@ -73,9 +73,9 @@ page reload, since there's no backend to persist to).
 | `/create-new-password`                          | Set a new password after OTP verification                    | [password-recovery.md](./documentation/password-recovery.md)           |
 | `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)          | [dashboard.md](./documentation/dashboard.md)                           |
 | `/profile`                                      | View your own member details, Edit to change them (any role) | [profile-page.md](./documentation/profile-page.md)                     |
-| `/savings`                                      | Savings & Contributions (role-aware; real Paystack)          | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings`                                      | Savings & Contributions (member only for now; real Paystack) | [savings-page.md](./documentation/savings-page.md)                     |
 | `/savings/[id]`                                 | Individual savings record detail                             | [savings-page.md](./documentation/savings-page.md)                     |
-| `/loans`                                        | Loans (role-aware; eligibility + application flow)           | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans`                                        | Loans (member only for now; eligibility + application flow)  | [loans-page.md](./documentation/loans-page.md)                         |
 | `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)    | [loans-page.md](./documentation/loans-page.md)                         |
 | `/co-operatives`                                | Super admin: list every co-operative, add a new one          | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
 | `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`) | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
@@ -148,8 +148,8 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Forgot password → OTP → new password
 - [x] Dashboard (super admin / admin / member views)
 - [x] My Profile (read-only by default, Edit toggle, all roles)
-- [x] Savings & Contributions (role-aware views, real Paystack checkout, savings detail page)
-- [x] Loans (role-aware views, eligibility-based application flow, repayment schedule + transactions detail page)
+- [x] Savings & Contributions (member view, real Paystack checkout, savings detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
+- [x] Loans (member view, eligibility-based application flow, repayment schedule + transactions detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
 - [x] Members Directory (admin: list, add with BVN auto-fill, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
 - [x] Light/dark theme

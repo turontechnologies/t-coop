@@ -5,19 +5,40 @@
 `/savings` (plus its detail route `/savings/[id]`) is the third real page
 in the `(dashboard)` route group, alongside `/dashboard` and `/profile` —
 see [dashboard.md](./dashboard.md) and
-[profile-page.md](./profile-page.md). Unlike those two, this page's shape
-genuinely differs by role rather than just its data: members see their own
-savings, admins see both an org-wide view and their own, super admins see
-only the org-wide view.
+[profile-page.md](./profile-page.md).
+
+**Currently member-only.** This page originally also had an admin/
+super-admin oversight view (an org-wide "Members Savings" aggregate, plus
+an admin-only tab switcher). That view turned out not to match what
+should actually be there for those two roles, so it's been removed
+pending a correct reference design — see
+[Admin/super-admin view removed](#adminsuper-admin-view-removed) below.
+The member experience described in this document is unaffected.
 
 ## Purpose
 
 Let a member actually add money to a savings type and pay for it through a
-real payment gateway — not a fake "success" button — while giving
-admin/super-admin roles the oversight view the reference designs showed.
-Every screen in the reference set is covered: the summary + record table,
-the "Add to Savings" modal, the Paystack checkout, the success
+real payment gateway — not a fake "success" button. Every member-facing
+screen in the original reference set is covered: the summary + record
+table, the "Add to Savings" modal, the Paystack checkout, the success
 confirmation, and the individual savings record detail page.
+
+## Admin/super-admin view removed
+
+The admin and super-admin roles' "Members Savings" org-wide aggregate
+(`<MembersSavingsOverview>`) and the admin's "Members Savings" / "My
+Savings" tab switcher have been unwired — `/savings/page.tsx` now renders
+`<MemberSavingsView>` for `role === "member"` only and returns `null` for
+every other role. The "Savings & Contributions" nav item lost its `href`
+for admin/super_admin (`dashboard-nav.ts`), so it's inert again — clicking
+it shows the same "coming soon" toast as any other not-yet-built nav item,
+instead of navigating to a page that isn't right yet. `<MembersSavingsOverview>`
+itself was **not** deleted — it's still in
+`src/components/features/savings/members-savings-overview.tsx`, simply no
+longer imported by the page — since a corrected reference design is
+expected and may reuse some or all of it. This is a deliberate "paused
+work," not a completed removal; see
+[Future Improvements](#future-improvements).
 
 ## Design Decisions
 
@@ -40,17 +61,14 @@ confirmation, and the individual savings record detail page.
   this app — so Paystack's client-side `callback` firing is treated as
   success. This is called out explicitly rather than glossed over: see
   [Future Improvements](#future-improvements).
-- **One reusable per-member view, not two.** The reference showed the
-  admin's "My Savings" tab as visually identical to the member's whole
-  page. Rather than duplicate that UI, `<MemberSavingsView>` takes a
-  `memberId`/`memberName`/`memberEmail` and is used both for the member
-  role's entire page _and_ as the admin's "My Savings" tab content — same
-  component, different props.
-- **Aggregate admin view, not a per-transaction list.** The reference's
-  "Members Savings" tab showed one row per savings _type_ with an org-wide
-  total, not a giant list of every member's individual transactions (that
-  already exists per-member on their own page). `<MembersSavingsOverview>`
-  reflects that: it sums `records` by `savingsType` across everyone.
+- **`<MemberSavingsView>` takes `memberId`/`memberName`/`memberEmail` as
+  props rather than reading the signed-in member directly**, even though
+  today it's only ever mounted for the signed-in member's own role. Kept
+  prop-driven (not hook-driven) since the removed admin view previously
+  reused this exact component for an admin's own "My Savings" tab, and
+  whatever replaces the admin/super-admin view (see
+  [Admin/super-admin view removed](#adminsuper-admin-view-removed)) will
+  likely want to do the same for a member other than the signed-in one.
 - **New `Dialog`, `Tabs`, `Select`, `Popover`, and `Calendar` primitives
   were added** (`src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`,
   `popover.tsx`, `calendar.tsx`) via `pnpm dlx shadcn@latest add`, not
@@ -85,8 +103,7 @@ confirmation, and the individual savings record detail page.
   the standing rule that the whole app should read as one designed
   system, not a mix of styled and browser-default controls.
 - **Export is real, and Import requires the approved template first.**
-  "Export / Import" (per-member table and the admin aggregate view) is a
-  `<ExportImportMenu>` dropdown (`src/components/features/savings/export-import-menu.tsx`)
+  "Export / Import" is a `<ExportImportMenu>` dropdown (`src/components/features/savings/export-import-menu.tsx`)
   that generates real files client-side via `xlsx` (CSV/Excel) and
   `jspdf`/`jspdf-autotable` (PDF) — see `src/lib/table-export.ts`. Import
   is deliberately template-gated: "Import from template" stays disabled
@@ -108,8 +125,7 @@ confirmation, and the individual savings record detail page.
 ```
 /savings
   member          → <MemberSavingsView> (their own records + "+ New Savings")
-  admin           → Tabs: "Members Savings" (org-wide) | "My Savings" (their own)
-  super_admin     → <MembersSavingsOverview> only (no personal savings, no tabs)
+  admin / super_admin → null (nav item inert; see "Admin/super-admin view removed")
 
 "+ New Savings" → <AddSavingsModal> (pick type, enter amount within its min/max)
   → "Proceed" → Paystack Inline checkout (real popup)
@@ -123,20 +139,22 @@ Any row in a records table → /savings/[id] → Savings Details page
 
 ## Components
 
-- `src/app/(dashboard)/savings/page.tsx` — role switch described above.
+- `src/app/(dashboard)/savings/page.tsx` — member-only role guard
+  described above.
 - `src/app/(dashboard)/savings/[id]/page.tsx` — the details page.
 - `src/components/features/savings/member-savings-view.tsx` — summary
   card, table, "+ New Savings"/"Export/Import" actions, modal
   orchestration (this is where the Paystack call actually happens).
 - `src/components/features/savings/members-savings-overview.tsx` — the
-  admin/super-admin aggregate-by-type view.
+  former admin/super-admin aggregate-by-type view; still present but no
+  longer imported by `page.tsx` (see
+  [Admin/super-admin view removed](#adminsuper-admin-view-removed)).
 - `src/components/features/savings/savings-records-table.tsx` — search,
   status filter, date range, pagination, clickable rows.
 - `src/components/features/savings/add-savings-modal.tsx` /
   `payment-success-modal.tsx` — the two dialogs.
 - `src/components/features/savings/export-import-menu.tsx` — the
-  Export/Import dropdown, reused by both the per-member table and the
-  admin aggregate view (generic over row shape via `ExportColumn<T>`).
+  Export/Import dropdown (generic over row shape via `ExportColumn<T>`).
 - `src/lib/paystack.ts` — the Paystack Inline wrapper.
 - `src/lib/savings-data.ts` — savings type definitions (name + min/max),
   the `findSavingsTypeRange` lookup shared by the table and export
@@ -170,11 +188,13 @@ Follows the same "lighter touch on data-dense screens" rule established in
 [profile-page.md](./profile-page.md#animations) — no per-field stagger on
 the table or forms. The two dialogs use the shared `Dialog` primitive's
 scale+fade open/close (matching `dropdown-menu.tsx`'s existing animation
-language), and the tabs indicator slides between "Members Savings" and "My
-Savings" via Base UI's `Tabs.Indicator`.
+language).
 
 ## Future Improvements
 
+- **Rebuild the admin/super-admin view against a correct reference.**
+  Top priority once that design is provided — see
+  [Admin/super-admin view removed](#adminsuper-admin-view-removed).
 - **Server-side Paystack verification.** The single biggest gap: a real
   integration verifies the transaction reference against Paystack's
   `/transaction/verify/:reference` endpoint from a trusted server before

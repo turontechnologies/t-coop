@@ -5,25 +5,36 @@
 `/loans` (plus its detail route `/loans/[id]`) is the fourth real page in
 the `(dashboard)` route group, alongside `/dashboard`, `/profile`, and
 `/savings` — see [dashboard.md](./dashboard.md) and
-[savings-page.md](./savings-page.md). It deliberately mirrors the
-Savings & Contributions architecture (same role split, same table/modal/
-detail-page shape) since a loan application is conceptually the same kind
-of "member does a money thing, admin/super-admin gets an oversight view"
-flow — but a loan is a request for money rather than a deposit of it, so
-the flow ends in an approval-pending state rather than an instant paid
-balance, and the detail page needs to show a full repayment plan rather
-than a single transaction.
+[savings-page.md](./savings-page.md). It originally mirrored the
+Savings & Contributions architecture in full, including the same role
+split (member view / admin tabs / super-admin org-wide overview) — but,
+same as `/savings`, that admin/super-admin oversight view turned out not
+to match what should actually be there and has been removed pending a
+correct reference design; see
+[Admin/super-admin view removed](#adminsuper-admin-view-removed).
 
 ## Purpose
 
 Let a member apply for a loan against their savings-derived eligibility,
 see a live breakdown of what that loan will cost before committing, and
-track it through to a full repayment schedule — while giving admin/
-super-admin roles the same kind of org-wide oversight `/savings` already
-has. Every screen in the reference set is covered: the summary + record
-table, the "Take a Loan" modal (with its eligibility hint and live Loan
-Details preview), the "Loan Successful" confirmation, and the individual
-loan detail page with its Repayment Schedule / Transactions tabs.
+track it through to a full repayment schedule. Every member-facing screen
+in the original reference set is covered: the summary + record table, the
+"Take a Loan" modal (with its eligibility hint and live Loan Details
+preview), the "Loan Successful" confirmation, and the individual loan
+detail page with its Repayment Schedule / Transactions tabs.
+
+## Admin/super-admin view removed
+
+Same change, same reasoning, as `/savings` — see
+[savings-page.md](./savings-page.md#adminsuper-admin-view-removed). The
+admin's "Members Loans" / "My Loans" tab switcher and the super admin's
+org-wide `<MembersLoansOverview>` are unwired: `/loans/page.tsx` now
+renders `<MemberLoansView>` for `role === "member"` only and returns
+`null` for every other role, and "Loans" lost its `href` for admin/
+super_admin in `dashboard-nav.ts` (inert "coming soon" toast again).
+`<MembersLoansOverview>` was not deleted — still in
+`src/components/features/loans/members-loans-overview.tsx`, just no
+longer imported — pending the corrected design.
 
 ## Design Decisions
 
@@ -105,8 +116,7 @@ loan detail page with its Repayment Schedule / Transactions tabs.
 ```
 /loans
   member          → <MemberLoansView> (their own records + "+ New Loan")
-  admin           → Tabs: "Members Loans" (org-wide) | "My Loans" (their own)
-  super_admin     → <MembersLoansOverview> only (no personal loans, no tabs)
+  admin / super_admin → null (nav item inert; see "Admin/super-admin view removed")
 
 "+ New Loan" → <TakeLoanModal>
   pick Loan Type → shows eligible amount + rate/duration for that type
@@ -128,15 +138,17 @@ Any row in a records table → /loans/[id] → Loan Details page
 
 ## Components
 
-- `src/app/(dashboard)/loans/page.tsx` — role switch described above.
+- `src/app/(dashboard)/loans/page.tsx` — member-only role guard described
+  above.
 - `src/app/(dashboard)/loans/[id]/page.tsx` — the details page, with the
   Repayment Schedule / Transactions tabs.
 - `src/components/features/loans/member-loans-view.tsx` — summary card,
   table, "+ New Loan"/"Export" actions, modal orchestration (this is
   where the submission simulation and `addRecord` call happen).
-- `src/components/features/loans/members-loans-overview.tsx` — the
-  admin/super-admin aggregate-by-loan-type view (total disbursed + active
-  count per type).
+- `src/components/features/loans/members-loans-overview.tsx` — the former
+  admin/super-admin aggregate-by-loan-type view; still present but no
+  longer imported by `page.tsx` (see
+  [Admin/super-admin view removed](#adminsuper-admin-view-removed)).
 - `src/components/features/loans/loan-records-table.tsx` — search, status
   filter, date range, pagination, clickable rows (mirrors
   `savings-records-table.tsx`).
@@ -154,11 +166,14 @@ Any row in a records table → /loans/[id] → Loan Details page
 Same "lighter touch on data-dense screens" rule as
 [savings-page.md](./savings-page.md#animations) — no per-field stagger on
 the table. The two dialogs reuse the shared `Dialog` primitive's
-scale+fade open/close, and the detail page's tabs reuse the same
-`Tabs.Indicator` sliding-highlight behavior as `/savings`' role tabs.
+scale+fade open/close, and the detail page's Repayment Schedule/
+Transactions tabs use Base UI's `Tabs.Indicator` sliding highlight.
 
 ## Future Improvements
 
+- **Rebuild the admin/super-admin view against a correct reference.**
+  Top priority once that design is provided — see
+  [Admin/super-admin view removed](#adminsuper-admin-view-removed).
 - **No admin approval action.** A loan created via "Take a Loan" stays
   `Awaiting Approval` forever in this mock system — there's no UI yet for
   an admin/super-admin to move it to `Active` or `Rejected`. The seed data
