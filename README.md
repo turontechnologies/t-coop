@@ -94,8 +94,11 @@ page reload, since there's no backend to persist to).
 | `/savings/[id]`                                 | Individual savings record detail (member's own)                  | [savings-page.md](./documentation/savings-page.md)                     |
 | `/savings/type/[type]`                          | Admin: all members' records for one savings type                 | [savings-page.md](./documentation/savings-page.md)                     |
 | `/savings/record/[recordId]`                    | Admin: individual savings record detail                          | [savings-page.md](./documentation/savings-page.md)                     |
-| `/loans`                                        | Loans (member only for now; eligibility + application flow)      | [loans-page.md](./documentation/loans-page.md)                         |
-| `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)        | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans`                                        | Loans (member + admin; eligibility + application flow)           | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/[id]`                                   | Individual loan detail (member's own)                            | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/type/[type]`                            | Admin: all members' records for one loan type                    | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/record/[recordId]`                      | Admin: individual loan detail                                    | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/request/[recordId]`                     | Admin: guarantor/admin decision on a pending loan request        | [loans-page.md](./documentation/loans-page.md)                         |
 | `/co-operatives`                                | Super admin: list every co-operative, add a new one              | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
 | `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`)     | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
 | `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs                 | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
@@ -141,7 +144,8 @@ src/
     features/auth/           one form component per auth screen
     features/coop/           co-operatives list/detail/member/drill-down components
     features/dashboard/      quick-summary cards, activity chart, activity list
-    features/loans/          loans list/modal/detail components
+    features/loans/          loans list/modal/detail; admin-loans-view.tsx
+                              (Quick Summary + tabs), loan-requests-table.tsx
     features/members-directory/  admin's own members list + add-member form
     features/notice-board/   create notice form, list, reply thread, member view
     features/profile/        profile view + edit-toggle form
@@ -178,14 +182,14 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Dashboard (super admin / admin / member views)
 - [x] My Profile (read-only by default, Edit toggle, all roles; real Cloudinary photo upload)
 - [x] Savings & Contributions (member: real Paystack checkout, savings detail page. admin: Quick Summary, Members Savings/My Savings/Request tabs, Upload Teller with receipt attachment, deposit/withdrawal request approval — super-admin oversight view still pending)
-- [x] Loans (member view, eligibility-based application flow, repayment schedule + transactions detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
+- [x] Loans (member: eligibility-based application flow, repayment schedule + transactions detail page. admin: Quick Summary, Requests/Members Loans/My Loans tabs, guarantor accept/reject with payslip upload, admin approve-and-disburse/reject-with-reason — super-admin oversight view still pending)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
 - [x] Members Directory (admin: list, add with BVN auto-fill, bulk import via template, export, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
 - [x] Notice Board (all roles; real cross-tab real-time via `storage` events — announcements, meeting notices, meeting minutes with PDF attachment, scheduled send, reply/feedback thread, live notification bell)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)
-- [ ] Admin loan approval action (loans stay "Awaiting Approval" indefinitely — see loans-page.md)
+- [ ] Admin approval for the member's own "Take a Loan" flow (the legacy personal `LoanRecord` — separate from the co-op loan pipeline the admin Loans page now resolves — stays "Awaiting Approval" indefinitely; see loans-page.md)
 - [ ] The dashboard's other non-Dashboard nav items (Subscriptions, Settings, etc.)
 
 ## Known Gotchas

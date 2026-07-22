@@ -51,7 +51,7 @@ export interface SavingsRequest {
 }
 
 export type CoopLoanStatus =
-  "Active" | "Awaiting Approval" | "Completed" | "Rejected";
+  "Awaiting Guarantor" | "Awaiting Admin" | "Active" | "Completed" | "Rejected";
 
 export interface CoopLoanRecord {
   id: string;
@@ -68,6 +68,11 @@ export interface CoopLoanRecord {
   date: string;
   status: CoopLoanStatus;
   repaymentsMade: number;
+  /** Set once the guarantor accepts — a payslip/proof upload, base64 data URL. */
+  guarantorDocumentUrl?: string;
+  guarantorAcceptedAt?: string;
+  /** Set when the admin rejects — shown wherever this record is viewed. */
+  rejectionReason?: string;
 }
 
 export interface Cooperative {
@@ -251,7 +256,24 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         totalRepayment: 180_000 + 180_000 * 0.07,
         guarantorName: "Karim Adeyemi",
         date: "2026-06-15",
-        status: "Awaiting Approval",
+        status: "Awaiting Admin",
+        repaymentsMade: 0,
+        guarantorAcceptedAt: "2026-06-20T10:00:00.000Z",
+      },
+      {
+        id: "coop-loan-5",
+        memberId: "MEM-0988-4",
+        memberName: "Halima Bello",
+        loanType: "Emergency Loan",
+        amount: 35_000,
+        interestRate: 5,
+        durationMonths: 3,
+        numberOfRepayments: 3,
+        monthlyRepayment: (35_000 + 35_000 * 0.05) / 3,
+        totalRepayment: 35_000 + 35_000 * 0.05,
+        guarantorName: "Amaka Chukwu",
+        date: "2026-07-15",
+        status: "Awaiting Guarantor",
         repaymentsMade: 0,
       },
     ],
@@ -438,6 +460,15 @@ export function coopMemberSavingsBalance(
 
 export function coopLoansTotal(coop: Cooperative): number {
   return coop.loans.reduce((sum, record) => sum + record.amount, 0);
+}
+
+export function coopLoanStatusBadgeVariant(
+  status: CoopLoanStatus,
+): "secondary" | "outline" | "destructive" {
+  if (status === "Active" || status === "Completed") return "secondary";
+  if (status === "Awaiting Guarantor" || status === "Awaiting Admin")
+    return "outline";
+  return "destructive";
 }
 
 interface CoopSavingsTypeSummary {

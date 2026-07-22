@@ -2,7 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import type { CoopLoanRecord } from "@/lib/coop-data";
+import {
+  coopLoanStatusBadgeVariant,
+  type CoopLoanRecord,
+} from "@/lib/coop-data";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -68,14 +71,7 @@ export function CoopMemberLoansTable({
                 </td>
                 <td className="px-4 py-3">
                   <Badge
-                    variant={
-                      record.status === "Active" ||
-                      record.status === "Completed"
-                        ? "secondary"
-                        : record.status === "Awaiting Approval"
-                          ? "outline"
-                          : "destructive"
-                    }
+                    variant={coopLoanStatusBadgeVariant(record.status)}
                     className={cn(
                       record.status === "Active" &&
                         "bg-success/15 text-success",

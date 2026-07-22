@@ -42,6 +42,18 @@ interface CoopState {
     requestId: string,
     status: Extract<SavingsRequestStatus, "Approved" | "Declined">,
   ) => void;
+  respondToGuarantorRequest: (
+    coopId: string,
+    loanId: string,
+    decision: "Accepted" | "Rejected",
+    documentUrl?: string,
+  ) => void;
+  resolveLoanRequest: (
+    coopId: string,
+    loanId: string,
+    decision: "Approved" | "Rejected",
+    rejectionReason?: string,
+  ) => void;
 }
 
 export const useCoopStore = create<CoopState>((set) => ({
@@ -136,6 +148,50 @@ export const useCoopStore = create<CoopState>((set) => ({
           ...coop,
           savingsRequests,
           savings: [record, ...coop.savings],
+        };
+      }),
+    })),
+  respondToGuarantorRequest: (coopId, loanId, decision, documentUrl) =>
+    set((state) => ({
+      cooperatives: state.cooperatives.map((coop) => {
+        if (coop.id !== coopId) return coop;
+        return {
+          ...coop,
+          loans: coop.loans.map((loan) => {
+            if (loan.id !== loanId || loan.status !== "Awaiting Guarantor") {
+              return loan;
+            }
+            if (decision === "Rejected") {
+              return {
+                ...loan,
+                status: "Rejected",
+                rejectionReason: "Guarantor declined to stand for this loan.",
+              };
+            }
+            return {
+              ...loan,
+              status: "Awaiting Admin",
+              guarantorAcceptedAt: new Date().toISOString(),
+              guarantorDocumentUrl: documentUrl,
+            };
+          }),
+        };
+      }),
+    })),
+  resolveLoanRequest: (coopId, loanId, decision, rejectionReason) =>
+    set((state) => ({
+      cooperatives: state.cooperatives.map((coop) => {
+        if (coop.id !== coopId) return coop;
+        return {
+          ...coop,
+          loans: coop.loans.map((loan) => {
+            if (loan.id !== loanId || loan.status !== "Awaiting Admin") {
+              return loan;
+            }
+            return decision === "Approved"
+              ? { ...loan, status: "Active" }
+              : { ...loan, status: "Rejected", rejectionReason };
+          }),
         };
       }),
     })),

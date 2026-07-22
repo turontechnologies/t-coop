@@ -35,12 +35,20 @@ interface MemberLoansViewProps {
   memberId: string;
   memberName: string;
   heading?: string;
+  /** Hide the "Quick Summary" heading, card, and "+ New Loan" button — for embedding inside a page that already renders its own summary and add action (e.g. the admin's "My Loans" tab). */
+  showSummary?: boolean;
+  /** Controls the Take Loan modal from outside, for use alongside `showSummary={false}`. Falls back to internal state when omitted. */
+  takeOpen?: boolean;
+  onTakeOpenChange?: (open: boolean) => void;
 }
 
 export function MemberLoansView({
   memberId,
   memberName,
   heading = "My Loan Record",
+  showSummary = true,
+  takeOpen: takeOpenProp,
+  onTakeOpenChange,
 }: MemberLoansViewProps) {
   const records = useLoansStore((state) => state.records);
   const addRecord = useLoansStore((state) => state.addRecord);
@@ -68,7 +76,9 @@ export function MemberLoansView({
     [memberRecords],
   );
 
-  const [takeOpen, setTakeOpen] = useState(false);
+  const [internalTakeOpen, setInternalTakeOpen] = useState(false);
+  const takeOpen = takeOpenProp ?? internalTakeOpen;
+  const setTakeOpen = onTakeOpenChange ?? setInternalTakeOpen;
   const [busy, setBusy] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastAmount, setLastAmount] = useState(0);
@@ -116,24 +126,30 @@ export function MemberLoansView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
-        <Button onClick={() => setTakeOpen(true)}>+ New Loan</Button>
-      </div>
-
-      <Card className="max-w-xs">
-        <CardContent className="flex items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <p className="text-sm text-muted-foreground">Active Loans</p>
-            <p className="text-xl font-semibold text-foreground sm:text-2xl">
-              {formatNaira(totalActive)}
-            </p>
+      {showSummary ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              Quick Summary
+            </h2>
+            <Button onClick={() => setTakeOpen(true)}>+ New Loan</Button>
           </div>
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Landmark className="size-5" aria-hidden="true" />
-          </span>
-        </CardContent>
-      </Card>
+
+          <Card className="max-w-xs">
+            <CardContent className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
+                <p className="text-sm text-muted-foreground">Active Loans</p>
+                <p className="text-xl font-semibold text-foreground sm:text-2xl">
+                  {formatNaira(totalActive)}
+                </p>
+              </div>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Landmark className="size-5" aria-hidden="true" />
+              </span>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
 
       <Card>
         <CardContent>

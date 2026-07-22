@@ -6,9 +6,14 @@ import { formatNaira } from "@/lib/format";
 
 interface CoopLoansSummaryTableProps {
   coop: Cooperative;
+  /** Defaults to the super-admin co-operative oversight path. */
+  basePath?: string;
 }
 
-export function CoopLoansSummaryTable({ coop }: CoopLoansSummaryTableProps) {
+export function CoopLoansSummaryTable({
+  coop,
+  basePath = `/co-operatives/${coop.id}/loans`,
+}: CoopLoansSummaryTableProps) {
   const router = useRouter();
   const totalsByType = coopLoansBySummaryType(coop);
 
@@ -42,9 +47,7 @@ export function CoopLoansSummaryTable({ coop }: CoopLoansSummaryTableProps) {
             <tr
               key={type.name}
               onClick={() =>
-                router.push(
-                  `/co-operatives/${coop.id}/loans/${encodeURIComponent(type.name)}`,
-                )
+                router.push(`${basePath}/${encodeURIComponent(type.name)}`)
               }
               className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
             >

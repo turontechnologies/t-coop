@@ -14,7 +14,8 @@ import {
   TabsPanel,
   TabsTab,
 } from "@/components/ui/tabs";
-import { coopLoanStatusBadgeVariant, findCooperative } from "@/lib/coop-data";
+import { coopLoanStatusBadgeVariant } from "@/lib/coop-data";
+import { getDirectoryCoop } from "@/lib/member-directory";
 import {
   generateLoanTransactions,
   generateRepaymentSchedule,
@@ -24,8 +25,8 @@ import { formatDateLong, formatNaira } from "@/lib/format";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
-interface CoopLoanRecordPageProps {
-  params: Promise<{ id: string; recordId: string }>;
+interface AdminLoanRecordPageProps {
+  params: Promise<{ recordId: string }>;
 }
 
 function repaymentBadgeVariant(status: RepaymentStatus) {
@@ -34,13 +35,13 @@ function repaymentBadgeVariant(status: RepaymentStatus) {
   return "destructive";
 }
 
-export default function CoopLoanRecordPage({
+export default function AdminLoanRecordPage({
   params,
-}: CoopLoanRecordPageProps) {
-  const { id, recordId } = use(params);
+}: AdminLoanRecordPageProps) {
+  const { recordId } = use(params);
   const router = useRouter();
   const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = findCooperative(cooperatives, id);
+  const coop = getDirectoryCoop(cooperatives);
   const record = coop?.loans.find((item) => item.id === recordId);
   const member = coop?.members.find((item) => item.id === record?.memberId);
 
@@ -59,12 +60,9 @@ export default function CoopLoanRecordPage({
         <p className="text-sm text-muted-foreground">
           We couldn&apos;t find that loan record.
         </p>
-        <Button
-          variant="outline"
-          onClick={() => router.push(`/co-operatives/${id}`)}
-        >
+        <Button variant="outline" onClick={() => router.push("/loans")}>
           <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to Co-operative
+          Back to Loans
         </Button>
       </div>
     );
@@ -108,7 +106,7 @@ export default function CoopLoanRecordPage({
             value={
               member ? (
                 <Link
-                  href={`/co-operatives/${coop.id}/members/${member.id}`}
+                  href={`/members/${member.id}`}
                   className="font-semibold text-primary underline-offset-4 hover:underline"
                 >
                   {record.memberName}
@@ -121,13 +119,7 @@ export default function CoopLoanRecordPage({
           <Field label="Guarantor" value={record.guarantorName} />
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Status</p>
-            <Badge
-              variant={coopLoanStatusBadgeVariant(record.status)}
-              className={cn(
-                record.status === "Active" && "bg-success/15 text-success",
-                record.status === "Completed" && "bg-primary/10 text-primary",
-              )}
-            >
+            <Badge variant={coopLoanStatusBadgeVariant(record.status)}>
               {record.status}
             </Badge>
           </div>

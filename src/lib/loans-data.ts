@@ -174,8 +174,18 @@ export interface RepaymentScheduleItem {
   status: RepaymentStatus;
 }
 
+/** Shared shape between the personal LoanRecord and the coop-scoped CoopLoanRecord. */
+interface RepaymentSourceLoan {
+  amount: number;
+  numberOfRepayments: number;
+  totalRepayment: number;
+  date: string;
+  status: string;
+  repaymentsMade: number;
+}
+
 export function generateRepaymentSchedule(
-  loan: LoanRecord,
+  loan: RepaymentSourceLoan,
 ): RepaymentScheduleItem[] {
   const principalPerInstallment = loan.amount / loan.numberOfRepayments;
   const interestPerInstallment =
@@ -189,7 +199,7 @@ export function generateRepaymentSchedule(
     dueDate.setMonth(dueDate.getMonth() + installment);
 
     let status: RepaymentStatus;
-    if (loan.status === "Awaiting Approval" || loan.status === "Rejected") {
+    if (loan.status.startsWith("Awaiting") || loan.status === "Rejected") {
       status = "Pending";
     } else if (installment <= loan.repaymentsMade) {
       status = "Paid";
@@ -217,7 +227,9 @@ export interface LoanTransaction {
   status: "Success";
 }
 
-export function generateLoanTransactions(loan: LoanRecord): LoanTransaction[] {
+export function generateLoanTransactions(
+  loan: RepaymentSourceLoan & { id: string },
+): LoanTransaction[] {
   return generateRepaymentSchedule(loan)
     .filter((item) => item.status === "Paid")
     .map((item) => ({

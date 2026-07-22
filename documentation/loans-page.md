@@ -5,15 +5,16 @@
 `/loans` (plus its detail route `/loans/[id]`) is the fourth real page in
 the `(dashboard)` route group, alongside `/dashboard`, `/profile`, and
 `/savings` — see [dashboard.md](./dashboard.md) and
-[savings-page.md](./savings-page.md). It originally mirrored the
-Savings & Contributions architecture in full, including the same role
-split (member view / admin tabs / super-admin org-wide overview) — but
-that admin/super-admin oversight view turned out not to match what should
-actually be there and has been removed pending a correct reference
-design; see [Admin/super-admin view removed](#adminsuper-admin-view-removed).
-(`/savings` has since had its own admin view rebuilt correctly — see
-[savings-page.md#admin-view](./savings-page.md#admin-view) — `/loans` is
-still awaiting the equivalent.)
+[savings-page.md](./savings-page.md).
+
+**Member and admin are both built; super_admin is still inert.** The
+member experience described in most of this document is unchanged. The
+admin role now has its own real "Loans" page — see
+[Admin view](#admin-view) below — built the same way `/savings`' admin
+view was: Quick Summary, tabs, a per-type drill-down reusing the
+super-admin co-op components via an optional `basePath`. Super admin's
+"Loans" nav item still has no `href`; the equivalent oversight already
+exists per co-operative under `/co-operatives/[id]/loans/...`.
 
 ## Purpose
 
@@ -25,19 +26,61 @@ in the original reference set is covered: the summary + record table, the
 preview), the "Loan Successful" confirmation, and the individual loan
 detail page with its Repayment Schedule / Transactions tabs.
 
-## Admin/super-admin view removed
+## Admin view
 
-Same original change, same reasoning, that `/savings` went through before
-its admin view was rebuilt (see [savings-page.md#admin-view](./savings-page.md#admin-view)) —
-`/loans` just hasn't had that follow-up yet. The
-admin's "Members Loans" / "My Loans" tab switcher and the super admin's
-org-wide `<MembersLoansOverview>` are unwired: `/loans/page.tsx` now
-renders `<MemberLoansView>` for `role === "member"` only and returns
-`null` for every other role, and "Loans" lost its `href` for admin/
-super_admin in `dashboard-nav.ts` (inert "coming soon" toast again).
-`<MembersLoansOverview>` was not deleted — still in
-`src/components/features/loans/members-loans-overview.tsx`, just no
-longer imported — pending the corrected design.
+An admin manages loans for their whole co-operative from the same
+`/loans` route (branched by role in `page.tsx`): a page-level Quick
+Summary (Total Loans across every member + the admin's own personal My
+Loans total) above three tabs — **Requests**, **Members Loans**, and
+**My Loans** (Requests first, matching the reference — it's the queue
+that actually needs attention). "+ New Loan" only appears on the My
+Loans tab, opening the exact same `<TakeLoanModal>` a member gets — there
+is no admin-side manual loan-entry action, since nothing in the request
+described one (unlike Savings' Upload Teller, which was explicitly
+asked for).
+
+This replaces an earlier, unwired admin/super-admin oversight view
+(`<MembersLoansOverview>` + a tab switcher) that predated a correct
+reference design. `<MembersLoansOverview>` is still present in
+`src/components/features/loans/members-loans-overview.tsx` but no longer
+imported anywhere — `AdminLoansView` was built fresh instead, reusing the
+co-operative oversight components (`CoopLoansSummaryTable`,
+`CoopLoanTypeRecordsTable`) the same way `AdminSavingsView` reuses their
+Savings equivalents.
+
+### The approval pipeline: Guarantor, then Admin
+
+A co-op loan (`CoopLoanRecord`) now moves through two pending stages
+before it's resolved:
+
+```
+Awaiting Guarantor → Awaiting Admin → Active (approved) | Rejected
+```
+
+- **Awaiting Guarantor**: the nominated guarantor needs to accept or
+  decline standing for the loan. The admin acts on this from a unified
+  Requests queue (see [Design Decisions](#design-decisions) for why there's
+  no separate guarantor login) — clicking a request in this stage shows a
+  guarantor profile card alongside the Loan Details, with **Accept
+  Request** (optionally attaching proof of income, e.g. a payslip) or
+  **Reject Request**.
+- **Awaiting Admin**: once the guarantor accepts, the admin makes the
+  final call — **Approve Request** marks the loan `Active` and represents
+  disbursing the approved amount to the member (simulated — there's no
+  real payout capability, see [Future Improvements](#future-improvements)),
+  or **Reject Request**, which _requires_ a reason before the button
+  enables, stored as `rejectionReason` and shown wherever the record is
+  viewed afterward.
+
+This intentionally does **not** build the full pipeline implied by the
+reference screenshots (`Awaiting Processing Fee` with a real Paystack
+charge, a separate `Awaiting Approver 1` stage) — those screens
+contradicted each other (a ₦100 Paystack charge vs. a "₦5,000 processing
+fee" success message) and didn't clearly map onto a single admin's
+final decision the way the request explicitly described ("if the admin
+want to pay the member the approved loan and if rejecting it should pass
+a message to the member reason for rejection"). Guarantor + Admin is the
+scope that was actually asked for.
 
 ## Design Decisions
 
@@ -113,15 +156,53 @@ longer imported — pending the corrected design.
   `/savings`' role-switch tabs) to separate "Repayment Schedule" (the
   full installment-by-installment plan) from "Transactions" (only the
   installments actually paid so far).
+- **The guarantor decision is made by the admin, not a separate guarantor
+  login.** This app has exactly three roles/logins (super_admin, admin,
+  member) — there's no fourth "guarantor" identity to sign in as, and
+  building one wasn't asked for. So `respondToGuarantorRequest` is an
+  admin action taken _on behalf of_ whoever is nominated: the admin's
+  unified Requests tab shows every pending request regardless of stage,
+  and the request detail page renders the guarantor's own profile card
+  (looked up by matching `guarantorName` against a real `CoopMember`, when
+  one exists) purely as _context_ for the admin's decision, not as a
+  login-gated action only that person could take. When the name doesn't
+  match any real member (e.g. a co-op's own `adminName`, who isn't
+  necessarily listed as a `CoopMember`), the card shows just the name and
+  says so honestly, rather than fabricating an email/country/etc.
+- **`CoopLoanStatus` replaced the single generic `"Awaiting Approval"`
+  with two specific stages** (`"Awaiting Guarantor"`, `"Awaiting Admin"`),
+  and `generateRepaymentSchedule`/`generateLoanTransactions` in
+  `loans-data.ts` were generalized to accept any loan-shaped object
+  (`status: string`, checked via `.startsWith("Awaiting")` for "not
+  disbursed yet") rather than the exact legacy `LoanRecord` type — needed
+  because `CoopLoanRecord` and the personal `LoanRecord` no longer share
+  an identical status union, so the functions had to stop assuming one.
+  A new shared `coopLoanStatusBadgeVariant()` helper in `coop-data.ts`
+  replaced three separate copies of the same badge-color logic that would
+  otherwise have needed updating in three places every time a status is
+  added.
+- **Withdrawal-style negative amounts weren't needed here** (unlike
+  Savings' request approvals) — a loan's `amount` is always positive
+  the whole way through; only its `status` changes as it moves through
+  the pipeline.
+- **"+ New Loan" is My Loans-only; there's no Members Loans equivalent of
+  Upload Teller.** Savings' Upload Teller exists because an admin
+  recording a _manual, already-happened_ deposit for someone else is a
+  real, distinct action from that member paying via Paystack. A loan
+  doesn't have an equivalent "the admin already gave them the money,
+  just log it" moment — every co-op loan enters through the same
+  application → guarantor → admin pipeline, so there's deliberately no
+  second creation path to keep in sync with it.
 
 ## Flow
 
 ```
 /loans
-  member          → <MemberLoansView> (their own records + "+ New Loan")
-  admin / super_admin → null (nav item inert; see "Admin/super-admin view removed")
+  member      → <MemberLoansView> (their own records + "+ New Loan")
+  admin       → <AdminLoansView> (Quick Summary + Requests/Members Loans/My Loans tabs)
+  super_admin → null (nav item inert)
 
-"+ New Loan" → <TakeLoanModal>
+Member "+ New Loan" → <TakeLoanModal>
   pick Loan Type → shows eligible amount + rate/duration for that type
   enter Amount   → validated against eligible amount; Loan Details preview
                    (type, duration, amount, total repayment, monthly
@@ -137,32 +218,80 @@ Any row in a records table → /loans/[id] → Loan Details page
   Tabs: "Repayment Schedule" (amount/interest/total/due date/status per
         installment) | "Transactions" (paid installments as transaction
         rows: ID, amount, date, method, status)
+
+--- Admin-only ---
+
+Members Loans tab → <CoopLoansSummaryTable> (by loan type)
+  → click a type row → /loans/type/[type] → per-type records for every member
+      → click a record → /loans/record/[recordId] → Loan Details + Repayment
+        Schedule/Transactions tabs (same shape as the member's own detail page)
+
+My Loans tab → <MemberLoansView showSummary={false}> for the admin's own
+  record — identical Take-a-Loan flow as a member, driven by the
+  page-level "+ New Loan" button
+
+Requests tab → <LoanRequestsTable> (every loan Awaiting Guarantor/Awaiting
+  Admin, across every member and type)
+  → click a row → /loans/request/[recordId]
+      status "Awaiting Guarantor" → guarantor profile card + Loan Details
+        "Accept Request" (optional payslip upload) → status → "Awaiting Admin"
+        "Reject Request" (simple confirm) → status → "Rejected"
+      status "Awaiting Admin" → Loan Details only
+        "Approve Request" (confirm) → status → "Active" (simulated disbursement)
+        "Reject Request" (reason required) → status → "Rejected", reason stored
 ```
 
 ## Components
 
-- `src/app/(dashboard)/loans/page.tsx` — member-only role guard described
-  above.
-- `src/app/(dashboard)/loans/[id]/page.tsx` — the details page, with the
-  Repayment Schedule / Transactions tabs.
+- `src/app/(dashboard)/loans/page.tsx` — role branch: member/admin/
+  super_admin, described above.
+- `src/app/(dashboard)/loans/[id]/page.tsx` — the member's own details
+  page, with the Repayment Schedule / Transactions tabs.
+- `src/app/(dashboard)/loans/type/[type]/page.tsx` — admin-only: all
+  members' records for one loan type.
+- `src/app/(dashboard)/loans/record/[recordId]/page.tsx` — admin-only:
+  single loan details + Repayment Schedule/Transactions tabs, mirrors the
+  super-admin co-op equivalent.
+- `src/app/(dashboard)/loans/request/[recordId]/page.tsx` — admin-only:
+  the guarantor/admin decision page described above.
 - `src/components/features/loans/member-loans-view.tsx` — summary card,
   table, "+ New Loan"/"Export" actions, modal orchestration (this is
-  where the submission simulation and `addRecord` call happen).
-- `src/components/features/loans/members-loans-overview.tsx` — the former
-  admin/super-admin aggregate-by-loan-type view; still present but no
-  longer imported by `page.tsx` (see
-  [Admin/super-admin view removed](#adminsuper-admin-view-removed)).
+  where the submission simulation and `addRecord` call happen); see the
+  `showSummary`/`takeOpen`/`onTakeOpenChange` props added for admin reuse.
+- `src/components/features/loans/admin-loans-view.tsx` — the admin
+  orchestrator: Quick Summary cards, the three tabs, "+ New Loan" shown
+  only on My Loans.
+- `src/components/features/loans/loan-requests-table.tsx` — the Requests
+  tab's flat, all-types table of pending requests.
+- `src/components/features/loans/members-loans-overview.tsx` — an
+  earlier, unwired admin aggregate view; no longer imported anywhere (see
+  [Admin view](#admin-view)) — candidate for deletion in a future cleanup.
 - `src/components/features/loans/loan-records-table.tsx` — search, status
   filter, date range, pagination, clickable rows (mirrors
   `savings-records-table.tsx`).
 - `src/components/features/loans/take-loan-modal.tsx` /
   `loan-success-modal.tsx` — the two dialogs.
+- `src/components/features/coop/coop-loans-summary-table.tsx` /
+  `coop-loan-type-records-table.tsx` — the by-type aggregate and per-type
+  records table, shared between the super-admin co-op oversight view and
+  the admin's Members Loans tab via an optional `basePath` prop.
 - `src/lib/loans-data.ts` — loan type definitions (name, flat interest
   rate, max amount, duration), `computeEligibleAmount`,
   `computeLoanTerms`, `generateRepaymentSchedule`,
-  `generateLoanTransactions`, and seed records.
-- `src/store/loans.store.ts` — the reactive record store (unpersisted,
-  same lifetime convention as `savings.store.ts`).
+  `generateLoanTransactions` (now generalized over any loan-shaped
+  object, not just the legacy `LoanRecord`), and seed records.
+- `src/lib/coop-data.ts` — `CoopLoanStatus`'s two staged statuses,
+  `CoopLoanRecord.rejectionReason`/`guarantorAcceptedAt`/
+  `guarantorDocumentUrl`, `coopLoanStatusBadgeVariant` (the shared
+  badge-color helper), and the seeded `coop-loan-5` (Awaiting Guarantor)
+  request used to demo the pipeline.
+- `src/lib/file-to-data-url.ts` — reused as-is from Notice Board/Savings
+  for the optional payslip upload on guarantor acceptance.
+- `src/store/loans.store.ts` — the reactive record store for the
+  member/admin's own personal loans (unpersisted, same lifetime
+  convention as `savings.store.ts`).
+- `src/store/coop.store.ts` — `respondToGuarantorRequest` and
+  `resolveLoanRequest` mutators driving the approval pipeline.
 
 ## Animations
 
@@ -174,22 +303,34 @@ Transactions tabs use Base UI's `Tabs.Indicator` sliding highlight.
 
 ## Future Improvements
 
-- **Rebuild the admin/super-admin view against a correct reference.**
-  Top priority once that design is provided — see
-  [Admin/super-admin view removed](#adminsuper-admin-view-removed).
-- **No admin approval action.** A loan created via "Take a Loan" stays
-  `Awaiting Approval` forever in this mock system — there's no UI yet for
-  an admin/super-admin to move it to `Active` or `Rejected`. The seed data
-  includes examples of every status so the UI has something real to
-  render, but the transition itself isn't wired up.
-- **No real disbursement or repayment collection.** Unlike `/savings`,
-  there's no payment gateway involved here in either direction — a real
-  system would need to actually pay out an approved loan and actually
-  collect each installment (likely via the same Paystack integration,
-  charging a saved payment method on each due date). `repaymentsMade` is
-  a static seed number for now, not something that advances over time.
+- **The member-facing "Take a Loan" flow (legacy `LoanRecord`) still has
+  no admin approval action.** A loan created via that flow stays
+  `Awaiting Approval` forever — it's a separate, older data model from
+  the co-op `CoopLoanRecord` pipeline this document's new Admin view
+  actually resolves. Folding the personal flow into the same
+  guarantor/admin pipeline (or building an equivalent for it) is the
+  natural next step, but was out of scope here since "My Loans" was
+  explicitly asked to stay identical to the member's existing flow.
+- **A dedicated super-admin `/loans` view**, if ever requested — today
+  super admin's oversight equivalent lives per-co-operative under
+  `/co-operatives/[id]/loans/...` (see
+  [co-operatives-page.md](./co-operatives-page.md)).
+- **No real disbursement or repayment collection.** Approving a co-op
+  loan request marks it `Active` and is explicitly labeled as a
+  simulated disbursement — there's no real payout capability (no
+  backend, no Paystack Transfers API/secret key) and no real repayment
+  collection either; `repaymentsMade` is still a static seed number, not
+  something that advances over time.
 - **Guarantor list is a flat mock array** (`GUARANTORS` in
   `loans-data.ts`), not the real member directory — good enough to
   demonstrate the field, but a real version would pull from whatever
   members-directory data source the admin "Members Directory" nav item
-  eventually uses.
+  eventually uses. The co-op guarantor pipeline instead matches
+  `guarantorName` against real `CoopMember` records when possible (see
+  [Design Decisions](#design-decisions)), which is a step closer but
+  still name-matching rather than a real reference/ID relationship.
+- **The full multi-stage pipeline implied by the reference screenshots**
+  (a real Paystack-charged processing fee, a separate "Approver 1"
+  stage) wasn't built — see [Admin view](#admin-view) for why. Worth
+  revisiting if a coherent, non-contradictory reference for those stages
+  is provided.

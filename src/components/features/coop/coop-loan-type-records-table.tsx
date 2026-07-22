@@ -20,7 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CoopLoanRecord, CoopLoanStatus } from "@/lib/coop-data";
+import {
+  coopLoanStatusBadgeVariant,
+  type CoopLoanRecord,
+} from "@/lib/coop-data";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -31,26 +34,24 @@ function toIsoDate(date: Date): string {
 interface CoopLoanTypeRecordsTableProps {
   coopId: string;
   records: CoopLoanRecord[];
+  /** Defaults to the super-admin co-operative oversight path. */
+  basePath?: string;
 }
 
 const STATUS_OPTIONS = [
   "All statuses",
   "Active",
-  "Awaiting Approval",
+  "Awaiting Guarantor",
+  "Awaiting Admin",
   "Completed",
   "Rejected",
 ] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
-function statusBadgeVariant(status: CoopLoanStatus) {
-  if (status === "Active" || status === "Completed") return "secondary";
-  if (status === "Awaiting Approval") return "outline";
-  return "destructive";
-}
-
 export function CoopLoanTypeRecordsTable({
   coopId,
   records,
+  basePath = `/co-operatives/${coopId}/loans/record`,
 }: CoopLoanTypeRecordsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -209,11 +210,7 @@ export function CoopLoanTypeRecordsTable({
               pageRecords.map((record) => (
                 <tr
                   key={record.id}
-                  onClick={() =>
-                    router.push(
-                      `/co-operatives/${coopId}/loans/record/${record.id}`,
-                    )
-                  }
+                  onClick={() => router.push(`${basePath}/${record.id}`)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
@@ -230,7 +227,7 @@ export function CoopLoanTypeRecordsTable({
                   </td>
                   <td className="px-4 py-3">
                     <Badge
-                      variant={statusBadgeVariant(record.status)}
+                      variant={coopLoanStatusBadgeVariant(record.status)}
                       className={cn(
                         record.status === "Active" &&
                           "bg-success/15 text-success",
