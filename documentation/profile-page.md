@@ -85,6 +85,18 @@ rather than a static mockup — sectioned, validated, with every field
   consistent with every other avatar in the app until a photo exists — see
   [theming-and-motion.md](./theming-and-motion.md#wordmark-asset) for the
   broader "one visual language, no ad-hoc assets" pattern.
+- **Clicking the photo opens it full-size, like tapping a profile picture
+  on TikTok or Instagram.** The 80px header avatar is a fixed-size
+  thumbnail — once a real photo exists, there was no way to actually see
+  it clearly. The avatar is now a real `<button>` (only rendered once
+  `avatarUrl` exists; initials aren't clickable, since there's nothing to
+  view yet) that opens a shadcn `Dialog` styled as a lightbox: transparent
+  popup chrome, a large square `next/image`, and a custom translucent
+  close button positioned over the photo itself rather than the default
+  dialog chrome, since the usual card background/border would fight with
+  an edge-to-edge image. Verified in a real browser that the enlarged
+  image is meaningfully bigger than the thumbnail (~380px vs. 80px) and
+  that Close actually dismisses it.
 - **Save is gated on having unsaved changes; leaving edit mode isn't.**
   "Update Details" stays disabled until the form is dirty
   (`formState.isDirty`) — a save button that's always clickable even with

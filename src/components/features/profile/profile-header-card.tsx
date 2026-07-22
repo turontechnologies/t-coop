@@ -2,10 +2,16 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Camera, IdCard, Loader2, Mail } from "lucide-react";
+import { Camera, IdCard, Loader2, Mail, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { getRoleLabel } from "@/config/dashboard-nav";
 import { getInitials } from "@/lib/format";
 import { useAuthStore } from "@/store/auth.store";
@@ -22,6 +28,7 @@ export function ProfileHeaderCard({ member }: ProfileHeaderCardProps) {
   const setAvatarUrl = useAuthStore((state) => state.setAvatarUrl);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -71,13 +78,20 @@ export function ProfileHeaderCard({ member }: ProfileHeaderCardProps) {
       <CardContent className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
         <div className="relative shrink-0">
           {member.avatarUrl ? (
-            <Image
-              src={member.avatarUrl}
-              alt={member.name}
-              width={80}
-              height={80}
-              className="size-20 rounded-full object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => setPhotoOpen(true)}
+              className="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              aria-label="View profile photo"
+            >
+              <Image
+                src={member.avatarUrl}
+                alt={member.name}
+                width={80}
+                height={80}
+                className="size-20 rounded-full object-cover transition-opacity hover:opacity-90"
+              />
+            </button>
           ) : (
             <span className="flex size-20 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
               {getInitials(member.name)}
@@ -124,6 +138,32 @@ export function ProfileHeaderCard({ member }: ProfileHeaderCardProps) {
           </div>
         </div>
       </CardContent>
+
+      {member.avatarUrl ? (
+        <Dialog open={photoOpen} onOpenChange={setPhotoOpen}>
+          <DialogContent
+            showClose={false}
+            className="max-w-sm bg-transparent p-0 shadow-none ring-0"
+          >
+            <DialogTitle className="sr-only">
+              {member.name}&apos;s profile photo
+            </DialogTitle>
+            <Image
+              src={member.avatarUrl}
+              alt={member.name}
+              width={480}
+              height={480}
+              className="aspect-square w-full rounded-2xl object-cover"
+            />
+            <DialogClose
+              className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-full bg-black/50 text-white outline-none backdrop-blur-sm transition-colors hover:bg-black/70 focus-visible:ring-2 focus-visible:ring-white/70"
+              aria-label="Close"
+            >
+              <X className="size-4" aria-hidden="true" />
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </Card>
   );
 }
