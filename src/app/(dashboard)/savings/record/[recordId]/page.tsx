@@ -7,22 +7,22 @@ import { ArrowLeft, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { findCooperative } from "@/lib/coop-data";
+import { getDirectoryCoop } from "@/lib/member-directory";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
-interface CoopSavingsRecordPageProps {
-  params: Promise<{ id: string; recordId: string }>;
+interface AdminSavingsRecordPageProps {
+  params: Promise<{ recordId: string }>;
 }
 
-export default function CoopSavingsRecordPage({
+export default function AdminSavingsRecordPage({
   params,
-}: CoopSavingsRecordPageProps) {
-  const { id, recordId } = use(params);
+}: AdminSavingsRecordPageProps) {
+  const { recordId } = use(params);
   const router = useRouter();
   const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = findCooperative(cooperatives, id);
+  const coop = getDirectoryCoop(cooperatives);
   const record = coop?.savings.find((item) => item.id === recordId);
   const member = coop?.members.find((item) => item.id === record?.memberId);
 
@@ -32,12 +32,9 @@ export default function CoopSavingsRecordPage({
         <p className="text-sm text-muted-foreground">
           We couldn&apos;t find that savings record.
         </p>
-        <Button
-          variant="outline"
-          onClick={() => router.push(`/co-operatives/${id}`)}
-        >
+        <Button variant="outline" onClick={() => router.push("/savings")}>
           <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to Co-operative
+          Back to Savings & Contributions
         </Button>
       </div>
     );
@@ -72,7 +69,7 @@ export default function CoopSavingsRecordPage({
             value={
               member ? (
                 <Link
-                  href={`/co-operatives/${coop.id}/members/${member.id}`}
+                  href={`/members/${member.id}`}
                   className="font-semibold text-primary underline-offset-4 hover:underline"
                 >
                   {record.memberName}

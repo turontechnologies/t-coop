@@ -7,11 +7,13 @@ the `(dashboard)` route group, alongside `/dashboard`, `/profile`, and
 `/savings` — see [dashboard.md](./dashboard.md) and
 [savings-page.md](./savings-page.md). It originally mirrored the
 Savings & Contributions architecture in full, including the same role
-split (member view / admin tabs / super-admin org-wide overview) — but,
-same as `/savings`, that admin/super-admin oversight view turned out not
-to match what should actually be there and has been removed pending a
-correct reference design; see
-[Admin/super-admin view removed](#adminsuper-admin-view-removed).
+split (member view / admin tabs / super-admin org-wide overview) — but
+that admin/super-admin oversight view turned out not to match what should
+actually be there and has been removed pending a correct reference
+design; see [Admin/super-admin view removed](#adminsuper-admin-view-removed).
+(`/savings` has since had its own admin view rebuilt correctly — see
+[savings-page.md#admin-view](./savings-page.md#admin-view) — `/loans` is
+still awaiting the equivalent.)
 
 ## Purpose
 
@@ -25,8 +27,9 @@ detail page with its Repayment Schedule / Transactions tabs.
 
 ## Admin/super-admin view removed
 
-Same change, same reasoning, as `/savings` — see
-[savings-page.md](./savings-page.md#adminsuper-admin-view-removed). The
+Same original change, same reasoning, that `/savings` went through before
+its admin view was rebuilt (see [savings-page.md#admin-view](./savings-page.md#admin-view)) —
+`/loans` just hasn't had that follow-up yet. The
 admin's "Members Loans" / "My Loans" tab switcher and the super admin's
 org-wide `<MembersLoansOverview>` are unwired: `/loans/page.tsx` now
 renders `<MemberLoansView>` for `role === "member"` only and returns

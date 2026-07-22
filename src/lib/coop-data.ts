@@ -30,6 +30,24 @@ export interface CoopSavingsRecord {
   transactionId: string;
   date: string;
   status: CoopSavingsStatus;
+  /** Base64 data URL of an uploaded teller/receipt image, when recorded that way. */
+  receiptUrl?: string;
+}
+
+export type SavingsRequestType = "Deposit" | "Withdrawal";
+export type SavingsRequestStatus = "Pending" | "Approved" | "Declined";
+
+export interface SavingsRequest {
+  id: string;
+  memberId: string;
+  memberName: string;
+  type: SavingsRequestType;
+  savingsType: string;
+  amount: number;
+  note?: string;
+  status: SavingsRequestStatus;
+  requestedAt: string;
+  resolvedAt?: string;
 }
 
 export type CoopLoanStatus =
@@ -65,6 +83,7 @@ export interface Cooperative {
   members: CoopMember[];
   savings: CoopSavingsRecord[];
   loans: CoopLoanRecord[];
+  savingsRequests: SavingsRequest[];
 }
 
 export const INITIAL_COOPERATIVES: Cooperative[] = [
@@ -236,6 +255,41 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         repaymentsMade: 0,
       },
     ],
+    savingsRequests: [
+      {
+        id: "coop-sav-req-1",
+        memberId: "MEM-0988-2",
+        memberName: "Amaka Chukwu",
+        type: "Deposit",
+        savingsType: "Basic Savings",
+        amount: 40_000,
+        note: "Salary contribution for July",
+        status: "Pending",
+        requestedAt: "2026-07-18T09:20:00.000Z",
+      },
+      {
+        id: "coop-sav-req-2",
+        memberId: "MEM-0988-1",
+        memberName: "Jonathan Newman",
+        type: "Withdrawal",
+        savingsType: "Premium Savings",
+        amount: 100_000,
+        note: "Emergency medical expense",
+        status: "Pending",
+        requestedAt: "2026-07-19T14:05:00.000Z",
+      },
+      {
+        id: "coop-sav-req-3",
+        memberId: "MEM-0988-3",
+        memberName: "Segun Ojo",
+        type: "Deposit",
+        savingsType: "Advanced Savings",
+        amount: 25_000,
+        status: "Approved",
+        requestedAt: "2026-07-10T11:00:00.000Z",
+        resolvedAt: "2026-07-11T08:30:00.000Z",
+      },
+    ],
   },
   {
     id: "COOP-0002",
@@ -315,6 +369,7 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         repaymentsMade: 1,
       },
     ],
+    savingsRequests: [],
   },
   {
     id: "COOP-0003",
@@ -341,6 +396,7 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
     ],
     savings: [],
     loans: [],
+    savingsRequests: [],
   },
 ];
 
@@ -364,6 +420,20 @@ export function coopMemberFullName(member: CoopMember): string {
 
 export function coopSavingsTotal(coop: Cooperative): number {
   return coop.savings.reduce((sum, record) => sum + record.amount, 0);
+}
+
+/** A member's running balance for one savings type, before a new record is added. */
+export function coopMemberSavingsBalance(
+  coop: Cooperative,
+  memberId: string,
+  savingsType: string,
+): number {
+  return coop.savings
+    .filter(
+      (record) =>
+        record.memberId === memberId && record.savingsType === savingsType,
+    )
+    .reduce((sum, record) => sum + record.amount, 0);
 }
 
 export function coopLoansTotal(coop: Cooperative): number {

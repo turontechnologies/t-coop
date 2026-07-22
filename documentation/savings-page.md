@@ -7,13 +7,16 @@ in the `(dashboard)` route group, alongside `/dashboard` and `/profile` —
 see [dashboard.md](./dashboard.md) and
 [profile-page.md](./profile-page.md).
 
-**Currently member-only.** This page originally also had an admin/
-super-admin oversight view (an org-wide "Members Savings" aggregate, plus
-an admin-only tab switcher). That view turned out not to match what
-should actually be there for those two roles, so it's been removed
-pending a correct reference design — see
-[Admin/super-admin view removed](#adminsuper-admin-view-removed) below.
-The member experience described in this document is unaffected.
+**Member and admin are both built; super_admin is still inert.** The
+member experience described in most of this document is unchanged. The
+admin role now has its own real "Savings & Contributions" page — see
+[Admin view](#admin-view) below — built against a corrected reference
+design. Super admin's "Savings & Contributions" nav item still has no
+`href` and shows the standard "coming soon" toast; super admin already has
+an equivalent oversight view per co-operative under
+`/co-operatives/[id]/savings/...` (see
+[co-operatives-page.md](./co-operatives-page.md)), so a dedicated
+super-admin `/savings` view hasn't been requested.
 
 ## Purpose
 
@@ -23,22 +26,24 @@ screen in the original reference set is covered: the summary + record
 table, the "Add to Savings" modal, the Paystack checkout, the success
 confirmation, and the individual savings record detail page.
 
-## Admin/super-admin view removed
+## Admin view
 
-The admin and super-admin roles' "Members Savings" org-wide aggregate
-(`<MembersSavingsOverview>`) and the admin's "Members Savings" / "My
-Savings" tab switcher have been unwired — `/savings/page.tsx` now renders
-`<MemberSavingsView>` for `role === "member"` only and returns `null` for
-every other role. The "Savings & Contributions" nav item lost its `href`
-for admin/super_admin (`dashboard-nav.ts`), so it's inert again — clicking
-it shows the same "coming soon" toast as any other not-yet-built nav item,
-instead of navigating to a page that isn't right yet. `<MembersSavingsOverview>`
-itself was **not** deleted — it's still in
-`src/components/features/savings/members-savings-overview.tsx`, simply no
-longer imported by the page — since a corrected reference design is
-expected and may reuse some or all of it. This is a deliberate "paused
-work," not a completed removal; see
-[Future Improvements](#future-improvements).
+An admin manages savings for their whole co-operative from the same
+`/savings` route (branched by role in `page.tsx`): a page-level Quick
+Summary (Total Savings across every member + the admin's own personal My
+Savings total) above three tabs — **Members Savings**, **My Savings**, and
+**Request** — with a single "+ New Savings" button whose behavior depends
+on which tab is active (see [Design Decisions](#design-decisions)).
+
+This replaces an earlier, unwired admin/super-admin oversight view
+(`<MembersSavingsOverview>` + a tab switcher) that didn't match the
+correct reference design and was removed pending one. `<MembersSavingsOverview>`
+itself is still present in
+`src/components/features/savings/members-savings-overview.tsx` but is no
+longer imported by anything — `AdminSavingsView` was built fresh instead,
+reusing the co-operative oversight components (`CoopSavingsSummaryTable`,
+`CoopSavingsTypeRecordsTable`) rather than that old component. It can be
+deleted in a future cleanup once nobody's relying on it as reference.
 
 ## Design Decisions
 
@@ -62,13 +67,59 @@ work," not a completed removal; see
   success. This is called out explicitly rather than glossed over: see
   [Future Improvements](#future-improvements).
 - **`<MemberSavingsView>` takes `memberId`/`memberName`/`memberEmail` as
-  props rather than reading the signed-in member directly**, even though
-  today it's only ever mounted for the signed-in member's own role. Kept
-  prop-driven (not hook-driven) since the removed admin view previously
-  reused this exact component for an admin's own "My Savings" tab, and
-  whatever replaces the admin/super-admin view (see
-  [Admin/super-admin view removed](#adminsuper-admin-view-removed)) will
-  likely want to do the same for a member other than the signed-in one.
+  props rather than reading the signed-in member directly**, kept
+  prop-driven specifically so the admin's "My Savings" tab could reuse it
+  wholesale for the admin's own personal record — which is exactly what
+  happened. It also gained two more optional props for that reuse:
+  `showSummary` (hides its own "Quick Summary" heading/card/"+ New
+  Savings" button when the parent page already renders an equivalent, as
+  `AdminSavingsView` does) and `addOpen`/`onAddOpenChange` (lets a parent
+  drive the Add Savings modal from an external button instead of the
+  component's own internal one). Both default to the component's original
+  fully-self-contained behavior, so the member's own `/savings` page needs
+  no changes at all.
+- **The admin's "+ New Savings" button does one of two different things,
+  depending on which tab is active** — and that's deliberate, not an
+  inconsistency. On **My Savings** it opens the exact same
+  `<AddSavingsModal>` → Paystack flow a member gets, because it's
+  crediting the admin's _own_ account and only the admin's own card can
+  pay for that. On **Members Savings** it opens `<UploadTellerModal>`
+  instead, because an admin recording a deposit _on behalf of_ another
+  member obviously can't run that member's card through Paystack — the
+  real-world equivalent is a bank teller slip, which is what that modal
+  captures. One button, whose behavior tracks the active tab, models the
+  actual constraint better than either a second unrequested button or
+  reusing the Paystack modal somewhere it can't honestly apply.
+- **Upload Teller records a real, downloadable receipt — not just a
+  filename.** Reusing the exact same `readFileAsDataUrl`/
+  `MAX_ATTACHMENT_BYTES` pieces already built for Notice Board attachments
+  (see [notice-board-page.md](./notice-board-page.md#design-decisions)),
+  the optional receipt image is read into a base64 data URL and stored as
+  `CoopSavingsRecord.receiptUrl`. Both savings-record-detail pages (the
+  new admin one and the existing super-admin
+  `/co-operatives/[id]/savings/record/[recordId]`) show a real "Download
+  receipt" link whenever it's present — a small, genuinely useful
+  extension beyond what the reference screenshot showed, since "upload a
+  teller" only means something if the proof stays retrievable afterward.
+- **Withdrawal requests and approvals are modeled as signed amounts, not
+  a parallel data shape.** Rather than invent a separate "withdrawal
+  record" type, an approved withdrawal creates an ordinary
+  `CoopSavingsRecord` with a **negative** `amount` for the same
+  `savingsType`. `coopSavingsBySummaryType`'s per-type total is a plain
+  sum, so a withdrawal nets out of "Total Savings & Contributions" with no
+  special-casing anywhere it's displayed or exported — one honest
+  representation, not two code paths that could drift apart.
+- **The Request tab is real end-to-end (approve/decline actually mutate
+  state), but there's deliberately no member-facing "submit a request"
+  screen yet.** The ask was specifically for the admin side of this page;
+  building a member-side submission form would be scope no one asked for
+  yet. `coop-data.ts` seeds a few realistic pending/resolved requests so
+  the tab has something real to act on, and `useCoopStore.resolveSavingsRequest`
+  genuinely creates the resulting savings record (or just marks the
+  request "Declined") rather than faking the approval — but a member
+  currently has no in-app way to create a new request themselves. Flagged
+  explicitly in [Future Improvements](#future-improvements) rather than
+  silently left out.
 - **New `Dialog`, `Tabs`, `Select`, `Popover`, and `Calendar` primitives
   were added** (`src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`,
   `popover.tsx`, `calendar.tsx`) via `pnpm dlx shadcn@latest add`, not
@@ -128,10 +179,11 @@ work," not a completed removal; see
 
 ```
 /savings
-  member          → <MemberSavingsView> (their own records + "+ New Savings")
-  admin / super_admin → null (nav item inert; see "Admin/super-admin view removed")
+  member      → <MemberSavingsView> (their own records + "+ New Savings")
+  admin       → <AdminSavingsView> (Quick Summary + Members Savings/My Savings/Request tabs)
+  super_admin → null (nav item inert)
 
-"+ New Savings" → <AddSavingsModal> (pick type, enter amount within its min/max)
+Member "+ New Savings" → <AddSavingsModal> (pick type, enter amount within its min/max)
   → "Proceed" → Paystack Inline checkout (real popup)
         → paid → <PaymentSuccessModal>, new record added, table/summary update live
         → popup closed without paying → modal stays open, no record added
@@ -139,36 +191,86 @@ work," not a completed removal; see
 Any row in a records table → /savings/[id] → Savings Details page
   (full record: type, amount, method, date, member — linked to /profile —
   balance after, transaction ID, status)
+
+--- Admin-only ---
+
+Members Savings tab → <CoopSavingsSummaryTable> (Basic/Advanced/Premium totals)
+  → click a type row → /savings/type/[type] → per-type records for every member
+      → click a record → /savings/record/[recordId] → Savings Details
+        (same fields as above, plus "Download receipt" when one was uploaded)
+
+My Savings tab → <MemberSavingsView showSummary={false}> for the admin's own
+  record — identical Paystack flow as a member, driven by the page-level
+  "+ New Savings" button
+
+Members Savings tab + "+ New Savings" → <UploadTellerModal>
+  (Member select, Savings Amount, Savings Type, optional receipt upload)
+  → "Upload" → real CoopSavingsRecord added (method: "Manual Upload"),
+     balance computed from that member's prior records for the type
+
+Request tab → <SavingsRequestsTable> (seeded Deposit/Withdrawal requests)
+  → "Approve" → confirm → creates a real CoopSavingsRecord
+       (Deposit: positive amount, Withdrawal: negative amount)
+  → "Decline" → confirm → request marked Declined, no record created
 ```
 
 ## Components
 
-- `src/app/(dashboard)/savings/page.tsx` — member-only role guard
-  described above.
-- `src/app/(dashboard)/savings/[id]/page.tsx` — the details page.
+- `src/app/(dashboard)/savings/page.tsx` — role branch: member/admin/
+  super_admin, described above.
+- `src/app/(dashboard)/savings/[id]/page.tsx` — the member's own record
+  details page.
+- `src/app/(dashboard)/savings/type/[type]/page.tsx` — admin-only:
+  per-type records across the co-operative.
+- `src/app/(dashboard)/savings/record/[recordId]/page.tsx` — admin-only:
+  single-record details, mirrors the super-admin co-op equivalent.
 - `src/components/features/savings/member-savings-view.tsx` — summary
   card, table, "+ New Savings"/"Export/Import" actions, modal
-  orchestration (this is where the Paystack call actually happens).
-- `src/components/features/savings/members-savings-overview.tsx` — the
-  former admin/super-admin aggregate-by-type view; still present but no
-  longer imported by `page.tsx` (see
-  [Admin/super-admin view removed](#adminsuper-admin-view-removed)).
+  orchestration (this is where the Paystack call actually happens); see
+  the `showSummary`/`addOpen`/`onAddOpenChange` props added for admin
+  reuse.
+- `src/components/features/savings/admin-savings-view.tsx` — the admin
+  orchestrator: Quick Summary cards, the three tabs, and the
+  tab-dependent "+ New Savings" button.
+- `src/components/features/savings/upload-teller-modal.tsx` — Member/
+  Amount/Savings Type/optional receipt upload, for admin-recorded manual
+  deposits.
+- `src/components/features/savings/savings-requests-table.tsx` — the
+  Request tab's table, with `AlertDialog`-confirmed Approve/Decline.
+- `src/components/features/savings/members-savings-overview.tsx` — an
+  earlier, unwired admin aggregate view; no longer imported anywhere (see
+  [Admin view](#admin-view)) — candidate for deletion in a future cleanup.
 - `src/components/features/savings/savings-records-table.tsx` — search,
   status filter, date range, pagination, clickable rows.
 - `src/components/features/savings/add-savings-modal.tsx` /
   `payment-success-modal.tsx` — the two dialogs.
+- `src/components/features/coop/coop-savings-summary-table.tsx` /
+  `coop-savings-type-records-table.tsx` — the by-type aggregate and
+  per-type records table, shared between the super-admin co-op oversight
+  view and the admin's Members Savings tab via an optional `basePath`
+  prop that points each at its own route tree.
 - `src/components/features/shared/export-import-menu.tsx` — the
   Export/Import dropdown (generic over row shape via `ExportColumn<T>`
   and, separately, over the imported row shape via `ImportConfig<TImportRow>`).
 - `src/lib/paystack.ts` — the Paystack Inline wrapper.
 - `src/lib/savings-data.ts` — savings type definitions (name + min/max),
   the `findSavingsTypeRange` lookup shared by the table and export
-  columns, and seed records.
+  columns, and seed records for the member/admin's own personal savings.
+- `src/lib/coop-data.ts` — `CoopSavingsRecord.receiptUrl`, the
+  `SavingsRequest` type, seed `savingsRequests` per co-operative, and
+  `coopMemberSavingsBalance` (a member's running balance for one savings
+  type, used to compute `balanceAfter` for both Upload Teller and
+  request approval).
+- `src/lib/file-to-data-url.ts` — reused as-is from Notice Board for the
+  receipt upload (`readFileAsDataUrl`, `MAX_ATTACHMENT_BYTES`).
 - `src/lib/table-export.ts` — generic CSV/Excel/PDF export (`xlsx`,
   `jspdf` + `jspdf-autotable`).
 - `src/lib/savings-import.ts` — import template generation + parsing/
   validation for `<ExportImportMenu>`'s Import flow.
-- `src/store/savings.store.ts` — the reactive record store.
+- `src/store/savings.store.ts` — the reactive record store for the
+  member/admin's own personal savings.
+- `src/store/coop.store.ts` — `addSavingsRecord` (Upload Teller) and
+  `resolveSavingsRequest` (Approve/Decline) mutators.
 - `src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`, `popover.tsx`,
   `calendar.tsx` — new shared primitives (see Design Decisions).
 
@@ -197,9 +299,15 @@ language).
 
 ## Future Improvements
 
-- **Rebuild the admin/super-admin view against a correct reference.**
-  Top priority once that design is provided — see
-  [Admin/super-admin view removed](#adminsuper-admin-view-removed).
+- **A member-facing "submit a request" screen.** The Request tab's
+  approve/decline side is fully real, but nothing in the app currently
+  lets a member create a new deposit/withdrawal request themselves — the
+  seeded requests are the only ones that exist until this is built.
+- **A dedicated super-admin `/savings` view**, if ever requested — today
+  super admin's oversight equivalent lives per-co-operative under
+  `/co-operatives/[id]/savings/...` (see
+  [co-operatives-page.md](./co-operatives-page.md)) rather than at a
+  cross-co-op `/savings` route.
 - **Server-side Paystack verification.** The single biggest gap: a real
   integration verifies the transaction reference against Paystack's
   `/transaction/verify/:reference` endpoint from a trusted server before

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node verify-remove-admin-savings-loans.mjs)",
+      "Bash(curl -s -o /dev/null -w \"login:%{http_code} time:%{time_total}\\\\n\" http://localhost:3000/login --max-time 30)",
+      "Bash(curl -s -o /dev/null -w \"login retry:%{http_code} time:%{time_total}\\\\n\" http://localhost:3000/login --max-time 20)",
+      "Bash(node \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-sam-t-coop-app\\\\83b85de9-e8bc-49d4-9fa4-9601d95e5721\\\\scratchpad\\\\make-member-import-file.cjs\")",
+      "Bash(curl -s -o /dev/null -w \"login:%{http_code}\\\\n\" http://localhost:3000/login --max-time 40)",
+      "Bash(curl -s -o /dev/null -w \"dashboard:%{http_code}\\\\n\" http://localhost:3000/dashboard --max-time 40)",
+      "Bash(node verify-member-import.mjs)",
+      "Bash(node verify-savings-import-regression.mjs)"
+    ]
+  }
+}

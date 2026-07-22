@@ -23,6 +23,8 @@ const PAGE_TITLES: Record<string, string> = {
 
 function getPageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  if (pathname.startsWith("/savings/record/")) return "Savings Details";
+  if (pathname.startsWith("/savings/type/")) return "Savings Record";
   if (pathname.startsWith("/savings/")) return "Savings Details";
   if (pathname.startsWith("/loans/")) return "Loan Details";
   if (pathname.startsWith("/members/")) return "Member Details";

@@ -40,6 +40,11 @@ interface MemberSavingsViewProps {
   memberName: string;
   memberEmail: string;
   heading?: string;
+  /** Hide the "Quick Summary" heading, card, and "+ New Savings" button — for embedding inside a page that already renders its own summary and add action (e.g. the admin's "My Savings" tab). */
+  showSummary?: boolean;
+  /** Controls the Add Savings modal from outside, for use alongside `showSummary={false}`. Falls back to internal state when omitted. */
+  addOpen?: boolean;
+  onAddOpenChange?: (open: boolean) => void;
 }
 
 export function MemberSavingsView({
@@ -47,6 +52,9 @@ export function MemberSavingsView({
   memberName,
   memberEmail,
   heading = "My Savings Record",
+  showSummary = true,
+  addOpen: addOpenProp,
+  onAddOpenChange,
 }: MemberSavingsViewProps) {
   const records = useSavingsStore((state) => state.records);
   const addRecord = useSavingsStore((state) => state.addRecord);
@@ -60,7 +68,9 @@ export function MemberSavingsView({
     [memberRecords],
   );
 
-  const [addOpen, setAddOpen] = useState(false);
+  const [internalAddOpen, setInternalAddOpen] = useState(false);
+  const addOpen = addOpenProp ?? internalAddOpen;
+  const setAddOpen = onAddOpenChange ?? setInternalAddOpen;
   const [busy, setBusy] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastAmount, setLastAmount] = useState(0);
@@ -122,24 +132,30 @@ export function MemberSavingsView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
-        <Button onClick={() => setAddOpen(true)}>+ New Savings</Button>
-      </div>
-
-      <Card className="max-w-xs">
-        <CardContent className="flex items-start justify-between gap-3">
-          <div className="space-y-1.5">
-            <p className="text-sm text-muted-foreground">My Savings</p>
-            <p className="text-xl font-semibold text-foreground sm:text-2xl">
-              {formatNaira(total)}
-            </p>
+      {showSummary ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-foreground">
+              Quick Summary
+            </h2>
+            <Button onClick={() => setAddOpen(true)}>+ New Savings</Button>
           </div>
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <PiggyBank className="size-5" aria-hidden="true" />
-          </span>
-        </CardContent>
-      </Card>
+
+          <Card className="max-w-xs">
+            <CardContent className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
+                <p className="text-sm text-muted-foreground">My Savings</p>
+                <p className="text-xl font-semibold text-foreground sm:text-2xl">
+                  {formatNaira(total)}
+                </p>
+              </div>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <PiggyBank className="size-5" aria-hidden="true" />
+              </span>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
 
       <Card>
         <CardContent>

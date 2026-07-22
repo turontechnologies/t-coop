@@ -90,8 +90,10 @@ page reload, since there's no backend to persist to).
 | `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)              | [dashboard.md](./documentation/dashboard.md)                           |
 | `/profile`                                      | View your own member details, Edit to change them (any role)     | [profile-page.md](./documentation/profile-page.md)                     |
 | `/api/upload`                                   | Route handler: signs and uploads the profile photo to Cloudinary | [profile-page.md](./documentation/profile-page.md)                     |
-| `/savings`                                      | Savings & Contributions (member only for now; real Paystack)     | [savings-page.md](./documentation/savings-page.md)                     |
-| `/savings/[id]`                                 | Individual savings record detail                                 | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings`                                      | Savings & Contributions (member + admin; real Paystack)          | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/[id]`                                 | Individual savings record detail (member's own)                  | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/type/[type]`                          | Admin: all members' records for one savings type                 | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/record/[recordId]`                    | Admin: individual savings record detail                          | [savings-page.md](./documentation/savings-page.md)                     |
 | `/loans`                                        | Loans (member only for now; eligibility + application flow)      | [loans-page.md](./documentation/loans-page.md)                         |
 | `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)        | [loans-page.md](./documentation/loans-page.md)                         |
 | `/co-operatives`                                | Super admin: list every co-operative, add a new one              | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
@@ -143,7 +145,9 @@ src/
     features/members-directory/  admin's own members list + add-member form
     features/notice-board/   create notice form, list, reply thread, member view
     features/profile/        profile view + edit-toggle form
-    features/savings/        savings list/modal/detail
+    features/savings/        savings list/modal/detail; admin-savings-view.tsx
+                              (Quick Summary + tabs), upload-teller-modal.tsx,
+                              savings-requests-table.tsx
     features/shared/         cross-feature components (export/import menu)
     layouts/                 the three shared page shells (auth / centered / dashboard)
     theme/                   next-themes provider + toggle
@@ -173,7 +177,7 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Forgot password → OTP → new password
 - [x] Dashboard (super admin / admin / member views)
 - [x] My Profile (read-only by default, Edit toggle, all roles; real Cloudinary photo upload)
-- [x] Savings & Contributions (member view, real Paystack checkout, savings detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
+- [x] Savings & Contributions (member: real Paystack checkout, savings detail page. admin: Quick Summary, Members Savings/My Savings/Request tabs, Upload Teller with receipt attachment, deposit/withdrawal request approval — super-admin oversight view still pending)
 - [x] Loans (member view, eligibility-based application flow, repayment schedule + transactions detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
 - [x] Members Directory (admin: list, add with BVN auto-fill, bulk import via template, export, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)

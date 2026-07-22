@@ -31,6 +31,8 @@ function toIsoDate(date: Date): string {
 interface CoopSavingsTypeRecordsTableProps {
   coopId: string;
   records: CoopSavingsRecord[];
+  /** Defaults to the super-admin co-operative oversight path. */
+  basePath?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -44,6 +46,7 @@ const PAGE_SIZE_OPTIONS = [5, 10, 25];
 export function CoopSavingsTypeRecordsTable({
   coopId,
   records,
+  basePath = `/co-operatives/${coopId}/savings/record`,
 }: CoopSavingsTypeRecordsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -202,11 +205,7 @@ export function CoopSavingsTypeRecordsTable({
               pageRecords.map((record) => (
                 <tr
                   key={record.id}
-                  onClick={() =>
-                    router.push(
-                      `/co-operatives/${coopId}/savings/record/${record.id}`,
-                    )
-                  }
+                  onClick={() => router.push(`${basePath}/${record.id}`)}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">

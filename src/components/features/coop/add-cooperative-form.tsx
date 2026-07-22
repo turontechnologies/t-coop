@@ -91,6 +91,7 @@ export function AddCooperativeForm() {
       members: [],
       savings: [],
       loans: [],
+      savingsRequests: [],
     };
 
     addCooperative(coop);
