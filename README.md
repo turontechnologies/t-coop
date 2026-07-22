@@ -88,6 +88,9 @@ page reload, since there's no backend to persist to).
 | `/members`                                      | Admin: list the members of their co-operative, add a new one | [members-directory-page.md](./documentation/members-directory-page.md) |
 | `/members/new`                                  | Add a member, with a BVN-verification auto-fill step         | [members-directory-page.md](./documentation/members-directory-page.md) |
 | `/members/[memberId]`                           | One member's own details + Savings/Loans tabs                | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/notice-board`                                 | All roles: real-time announcements/meeting notices/minutes   | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/notice-board/new`                             | Create a notice (admin/super admin only)                     | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/notice-board/[id]`                            | A notice + attachment download + the reply/feedback thread   | [notice-board-page.md](./documentation/notice-board-page.md)           |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -111,7 +114,7 @@ src/
     (password-recovery)/     centered layout — /forgot-password, /verify-otp,
                               /create-new-password
     (dashboard)/              role-aware dashboard, auth-guarded
-                              (co-operatives/, members/ nested under here)
+                              (co-operatives/, members/, notice-board/ nested under here)
     layout.tsx, template.tsx, loading.tsx   root providers + page transitions
   components/
     brand/                   logo, animated loading mark, route transitions
@@ -120,6 +123,7 @@ src/
     features/dashboard/      quick-summary cards, activity chart, activity list
     features/loans/          loans list/modal/detail components
     features/members-directory/  admin's own members list + add-member form
+    features/notice-board/   create notice form, list, reply thread, member view
     features/profile/        profile view + edit-toggle form
     features/savings/        savings list/modal/detail
     features/shared/         cross-feature components (export/import menu)
@@ -127,11 +131,13 @@ src/
     theme/                   next-themes provider + toggle
     ui/                      shadcn primitives (Base UI-based)
   config/                    role → nav item mapping
-  hooks/                     one hook per mutation, + small UI-timing hooks
+  hooks/                     one hook per mutation, + small UI-timing hooks,
+                              cross-tab real-time sync
   lib/                       mock data, validation schemas, small utilities
   services/                  auth/profile/etc. services — the seam a real backend plugs into
   store/                     Zustand stores (auth session, password-reset session,
-                              savings records, loan records, co-operatives)
+                              savings records, loan records, co-operatives, notice board —
+                              the only one persisted + cross-tab synced, see notice-board-page.md)
   types/                     shared domain types
 ```
 
@@ -153,6 +159,7 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Loans (member view, eligibility-based application flow, repayment schedule + transactions detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
 - [x] Members Directory (admin: list, add with BVN auto-fill, bulk import via template, export, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
+- [x] Notice Board (all roles; real cross-tab real-time via `storage` events — announcements, meeting notices, meeting minutes with PDF attachment, scheduled send, reply/feedback thread, live notification bell)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)

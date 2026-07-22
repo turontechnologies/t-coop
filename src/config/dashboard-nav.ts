@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   Landmark,
   LifeBuoy,
+  Megaphone,
   PiggyBank,
   Settings,
   User,
@@ -28,6 +29,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   super_admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
     { label: "Co-operatives", href: "/co-operatives", icon: Building2 },
+    { label: "Notice Board", href: "/notice-board", icon: Megaphone },
     { label: "Savings & Contributions", icon: PiggyBank },
     { label: "Loans", icon: Landmark },
     { label: "Subscriptions", icon: CreditCard },
@@ -37,6 +39,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
     { label: "Members Directory", href: "/members", icon: Users },
+    { label: "Notice Board", href: "/notice-board", icon: Megaphone },
     { label: "Savings & Contributions", icon: PiggyBank },
     { label: "Loans", icon: Landmark },
     { label: "Support", icon: LifeBuoy },
@@ -45,6 +48,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   member: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
     { label: "My Profile", href: "/profile", icon: User },
+    { label: "Notice Board", href: "/notice-board", icon: Megaphone },
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
     { label: "Loans", href: "/loans", icon: Landmark },
     { label: "Support", icon: LifeBuoy },

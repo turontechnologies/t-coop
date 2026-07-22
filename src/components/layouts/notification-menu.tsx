@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import {
   DropdownMenu,
@@ -9,21 +9,40 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { INITIAL_NOTIFICATIONS } from "@/lib/notifications-data";
+import { useCrossTabSync } from "@/hooks/use-cross-tab-sync";
+import { formatTimeAgo } from "@/lib/format";
+import { isNoticeVisibleToRole, noticeExcerpt } from "@/lib/notice-data";
+import { NOTICE_STORE_NAME, useNoticeStore } from "@/store/notice.store";
+import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 
+const MAX_VISIBLE = 6;
+
 export function NotificationMenu() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const router = useRouter();
+  const member = useAuthStore((state) => state.member);
+  const notices = useNoticeStore((state) => state.notices);
+  const readMarkers = useNoticeStore((state) => state.readMarkers);
+  const markRead = useNoticeStore((state) => state.markRead);
+
+  useCrossTabSync(NOTICE_STORE_NAME, () => useNoticeStore.persist.rehydrate());
+
+  if (!member) return null;
+
+  const visibleNotices = notices
+    .filter((notice) => isNoticeVisibleToRole(notice, member.role))
+    .sort((a, b) => b.sendAt.localeCompare(a.sendAt));
+  const unreadCount = visibleNotices.filter(
+    (notice) => !readMarkers[`${member.id}:${notice.id}`],
+  ).length;
 
   const markAllAsRead = () => {
-    setNotifications((items) => items.map((item) => ({ ...item, read: true })));
+    visibleNotices.forEach((notice) => markRead(member.id, notice.id));
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications((items) =>
-      items.map((item) => (item.id === id ? { ...item, read: true } : item)),
-    );
+  const openNotice = (noticeId: string) => {
+    markRead(member.id, noticeId);
+    router.push(`/notice-board/${noticeId}`);
   };
 
   return (
@@ -59,36 +78,53 @@ export function NotificationMenu() {
           ) : null}
         </div>
         <DropdownMenuSeparator className="mx-0" />
-        <ul className="max-h-80 overflow-y-auto py-1">
-          {notifications.map((notification) => (
-            <li key={notification.id}>
-              <button
-                type="button"
-                onClick={() => markAsRead(notification.id)}
-                className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted"
-              >
-                <span
-                  className={cn(
-                    "mt-1.5 size-1.5 shrink-0 rounded-full",
-                    notification.read ? "bg-transparent" : "bg-primary",
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-foreground">
-                    {notification.title}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {notification.description}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground/70">
-                    {notification.time}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {visibleNotices.length === 0 ? (
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            No notices yet.
+          </p>
+        ) : (
+          <ul className="max-h-80 overflow-y-auto py-1">
+            {visibleNotices.slice(0, MAX_VISIBLE).map((notice) => {
+              const isUnread = !readMarkers[`${member.id}:${notice.id}`];
+              return (
+                <li key={notice.id}>
+                  <button
+                    type="button"
+                    onClick={() => openNotice(notice.id)}
+                    className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted"
+                  >
+                    <span
+                      className={cn(
+                        "mt-1.5 size-1.5 shrink-0 rounded-full",
+                        isUnread ? "bg-primary" : "bg-transparent",
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-foreground">
+                        {notice.title}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {noticeExcerpt(notice.message, 70)}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground/70">
+                        {formatTimeAgo(notice.sendAt)}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <DropdownMenuSeparator className="mx-0" />
+        <button
+          type="button"
+          onClick={() => router.push("/notice-board")}
+          className="block w-full px-3 py-2.5 text-center text-xs font-medium text-primary hover:underline"
+        >
+          View all notices
+        </button>
       </DropdownMenuContent>
     </DropdownMenu>
   );
