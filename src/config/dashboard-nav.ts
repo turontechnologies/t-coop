@@ -36,7 +36,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
   admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
-    { label: "Members Directory", icon: Users },
+    { label: "Members Directory", href: "/members", icon: Users },
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
     { label: "Loans", href: "/loans", icon: Landmark },
     { label: "Support", icon: LifeBuoy },

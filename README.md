@@ -65,26 +65,29 @@ page reload, since there's no backend to persist to).
 
 ## Routes
 
-| Route                                           | Purpose                                                      | Docs                                                           |
-| ----------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- |
-| `/login`                                        | Sign in with a membership ID + password                      | [login-page.md](./documentation/login-page.md)                 |
-| `/forgot-password`                              | Request a one-time password by email                         | [password-recovery.md](./documentation/password-recovery.md)   |
-| `/verify-otp`                                   | Enter the OTP sent (simulated) to your email                 | [password-recovery.md](./documentation/password-recovery.md)   |
-| `/create-new-password`                          | Set a new password after OTP verification                    | [password-recovery.md](./documentation/password-recovery.md)   |
-| `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)          | [dashboard.md](./documentation/dashboard.md)                   |
-| `/profile`                                      | View your own member details, Edit to change them (any role) | [profile-page.md](./documentation/profile-page.md)             |
-| `/savings`                                      | Savings & Contributions (role-aware; real Paystack)          | [savings-page.md](./documentation/savings-page.md)             |
-| `/savings/[id]`                                 | Individual savings record detail                             | [savings-page.md](./documentation/savings-page.md)             |
-| `/loans`                                        | Loans (role-aware; eligibility + application flow)           | [loans-page.md](./documentation/loans-page.md)                 |
-| `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)    | [loans-page.md](./documentation/loans-page.md)                 |
-| `/co-operatives`                                | Super admin: list every co-operative, add a new one          | [co-operatives-page.md](./documentation/co-operatives-page.md) |
-| `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`) | [co-operatives-page.md](./documentation/co-operatives-page.md) |
-| `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs             | [co-operatives-page.md](./documentation/co-operatives-page.md) |
-| `/co-operatives/[id]/members/[memberId]`        | One member's own details + Savings/Loans tabs                | [co-operatives-page.md](./documentation/co-operatives-page.md) |
-| `/co-operatives/[id]/savings/[type]`            | All transactions of one savings product in the co-op         | [co-operatives-page.md](./documentation/co-operatives-page.md) |
-| `/co-operatives/[id]/savings/record/[recordId]` | Individual savings record detail (co-op scoped)              | [co-operatives-page.md](./documentation/co-operatives-page.md) |
-| `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op       | [co-operatives-page.md](./documentation/co-operatives-page.md) |
-| `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions    | [co-operatives-page.md](./documentation/co-operatives-page.md) |
+| Route                                           | Purpose                                                      | Docs                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `/login`                                        | Sign in with a membership ID + password                      | [login-page.md](./documentation/login-page.md)                         |
+| `/forgot-password`                              | Request a one-time password by email                         | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/verify-otp`                                   | Enter the OTP sent (simulated) to your email                 | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/create-new-password`                          | Set a new password after OTP verification                    | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)          | [dashboard.md](./documentation/dashboard.md)                           |
+| `/profile`                                      | View your own member details, Edit to change them (any role) | [profile-page.md](./documentation/profile-page.md)                     |
+| `/savings`                                      | Savings & Contributions (role-aware; real Paystack)          | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/[id]`                                 | Individual savings record detail                             | [savings-page.md](./documentation/savings-page.md)                     |
+| `/loans`                                        | Loans (role-aware; eligibility + application flow)           | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)    | [loans-page.md](./documentation/loans-page.md)                         |
+| `/co-operatives`                                | Super admin: list every co-operative, add a new one          | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`) | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs             | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/members/[memberId]`        | One member's own details + Savings/Loans tabs                | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/savings/[type]`            | All transactions of one savings product in the co-op         | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/savings/record/[recordId]` | Individual savings record detail (co-op scoped)              | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op       | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions    | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/members`                                      | Admin: list the members of their co-operative, add a new one | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/members/new`                                  | Add a member, with a BVN-verification auto-fill step         | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/members/[memberId]`                           | One member's own details + Savings/Loans tabs                | [members-directory-page.md](./documentation/members-directory-page.md) |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -108,7 +111,7 @@ src/
     (password-recovery)/     centered layout — /forgot-password, /verify-otp,
                               /create-new-password
     (dashboard)/              role-aware dashboard, auth-guarded
-                              (co-operatives/ nested under here)
+                              (co-operatives/, members/ nested under here)
     layout.tsx, template.tsx, loading.tsx   root providers + page transitions
   components/
     brand/                   logo, animated loading mark, route transitions
@@ -116,6 +119,7 @@ src/
     features/coop/           co-operatives list/detail/member/drill-down components
     features/dashboard/      quick-summary cards, activity chart, activity list
     features/loans/          loans list/modal/detail components
+    features/members-directory/  admin's own members list + add-member form
     features/profile/        profile view + edit-toggle form
     features/savings/        savings list/modal/detail + export-import menu
     layouts/                 the three shared page shells (auth / centered / dashboard)
@@ -147,6 +151,7 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Savings & Contributions (role-aware views, real Paystack checkout, savings detail page)
 - [x] Loans (role-aware views, eligibility-based application flow, repayment schedule + transactions detail page)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
+- [x] Members Directory (admin: list, add with BVN auto-fill, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)

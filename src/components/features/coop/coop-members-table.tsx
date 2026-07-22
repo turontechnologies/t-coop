@@ -2,21 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, Power, Search } from "lucide-react";
+import { Pencil, Power, Search } from "lucide-react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
 import {
   coopMemberFullName,
@@ -34,6 +24,7 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [editingMember, setEditingMember] = useState<CoopMember | null>(null);
+  const setMemberStatus = useCoopStore((state) => state.setMemberStatus);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -45,6 +36,17 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
         member.id.toLowerCase().includes(query),
     );
   }, [coop.members, search]);
+
+  const handleToggleStatus = async (member: CoopMember) => {
+    const isActive = member.status === "Active";
+    const fullName = coopMemberFullName(member);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const next = isActive ? "Inactive" : "Active";
+    setMemberStatus(coop.id, member.id, next);
+    toast.success(
+      next === "Active" ? `${fullName} activated` : `${fullName} disabled`,
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -97,65 +99,80 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
                 </td>
               </tr>
             ) : (
-              filtered.map((member) => (
-                <tr
-                  key={member.id}
-                  onClick={() =>
-                    router.push(
-                      `/co-operatives/${coop.id}/members/${member.id}`,
-                    )
-                  }
-                  className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
-                >
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {member.id}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    {member.firstName}
-                  </td>
-                  <td className="px-4 py-3 text-foreground">
-                    {member.lastName}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {member.email}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {member.role}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
-                      variant={
-                        member.status === "Active" ? "secondary" : "outline"
-                      }
-                      className={cn(
-                        member.status === "Active" &&
-                          "bg-success/15 text-success",
-                      )}
-                    >
-                      {member.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setEditingMember(member);
-                        }}
-                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={`Edit ${coopMemberFullName(member)}`}
+              filtered.map((member) => {
+                const isActive = member.status === "Active";
+                const fullName = coopMemberFullName(member);
+                return (
+                  <tr
+                    key={member.id}
+                    onClick={() =>
+                      router.push(
+                        `/co-operatives/${coop.id}/members/${member.id}`,
+                      )
+                    }
+                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {member.id}
+                    </td>
+                    <td className="px-4 py-3 text-foreground">
+                      {member.firstName}
+                    </td>
+                    <td className="px-4 py-3 text-foreground">
+                      {member.lastName}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {member.email}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {member.role}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        variant={isActive ? "secondary" : "outline"}
+                        className={cn(isActive && "bg-success/15 text-success")}
                       >
-                        <Pencil className="size-3.5" aria-hidden="true" />
-                      </button>
-                      <ToggleMemberStatusAction
-                        coopId={coop.id}
-                        member={member}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))
+                        {member.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setEditingMember(member);
+                          }}
+                          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          aria-label={`Edit ${fullName}`}
+                        >
+                          <Pencil className="size-3.5" aria-hidden="true" />
+                        </button>
+                        <ConfirmToggleDialog
+                          trigger={
+                            <button
+                              type="button"
+                              onClick={(event) => event.stopPropagation()}
+                              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              aria-label={
+                                isActive
+                                  ? `Disable ${fullName}`
+                                  : `Activate ${fullName}`
+                              }
+                            />
+                          }
+                          entityLabel="Member"
+                          name={fullName}
+                          isActive={isActive}
+                          onConfirm={() => handleToggleStatus(member)}
+                        >
+                          <Power className="size-3.5" aria-hidden="true" />
+                        </ConfirmToggleDialog>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -172,78 +189,5 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
         />
       ) : null}
     </div>
-  );
-}
-
-function ToggleMemberStatusAction({
-  coopId,
-  member,
-}: {
-  coopId: string;
-  member: CoopMember;
-}) {
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const setMemberStatus = useCoopStore((state) => state.setMemberStatus);
-  const isActive = member.status === "Active";
-  const fullName = coopMemberFullName(member);
-
-  const handleConfirm = async () => {
-    setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const next = isActive ? "Inactive" : "Active";
-    setMemberStatus(coopId, member.id, next);
-    setBusy(false);
-    setOpen(false);
-    toast.success(
-      next === "Active" ? `${fullName} activated` : `${fullName} deactivated`,
-    );
-  };
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger
-        render={
-          <button
-            type="button"
-            onClick={(event) => event.stopPropagation()}
-            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label={
-              isActive ? `Deactivate ${fullName}` : `Activate ${fullName}`
-            }
-          />
-        }
-      >
-        <Power className="size-3.5" aria-hidden="true" />
-      </AlertDialogTrigger>
-      <AlertDialogContent onClick={(event) => event.stopPropagation()}>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {isActive ? `Deactivate ${fullName}?` : `Activate ${fullName}?`}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {isActive
-              ? `${fullName} will no longer be able to access member features until reactivated.`
-              : `${fullName} will regain access to member features.`}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant={isActive ? "destructive" : "default"}
-            disabled={busy}
-            onClick={handleConfirm}
-          >
-            {busy ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : isActive ? (
-              "Deactivate"
-            ) : (
-              "Activate"
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

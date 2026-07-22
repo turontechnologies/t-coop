@@ -15,12 +15,15 @@ const PAGE_TITLES: Record<string, string> = {
   "/loans": "Loans",
   "/co-operatives": "Co-operatives",
   "/co-operatives/new": "Add New Co-operative",
+  "/members": "Members Directory",
+  "/members/new": "Add New Member",
 };
 
 function getPageTitle(pathname: string): string {
   if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
   if (pathname.startsWith("/savings/")) return "Savings Details";
   if (pathname.startsWith("/loans/")) return "Loan Details";
+  if (pathname.startsWith("/members/")) return "Member Details";
   if (/^\/co-operatives\/[^/]+\/members\//.test(pathname))
     return "Member Details";
   if (/^\/co-operatives\/[^/]+\/savings\/record\//.test(pathname))

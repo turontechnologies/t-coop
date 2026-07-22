@@ -113,20 +113,28 @@ panel) — and:
   2% of each type's total — clearly labeled as a mock simplification here
   rather than left unexplained.
 - **Activate/Deactivate requires an explicit confirmation, not an
-  instant toggle.** Both the co-operative level (`CoopHeaderCard`'s
+  instant toggle — via one shared component, not three near-duplicate
+  implementations.** Both the co-operative level (`CoopHeaderCard`'s
   "Disable Co-operative" / "Activate Co-operative" button) and the
   individual member level (the power-icon toggle on each row in the
-  Members tab) open a shadcn `AlertDialog` — added via
-  `pnpm dlx shadcn@latest add alert-dialog` — describing the consequence
-  ("Members won't be able to access their accounts…") before anything
-  mutates. This isn't a stock "are you sure?" wrapper: `AlertDialogAction`
-  in this Base UI port is a plain `Button`, not an auto-closing primitive,
-  so both call sites control `open`/`busy` state themselves — the dialog
-  stays open with a spinner through the (simulated) mutation and only
-  closes on success, the same real-busy-state discipline used for every
-  other async action in the app (Add to Savings, Take a Loan, etc.).
-  Confirmed in a real browser that Cancel leaves the status genuinely
-  unchanged and only the confirm action mutates it. Neither toggle is
+  Members tab) now go through `ConfirmToggleDialog`
+  (`src/components/features/coop/confirm-toggle-dialog.tsx`), built on
+  the shadcn `AlertDialog` — added via
+  `pnpm dlx shadcn@latest add alert-dialog`. It standardizes the copy to
+  "Disable {entityLabel}" / "Activate {entityLabel}" with
+  `Are you sure you want to disable "{name}"?`, and is reused by a third
+  call site too — the Members Directory page's member toggle (see
+  [members-directory-page.md](./members-directory-page.md)) — after the
+  user asked that this exact confirmation pattern apply everywhere in the
+  app, not just wherever it was first built. This isn't a stock "are you
+  sure?" wrapper: `AlertDialogAction` in this Base UI port is a plain
+  `Button`, not an auto-closing primitive, so `ConfirmToggleDialog`
+  controls `open`/`busy` state itself — the dialog stays open with a
+  spinner through the (simulated) mutation and only closes on success,
+  the same real-busy-state discipline used for every other async action
+  in the app (Add to Savings, Take a Loan, etc.). Confirmed in a real
+  browser that Cancel leaves the status genuinely unchanged and only the
+  confirm action mutates it. Neither toggle is
   wired to a cascading real-world effect (e.g. disabling a co-op doesn't
   currently block its members from anything else in the mock) — a fair
   simplification for a demo but called out here rather than implied.
@@ -166,13 +174,17 @@ panel) — and:
   `CoopLoanRecord` types, seed data, and derived-summary helpers
   (`coopSavingsBySummaryType`, `coopLoansBySummaryType`, totals).
 - `src/store/coop.store.ts` — Zustand store: `cooperatives`, `addCooperative`,
-  `setCooperativeStatus`, `setMemberStatus`, `updateMember`.
+  `setCooperativeStatus`, `setMemberStatus`, `updateMember`, `addMember`.
 - `src/lib/validations/coop.schema.ts` — `addCooperativeSchema` for the
   "Add New Co-operative" form, `editMemberSchema` for the Members tab's
   edit dialog.
 - `src/components/ui/alert-dialog.tsx` — shadcn `AlertDialog` primitive,
   added specifically for the Disable/Activate and member status
   confirmations (first use of this primitive in the app).
+- `src/components/features/coop/confirm-toggle-dialog.tsx` —
+  `ConfirmToggleDialog`, the shared standardized confirmation dialog built
+  on `alert-dialog.tsx`; used by both call sites on this page and by the
+  Members Directory page.
 - `src/components/features/coop/` — `coop-list-table.tsx`,
   `add-cooperative-form.tsx`, `coop-header-card.tsx`,
   `coop-members-table.tsx`, `edit-member-modal.tsx`,

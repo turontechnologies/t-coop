@@ -32,6 +32,7 @@ interface CoopState {
     memberId: string,
     updates: MemberEditableFields,
   ) => void;
+  addMember: (coopId: string, member: CoopMember) => void;
 }
 
 export const useCoopStore = create<CoopState>((set) => ({
@@ -67,6 +68,14 @@ export const useCoopStore = create<CoopState>((set) => ({
                 member.id === memberId ? { ...member, ...updates } : member,
               ),
             }
+          : coop,
+      ),
+    })),
+  addMember: (coopId, member) =>
+    set((state) => ({
+      cooperatives: state.cooperatives.map((coop) =>
+        coop.id === coopId
+          ? { ...coop, members: [member, ...coop.members] }
           : coop,
       ),
     })),
