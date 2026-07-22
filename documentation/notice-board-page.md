@@ -116,6 +116,19 @@ SMS`), added via `pnpm dlx shadcn@latest add radio-group` since no
   form**, not left for the user to assume — a small line under the Media
   Type options says so directly, matching this app's running honesty
   convention (no backend exists to actually send anything).
+- **The "Send Later" time field is a real shadcn time picker, not a
+  native `<input type="time">`.** The Date field next to it already opens
+  a styled `Calendar` inside a `Popover`; the browser's native time input
+  renders completely differently per OS/browser and breaks that visual
+  consistency. `src/components/ui/time-picker.tsx` is a new shadcn-style
+  primitive — two independently scrollable hour/minute columns
+  (`ScrollArea` + `Button`, added via `pnpm dlx shadcn@latest add
+scroll-area`) inside the same rounded popover panel as `Calendar`, with
+  the same selected-state styling (`bg-primary`/`text-primary-foreground`)
+  and auto-scroll-into-view on open. Used the same way `Calendar` is: a
+  `Popover`/`PopoverTrigger` button showing the formatted value
+  (`formatTimeLabel`, e.g. "2:30 PM") or a placeholder, with the picker
+  itself in `PopoverContent`.
 
 ## Known limitation: single session per browser
 

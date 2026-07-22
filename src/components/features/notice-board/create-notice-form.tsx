@@ -7,6 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import {
   CalendarIcon,
+  ClockIcon,
   Loader2,
   Paperclip,
   TriangleAlert,
@@ -33,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { TimePicker, formatTimeLabel } from "@/components/ui/time-picker";
 import { formatDateLong } from "@/lib/format";
 import {
   MAX_ATTACHMENT_BYTES,
@@ -446,13 +448,37 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={scheduleTimeId}>Time</Label>
-                  <Input
-                    id={scheduleTimeId}
-                    type="time"
-                    disabled={isSubmitting}
-                    className="h-11"
-                    aria-invalid={!!errors.scheduleTime}
-                    {...register("scheduleTime")}
+                  <Controller
+                    control={control}
+                    name="scheduleTime"
+                    render={({ field }) => (
+                      <Popover>
+                        <PopoverTrigger
+                          render={
+                            <Button
+                              id={scheduleTimeId}
+                              type="button"
+                              variant="outline"
+                              disabled={isSubmitting}
+                              className="h-11 w-full justify-start font-normal text-muted-foreground data-[has-value=true]:text-foreground"
+                              data-has-value={!!field.value}
+                              aria-invalid={!!errors.scheduleTime}
+                            />
+                          }
+                        >
+                          <ClockIcon className="size-4" aria-hidden="true" />
+                          {field.value
+                            ? formatTimeLabel(field.value)
+                            : "Pick a time"}
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <TimePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    )}
                   />
                   <FieldError message={errors.scheduleTime?.message} />
                 </div>
