@@ -65,13 +65,26 @@ rather than a static mockup — sectioned, validated, with every field
   app when this page was reworked — both fields are wired through RHF's
   `Controller` since Base UI's `Select` isn't an uncontrolled native
   element `register()` can attach to directly.
-- **Avatar is generated initials, not a photo.** Consistent with every
-  other avatar in the app (topbar, recent activities) — see
+- **Avatar photo upload is real, via Cloudinary — not a "coming soon"
+  toast.** The camera button opens a hidden `<input type="file">`
+  (PNG/JPEG/WEBP, capped at 5MB client-side), which posts the file as
+  `multipart/form-data` to `src/app/api/upload/route.ts`, a Next.js route
+  handler that signs and uploads to Cloudinary server-side via the
+  `cloudinary` Node SDK (`cloudinary.uploader.upload_stream`, folder
+  `t-coop/avatars`) and returns the resulting `secure_url`. The upload
+  credentials (`CLOUDINARY_CLOUD_NAME`/`CLOUDINARY_API_KEY`/
+  `CLOUDINARY_API_SECRET`) live only in `.env.local` (server-only, no
+  `NEXT_PUBLIC_` prefix) — the API secret never reaches the browser,
+  unlike an unsigned client-side upload preset. The returned URL is
+  stored as `avatarUrl` on `AuthenticatedMember` in the already-persisted
+  `useAuthStore`, so both the profile header and the topbar dropdown
+  avatar (two independent components reading the same store) update
+  immediately and the photo survives a full page reload — this is a real
+  upload to a real CDN, not a local object URL or base64 placeholder.
+  Falls back to generated initials whenever no `avatarUrl` is set yet,
+  consistent with every other avatar in the app until a photo exists — see
   [theming-and-motion.md](./theming-and-motion.md#wordmark-asset) for the
-  broader "one visual language, no ad-hoc assets" pattern this follows.
-  The camera/edit-photo button is present (matching the affordance a real
-  profile page would have) but surfaces a "coming soon" toast — see
-  [Future Improvements](#future-improvements) for the real-upload plan.
+  broader "one visual language, no ad-hoc assets" pattern.
 - **Save is gated on having unsaved changes; leaving edit mode isn't.**
   "Update Details" stays disabled until the form is dirty
   (`formState.isDirty`) — a save button that's always clickable even with
@@ -126,6 +139,8 @@ access.
   `profileService.updateProfile`.
 - `src/lib/profile-data.ts` — mock profile records, one per demo account,
   plus the in-memory update function.
+- `src/app/api/upload/route.ts` — server-side route handler that validates
+  and signs uploads to Cloudinary for the avatar photo.
 
 ## Animations
 
@@ -138,9 +153,10 @@ they can start typing). Page-level entrance still comes from the root
 
 ## Future Improvements
 
-- **Real photo upload via Cloudinary** is the next planned step — the
-  camera button already sits in the right place, it just needs a real
-  unsigned upload wired to it instead of the "coming soon" toast.
+- The avatar upload endpoint has no rate limiting or per-user storage
+  quota — fine for a demo, worth adding (plus deleting the previous
+  Cloudinary asset on re-upload, rather than leaving orphaned images) once
+  this is backed by real user accounts.
 - BVN/NIN "Verified" badges are hardcoded permanently `true`; once there's
   a real KYC provider, that status (and whether the field should even be
   user-editable after verification) should come from that provider

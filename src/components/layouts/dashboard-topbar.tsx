@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { CalendarDays, ChevronDown, LogOut, Menu, User } from "lucide-react";
 import {
   DropdownMenu,
@@ -64,9 +65,19 @@ export function DashboardTopbar({
               />
             }
           >
-            <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-              {getInitials(member.name)}
-            </span>
+            {member.avatarUrl ? (
+              <Image
+                src={member.avatarUrl}
+                alt={member.name}
+                width={32}
+                height={32}
+                className="size-8 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex size-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                {getInitials(member.name)}
+              </span>
+            )}
             <span className="hidden text-left leading-tight sm:block">
               <span className="block text-sm font-medium text-foreground">
                 {member.name}

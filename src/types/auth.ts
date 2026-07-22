@@ -11,6 +11,7 @@ export interface AuthenticatedMember {
   name: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string;
 }
 
 export interface LoginResponse {

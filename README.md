@@ -45,6 +45,22 @@ this one set, "Proceed" in the Add to Savings modal fails with a toast
 explaining what's missing rather than doing nothing silently. See
 [savings-page.md](./documentation/savings-page.md#setup-paystack).
 
+**Real profile photo uploads require Cloudinary credentials.** The camera
+button on `/profile` uploads to a real Cloudinary account via
+`src/app/api/upload/route.ts`. Add these (server-only — no
+`NEXT_PUBLIC_` prefix, since the upload is signed server-side and the
+secret must never reach the browser) to the same `.env.local`:
+
+```
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+Without these set, choosing a photo fails with a toast rather than
+silently doing nothing. See
+[profile-page.md](./documentation/profile-page.md#design-decisions).
+
 ## Demo Accounts
 
 There is no public sign-up path into the app — these three hardcoded roles
@@ -65,32 +81,33 @@ page reload, since there's no backend to persist to).
 
 ## Routes
 
-| Route                                           | Purpose                                                      | Docs                                                                   |
-| ----------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `/login`                                        | Sign in with a membership ID + password                      | [login-page.md](./documentation/login-page.md)                         |
-| `/forgot-password`                              | Request a one-time password by email                         | [password-recovery.md](./documentation/password-recovery.md)           |
-| `/verify-otp`                                   | Enter the OTP sent (simulated) to your email                 | [password-recovery.md](./documentation/password-recovery.md)           |
-| `/create-new-password`                          | Set a new password after OTP verification                    | [password-recovery.md](./documentation/password-recovery.md)           |
-| `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)          | [dashboard.md](./documentation/dashboard.md)                           |
-| `/profile`                                      | View your own member details, Edit to change them (any role) | [profile-page.md](./documentation/profile-page.md)                     |
-| `/savings`                                      | Savings & Contributions (member only for now; real Paystack) | [savings-page.md](./documentation/savings-page.md)                     |
-| `/savings/[id]`                                 | Individual savings record detail                             | [savings-page.md](./documentation/savings-page.md)                     |
-| `/loans`                                        | Loans (member only for now; eligibility + application flow)  | [loans-page.md](./documentation/loans-page.md)                         |
-| `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)    | [loans-page.md](./documentation/loans-page.md)                         |
-| `/co-operatives`                                | Super admin: list every co-operative, add a new one          | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`) | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs             | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/members/[memberId]`        | One member's own details + Savings/Loans tabs                | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/savings/[type]`            | All transactions of one savings product in the co-op         | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/savings/record/[recordId]` | Individual savings record detail (co-op scoped)              | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op       | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions    | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/members`                                      | Admin: list the members of their co-operative, add a new one | [members-directory-page.md](./documentation/members-directory-page.md) |
-| `/members/new`                                  | Add a member, with a BVN-verification auto-fill step         | [members-directory-page.md](./documentation/members-directory-page.md) |
-| `/members/[memberId]`                           | One member's own details + Savings/Loans tabs                | [members-directory-page.md](./documentation/members-directory-page.md) |
-| `/notice-board`                                 | All roles: real-time announcements/meeting notices/minutes   | [notice-board-page.md](./documentation/notice-board-page.md)           |
-| `/notice-board/new`                             | Create a notice (admin/super admin only)                     | [notice-board-page.md](./documentation/notice-board-page.md)           |
-| `/notice-board/[id]`                            | A notice + attachment download + the reply/feedback thread   | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| Route                                           | Purpose                                                          | Docs                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `/login`                                        | Sign in with a membership ID + password                          | [login-page.md](./documentation/login-page.md)                         |
+| `/forgot-password`                              | Request a one-time password by email                             | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/verify-otp`                                   | Enter the OTP sent (simulated) to your email                     | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/create-new-password`                          | Set a new password after OTP verification                        | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)              | [dashboard.md](./documentation/dashboard.md)                           |
+| `/profile`                                      | View your own member details, Edit to change them (any role)     | [profile-page.md](./documentation/profile-page.md)                     |
+| `/api/upload`                                   | Route handler: signs and uploads the profile photo to Cloudinary | [profile-page.md](./documentation/profile-page.md)                     |
+| `/savings`                                      | Savings & Contributions (member only for now; real Paystack)     | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/[id]`                                 | Individual savings record detail                                 | [savings-page.md](./documentation/savings-page.md)                     |
+| `/loans`                                        | Loans (member only for now; eligibility + application flow)      | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/[id]`                                   | Individual loan detail (repayment schedule, transactions)        | [loans-page.md](./documentation/loans-page.md)                         |
+| `/co-operatives`                                | Super admin: list every co-operative, add a new one              | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`)     | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs                 | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/members/[memberId]`        | One member's own details + Savings/Loans tabs                    | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/savings/[type]`            | All transactions of one savings product in the co-op             | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/savings/record/[recordId]` | Individual savings record detail (co-op scoped)                  | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op           | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions        | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/members`                                      | Admin: list the members of their co-operative, add a new one     | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/members/new`                                  | Add a member, with a BVN-verification auto-fill step             | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/members/[memberId]`                           | One member's own details + Savings/Loans tabs                    | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/notice-board`                                 | All roles: real-time announcements/meeting notices/minutes       | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/notice-board/new`                             | Create a notice (admin/super admin only)                         | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/notice-board/[id]`                            | A notice + attachment download + the reply/feedback thread       | [notice-board-page.md](./documentation/notice-board-page.md)           |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -115,6 +132,7 @@ src/
                               /create-new-password
     (dashboard)/              role-aware dashboard, auth-guarded
                               (co-operatives/, members/, notice-board/ nested under here)
+    api/upload/               route handler: signed Cloudinary upload for avatars
     layout.tsx, template.tsx, loading.tsx   root providers + page transitions
   components/
     brand/                   logo, animated loading mark, route transitions
@@ -154,7 +172,7 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Login (3 hardcoded roles, demo-account picker)
 - [x] Forgot password → OTP → new password
 - [x] Dashboard (super admin / admin / member views)
-- [x] My Profile (read-only by default, Edit toggle, all roles)
+- [x] My Profile (read-only by default, Edit toggle, all roles; real Cloudinary photo upload)
 - [x] Savings & Contributions (member view, real Paystack checkout, savings detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
 - [x] Loans (member view, eligibility-based application flow, repayment schedule + transactions detail page — admin/super-admin oversight view removed, awaiting a corrected reference design)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
@@ -164,7 +182,6 @@ them when the feature's behavior changes, not just when it's first built.
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)
 - [ ] Admin loan approval action (loans stay "Awaiting Approval" indefinitely — see loans-page.md)
-- [ ] Real photo upload for the profile avatar (Cloudinary — in progress)
 - [ ] The dashboard's other non-Dashboard nav items (Subscriptions, Settings, etc.)
 
 ## Known Gotchas
