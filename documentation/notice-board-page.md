@@ -85,6 +85,15 @@ SMS`), added via `pnpm dlx shadcn@latest add radio-group` since no
   per-origin quota, so attachments are capped at 2MB
   (`MAX_ATTACHMENT_BYTES`) with a clear inline error if exceeded, rather
   than silently failing or corrupting the store once the quota is hit.
+- **Feedback replies carry the real uploaded profile photo, not just
+  initials.** `NoticeReply` gained an optional `authorAvatarUrl`, set from
+  `member.avatarUrl` (see [profile-page.md](./profile-page.md) for the
+  real Cloudinary upload it comes from) at the moment a reply is posted —
+  a snapshot, not a live join, so a reply always shows the photo the
+  author had when they wrote it. `ReplyThread` renders a real `next/image`
+  avatar whenever one is present, in both the composer and every reply
+  bubble, falling back to generated initials only when the author never
+  uploaded a photo (seeded demo replies, for instance).
 - **The topbar notification bell went from a static, disconnected list to
   the real thing.** `NotificationMenu` previously rendered hardcoded
   `INITIAL_NOTIFICATIONS` from a local `useState` — not wired to anything,

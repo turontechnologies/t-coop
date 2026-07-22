@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,39 @@ import { getInitials } from "@/lib/format";
 import type { NoticeReply } from "@/lib/notice-data";
 import { useNoticeStore } from "@/store/notice.store";
 import type { AuthenticatedMember } from "@/types/auth";
+
+function Avatar({
+  name,
+  avatarUrl,
+  emphasized = false,
+}: {
+  name: string;
+  avatarUrl?: string;
+  emphasized?: boolean;
+}) {
+  if (avatarUrl) {
+    return (
+      <Image
+        src={avatarUrl}
+        alt={name}
+        width={36}
+        height={36}
+        className="size-9 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <span
+      className={
+        emphasized
+          ? "flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+          : "flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+      }
+    >
+      {getInitials(name)}
+    </span>
+  );
+}
 
 interface ReplyThreadProps {
   noticeId: string;
@@ -53,6 +87,7 @@ export function ReplyThread({ noticeId, member }: ReplyThreadProps) {
       authorId: member.id,
       authorName: member.name,
       authorRole: member.role,
+      authorAvatarUrl: member.avatarUrl,
       message: trimmed,
       createdAt: new Date().toISOString(),
     };
@@ -78,9 +113,10 @@ export function ReplyThread({ noticeId, member }: ReplyThreadProps) {
         ) : (
           threadReplies.map((reply) => (
             <div key={reply.id} className="flex gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                {getInitials(reply.authorName)}
-              </span>
+              <Avatar
+                name={reply.authorName}
+                avatarUrl={reply.authorAvatarUrl}
+              />
               <div className="min-w-0 flex-1 space-y-1 rounded-xl bg-accent/50 px-3.5 py-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
@@ -107,9 +143,7 @@ export function ReplyThread({ noticeId, member }: ReplyThreadProps) {
       </div>
 
       <div className="flex items-start gap-3 border-t border-border pt-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-          {getInitials(member.name)}
-        </span>
+        <Avatar name={member.name} avatarUrl={member.avatarUrl} emphasized />
         <div className="min-w-0 flex-1 space-y-2">
           <Textarea
             value={message}

@@ -34,6 +34,7 @@ export interface NoticeReply {
   authorId: string;
   authorName: string;
   authorRole: UserRole;
+  authorAvatarUrl?: string;
   message: string;
   createdAt: string;
 }
