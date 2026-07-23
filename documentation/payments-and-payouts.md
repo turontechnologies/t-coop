@@ -73,6 +73,31 @@ bank codes 001 or upgrade to live mode."`) while building this. Bank
   prepends it to the live list anyway, clearly labeled
   "(sandbox preview only — not for payouts)", so it's available for the
   Verify step but nobody mistakes it for a way to actually receive money.
+- **Transfer Recipient creation needs a genuinely real, resolvable
+  account — fabricated seed account numbers will never work, quota or
+  no quota.** Discovered by testing directly against Paystack: a random
+  10-digit number against a real bank code fails with
+  `"Cannot resolve account"` / `invalid_bank_code` regardless of the
+  daily resolve quota, because `/transferrecipient` validates the
+  account is real, not just correctly formatted. Every seeded
+  `CoopMember`/`ProfileRecord` was updated to use one real, confirmed-
+  working test account (OPay, bank code `999992`) so the approval flow
+  can actually be exercised end-to-end rather than always dead-ending on
+  step one. In a real product this obviously wouldn't be one shared
+  account — each member would verify their own.
+- **Even with a real recipient, an actual Transfer needs the connected
+  Paystack business to be past "Starter" tier.** Confirmed directly:
+  initiating a transfer to a real, successfully-created recipient
+  returned `"You cannot initiate third party payouts as a starter
+business... upgrade your business to a Registered Business"`. This is
+  a Paystack account-level compliance/KYB gate, entirely outside this
+  app's code — the account owner needs to complete Paystack's business
+  verification on their dashboard before _any_ third-party payout
+  (loan disbursement, savings withdrawal, or otherwise) can actually
+  complete, even in test mode, even with a perfectly valid recipient.
+  Recipient creation working end-to-end already proves the integration
+  code is correct; this remaining step is account administration, not
+  a bug to fix here.
 - **OTP finalization exists in code but wasn't exercised in test mode.**
   A real Paystack Transfer can come back requiring OTP confirmation
   (Paystack SMS's/emails a code to the business) before it completes —

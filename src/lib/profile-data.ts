@@ -7,9 +7,9 @@ export interface ProfileRecord extends ProfileFormValues {
 const PROFILES: Record<string, ProfileRecord> = {
   "SA-0001": {
     membershipId: "SA-0001",
-    accountNumber: "0123456789",
-    bankCode: "058",
-    accountName: "FALOLA MAYOWA",
+    accountNumber: "8135013995",
+    bankCode: "999992",
+    accountName: "SAMUEL PRECIOUS ADEDARA",
     nin: "11223344556",
     firstName: "Falola",
     lastName: "Mayowa",
@@ -27,9 +27,9 @@ const PROFILES: Record<string, ProfileRecord> = {
   },
   "AD-0001": {
     membershipId: "AD-0001",
-    accountNumber: "0234567891",
-    bankCode: "057",
-    accountName: "CHIDINMA EZE",
+    accountNumber: "8135013995",
+    bankCode: "999992",
+    accountName: "SAMUEL PRECIOUS ADEDARA",
     nin: "22334455667",
     firstName: "Chidinma",
     lastName: "Eze",
@@ -47,9 +47,9 @@ const PROFILES: Record<string, ProfileRecord> = {
   },
   "MB-0001": {
     membershipId: "MB-0001",
-    accountNumber: "0345678912",
-    bankCode: "044",
-    accountName: "TUNDE BAKARE",
+    accountNumber: "8135013995",
+    bankCode: "999992",
+    accountName: "SAMUEL PRECIOUS ADEDARA",
     nin: "33445566778",
     firstName: "Tunde",
     lastName: "Bakare",
