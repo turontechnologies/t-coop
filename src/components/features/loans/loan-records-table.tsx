@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { LoanRecord, LoanStatus } from "@/lib/loans-data";
+import { LOAN_TYPES, type LoanRecord, type LoanStatus } from "@/lib/loans-data";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,10 @@ const STATUS_OPTIONS = [
   "Completed",
   "Rejected",
 ] as const;
+const TYPE_OPTIONS = [
+  "All types",
+  ...LOAN_TYPES.map((type) => type.name),
+] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
 function statusBadgeVariant(status: LoanStatus) {
@@ -52,6 +56,7 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
+  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -68,11 +73,18 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
         record.guarantorName.toLowerCase().includes(search.toLowerCase());
       const matchesStatus =
         status === "All statuses" || record.status === status;
+      const matchesType = type === "All types" || record.loanType === type;
       const matchesFrom = !dateFrom || record.date >= dateFrom;
       const matchesTo = !dateTo || record.date <= dateTo;
-      return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesType &&
+        matchesFrom &&
+        matchesTo
+      );
     });
-  }, [records, search, status, dateFrom, dateTo]);
+  }, [records, search, status, type, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -114,6 +126,25 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
             {STATUS_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>
                 {option === "All statuses" ? "By status" : option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={type}
+          onValueChange={(value) => {
+            setType(value as (typeof TYPE_OPTIONS)[number]);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger size="sm" className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option === "All types" ? "By loan type" : option}
               </SelectItem>
             ))}
           </SelectContent>

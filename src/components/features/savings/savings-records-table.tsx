@@ -20,7 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { findSavingsTypeRange, type SavingsRecord } from "@/lib/savings-data";
+import {
+  findSavingsTypeRange,
+  SAVINGS_TYPES,
+  type SavingsRecord,
+} from "@/lib/savings-data";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +42,10 @@ const STATUS_OPTIONS = [
   "Pending",
   "Failed",
 ] as const;
+const TYPE_OPTIONS = [
+  "All types",
+  ...SAVINGS_TYPES.map((type) => type.name),
+] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
 export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
@@ -45,6 +53,7 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
+  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -61,11 +70,18 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
         record.memberName.toLowerCase().includes(search.toLowerCase());
       const matchesStatus =
         status === "All statuses" || record.status === status;
+      const matchesType = type === "All types" || record.savingsType === type;
       const matchesFrom = !dateFrom || record.date >= dateFrom;
       const matchesTo = !dateTo || record.date <= dateTo;
-      return matchesSearch && matchesStatus && matchesFrom && matchesTo;
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesType &&
+        matchesFrom &&
+        matchesTo
+      );
     });
-  }, [records, search, status, dateFrom, dateTo]);
+  }, [records, search, status, type, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -107,6 +123,25 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
             {STATUS_OPTIONS.map((option) => (
               <SelectItem key={option} value={option}>
                 {option === "All statuses" ? "By status" : option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={type}
+          onValueChange={(value) => {
+            setType(value as (typeof TYPE_OPTIONS)[number]);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger size="sm" className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option === "All types" ? "By savings type" : option}
               </SelectItem>
             ))}
           </SelectContent>
