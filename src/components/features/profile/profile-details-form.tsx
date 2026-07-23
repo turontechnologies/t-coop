@@ -30,8 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LocationFields } from "@/components/features/shared/location-fields";
+import { useBankList } from "@/hooks/use-bank-list";
 import { useUpdateProfile } from "@/hooks/use-update-profile";
-import { COUNTRIES } from "@/lib/countries";
+import { resolveBankAccount } from "@/lib/bank-lookup";
+import { findBankByCode } from "@/lib/bank-data";
 import type { ProfileRecord } from "@/lib/profile-data";
 import {
   profileSchema,
@@ -49,19 +52,50 @@ export function ProfileDetailsForm({
 }: ProfileDetailsFormProps) {
   const [editing, setEditing] = useState(false);
   const [displayProfile, setDisplayProfile] = useState(profile);
+  const [verifyingAccount, setVerifyingAccount] = useState(false);
   const membershipIdFieldId = useId();
+  const bankId = useId();
+  const accountNumberId = useId();
   const updateProfile = useUpdateProfile();
+  const { banks, loading: banksLoading } = useBankList();
 
   const {
     register,
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: displayProfile,
   });
+
+  const accountName = watch("accountName");
+  const accountNumber = watch("accountNumber");
+  const bankCode = watch("bankCode");
+
+  const invalidateAccountName = () => {
+    if (accountName) setValue("accountName", "", { shouldDirty: true });
+  };
+
+  const handleVerifyAccount = async () => {
+    setVerifyingAccount(true);
+    try {
+      const resolvedName = await resolveBankAccount(accountNumber, bankCode);
+      setValue("accountName", resolvedName, { shouldDirty: true });
+      toast.success("Account verified", {
+        description: resolvedName,
+      });
+    } catch (error) {
+      toast.error("Couldn't verify that account", {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    } finally {
+      setVerifyingAccount(false);
+    }
+  };
 
   const onSubmit = handleSubmit(async (values) => {
     updateProfile.reset();
@@ -109,19 +143,90 @@ export function ProfileDetailsForm({
           <CardTitle>Personal Information</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <ProfileField
-            label="Bank Verification Number (BVN)"
-            required
-            registration={register("bvn")}
-            error={errors.bvn?.message}
-            disabled={busy}
-            trailing={
-              <span className="flex items-center gap-1 text-xs font-medium text-success">
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Bank Account</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <Controller
+                control={control}
+                name="bankCode"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(value) => {
+                      field.onChange(value ?? "");
+                      invalidateAccountName();
+                    }}
+                    disabled={busy || banksLoading}
+                  >
+                    <SelectTrigger
+                      id={bankId}
+                      className="h-11 w-full"
+                      aria-invalid={!!errors.bankCode}
+                    >
+                      <SelectValue
+                        placeholder={
+                          banksLoading ? "Loading banks…" : "Select bank"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {banks.map((bank) => (
+                        <SelectItem key={bank.code} value={bank.code}>
+                          {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <Input
+                id={accountNumberId}
+                placeholder="10-digit account number"
+                disabled={busy}
+                aria-invalid={!!errors.accountNumber}
+                className="h-11"
+                {...register("accountNumber", {
+                  onChange: invalidateAccountName,
+                })}
+              />
+              <Button
+                type="button"
+                onClick={handleVerifyAccount}
+                disabled={
+                  busy ||
+                  verifyingAccount ||
+                  !bankCode ||
+                  accountNumber?.length !== 10
+                }
+                className="h-11"
+              >
+                {verifyingAccount ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : accountName ? (
+                  "Verified"
+                ) : (
+                  "Verify"
+                )}
+              </Button>
+            </div>
+            <FieldError
+              message={
+                errors.bankCode?.message ?? errors.accountNumber?.message
+              }
+            />
+            {accountName ? (
+              <p className="flex items-center gap-1 text-xs font-medium text-success">
                 <BadgeCheck className="size-3.5" aria-hidden="true" />
-                Verified
-              </span>
-            }
-          />
+                {accountName}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Select a bank, enter the account number, then Verify — this is
+                where payouts (loan disbursement, savings withdrawal) will be
+                sent.
+              </p>
+            )}
+          </div>
           <ProfileField
             label="National Identification Number (NIN)"
             required
@@ -193,19 +298,32 @@ export function ProfileDetailsForm({
             error={errors.homeAddress?.message}
             disabled={busy}
           />
-          <ProfileSelect
-            label="Country"
-            control={control}
-            name="country"
-            error={errors.country?.message}
+          <LocationFields
+            country={watch("country")}
+            state={watch("state")}
+            city={watch("city")}
+            onCountryChange={(value) =>
+              setValue("country", value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            onStateChange={(value) =>
+              setValue("state", value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            onCityChange={(value) =>
+              setValue("city", value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
             disabled={busy}
-            options={COUNTRIES}
-          />
-          <ProfileField
-            label="State"
-            registration={register("state")}
-            error={errors.state?.message}
-            disabled={busy}
+            countryError={errors.country?.message}
+            stateError={errors.state?.message}
+            cityError={errors.city?.message}
           />
         </CardContent>
       </Card>
@@ -290,6 +408,7 @@ function ProfileReadOnlyView({
   profile,
   onEdit,
 }: ProfileReadOnlyViewProps) {
+  const { banks } = useBankList();
   const verifiedBadge = (
     <span className="flex items-center gap-1 text-xs font-medium text-success">
       <BadgeCheck className="size-3.5" aria-hidden="true" />
@@ -316,9 +435,13 @@ function ProfileReadOnlyView({
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <ProfileViewField
-            label="Bank Verification Number (BVN)"
-            value={profile.bvn}
-            trailing={verifiedBadge}
+            label="Bank Account"
+            value={
+              profile.accountNumber
+                ? `${findBankByCode(banks, profile.bankCode)?.name ?? profile.bankCode} — ${profile.accountNumber}`
+                : undefined
+            }
+            trailing={profile.accountName ? verifiedBadge : undefined}
           />
           <ProfileViewField
             label="National Identification Number (NIN)"
@@ -342,6 +465,10 @@ function ProfileReadOnlyView({
           <ProfileViewField label="Home Address" value={profile.homeAddress} />
           <ProfileViewField label="Country" value={profile.country} />
           <ProfileViewField label="State" value={profile.state} />
+          <ProfileViewField
+            label="City / Local Government"
+            value={profile.city}
+          />
         </CardContent>
       </Card>
 

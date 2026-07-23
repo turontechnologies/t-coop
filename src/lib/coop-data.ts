@@ -15,6 +15,11 @@ export interface CoopMember {
   guarantor: string;
   country: string;
   state: string;
+  city: string;
+  /** Bank payout details — required for real Paystack Transfers (loan disbursement, savings withdrawal). */
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
 }
 
 export type CoopSavingsStatus = "Success" | "Pending" | "Failed";
@@ -84,6 +89,7 @@ export interface Cooperative {
   address: string;
   country: string;
   state: string;
+  city: string;
   status: CoopStatus;
   members: CoopMember[];
   savings: CoopSavingsRecord[];
@@ -100,7 +106,8 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
     contactPhone: "090-228-27263",
     address: "14 Marina Road",
     country: "Nigeria",
-    state: "Lagos",
+    state: "Lagos State",
+    city: "Lagos Island",
     status: "Active",
     members: [
       {
@@ -112,7 +119,11 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Active",
         guarantor: "Karim Adeyemi",
         country: "Nigeria",
-        state: "Lagos",
+        state: "Lagos State",
+        city: "Ikeja",
+        bankCode: "058",
+        accountNumber: "0111222333",
+        accountName: "JONATHAN NEWMAN",
       },
       {
         id: "MEM-0988-2",
@@ -123,7 +134,11 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Active",
         guarantor: "Jonathan Newman",
         country: "Nigeria",
-        state: "Lagos",
+        state: "Lagos State",
+        city: "Eti-Osa",
+        bankCode: "044",
+        accountNumber: "0222333444",
+        accountName: "AMAKA CHUKWU",
       },
       {
         id: "MEM-0988-3",
@@ -134,7 +149,11 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Active",
         guarantor: "Karim Adeyemi",
         country: "Nigeria",
-        state: "Lagos",
+        state: "Lagos State",
+        city: "Surulere",
+        bankCode: "057",
+        accountNumber: "0333444555",
+        accountName: "SEGUN OJO",
       },
       {
         id: "MEM-0988-4",
@@ -145,7 +164,11 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Inactive",
         guarantor: "Amaka Chukwu",
         country: "Nigeria",
-        state: "Lagos",
+        state: "Lagos State",
+        city: "Lagos Mainland",
+        bankCode: "033",
+        accountNumber: "0444555666",
+        accountName: "HALIMA BELLO",
       },
     ],
     savings: [
@@ -321,7 +344,8 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
     contactPhone: "081-345-90211",
     address: "22 Aba Road, GRA Phase 2",
     country: "Nigeria",
-    state: "Rivers",
+    state: "Rivers State",
+    city: "Port Harcourt",
     status: "Active",
     members: [
       {
@@ -333,7 +357,11 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Active",
         guarantor: "Ifeoma Nwachukwu",
         country: "Nigeria",
-        state: "Rivers",
+        state: "Rivers State",
+        city: "Port Harcourt",
+        bankCode: "058",
+        accountNumber: "0555666777",
+        accountName: "YEMI ALADE",
       },
       {
         id: "MEM-0442-2",
@@ -344,7 +372,11 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Active",
         guarantor: "Yemi Alade",
         country: "Nigeria",
-        state: "Rivers",
+        state: "Rivers State",
+        city: "Obio/Akpor",
+        bankCode: "044",
+        accountNumber: "0666777888",
+        accountName: "CHUKA OBI",
       },
     ],
     savings: [
@@ -401,7 +433,8 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
     contactPhone: "070-556-40912",
     address: "9 Ahmadu Bello Way",
     country: "Nigeria",
-    state: "Kaduna",
+    state: "Kaduna State",
+    city: "Kaduna North",
     status: "Disabled",
     members: [
       {
@@ -413,7 +446,11 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Inactive",
         guarantor: "Board of Trustees",
         country: "Nigeria",
-        state: "Kaduna",
+        state: "Kaduna State",
+        city: "Kaduna North",
+        bankCode: "033",
+        accountNumber: "0777888999",
+        accountName: "PATIENCE UZO",
       },
     ],
     savings: [],

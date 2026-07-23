@@ -15,7 +15,7 @@ switch into an editable form when they deliberately choose to, via an
 Edit button. Matches the fields and density of the reference "Member
 Details" design, redesigned to look and behave like a real product screen
 rather than a static mockup — sectioned, validated, with every field
-(including BVN and NIN) genuinely editable once in edit mode.
+(including Bank Account and NIN) genuinely editable once in edit mode.
 
 ## Design Decisions
 
@@ -42,14 +42,18 @@ rather than a static mockup — sectioned, validated, with every field
   read-only element. A member landing on this page to check their details
   shouldn't see a wall of editable-looking fields and wonder whether
   typing in one commits anything.
-- **BVN and NIN are both editable in edit mode, not permanently locked.**
-  An earlier version of this page kept BVN hard-`disabled` to simulate a
-  bank-verified, locked field. That's been reversed: the member can now
-  edit BVN and NIN like every other field once "Edit" is clicked — both
-  still carry a "Verified" badge next to the label as a visual cue, but
-  it's cosmetic, not a real block. NIN (National Identification Number)
-  is a new field alongside BVN, added to `profileSchema` and
-  `ProfileRecord` with the same 11-digit validation. Membership ID stays
+- **The BVN field is now a real Bank Account field, genuinely verified,
+  not a cosmetic badge.** Every BVN field in this app was replaced with
+  Bank + Account Number + a real "Verify" step — see
+  [payments-and-payouts.md](./payments-and-payouts.md) for the full
+  design reasoning (bank list, resolve flow, why it exists at all: this
+  is where the member's own loan disbursement and savings-withdrawal
+  payouts get sent). Unlike the old BVN field's permanent, hardcoded
+  "Verified" badge, this one is real: it only shows once "Verify" has
+  actually resolved an account name via Paystack, and editing the
+  account number/bank afterward clears it, requiring re-verification.
+  NIN keeps its original cosmetic "Verified" badge unchanged — only BVN
+  was in scope for this change. Membership ID stays
   genuinely read-only in both modes (system-assigned, shown as plain
   `<Input disabled>` even inside the edit form) since a member changing
   their own membership ID isn't realistic in either state. "User Access"
@@ -58,13 +62,21 @@ rather than a static mockup — sectioned, validated, with every field
   level isn't realistic, and the mock has nowhere legitimate to enforce
   that boundary; it's represented instead as the read-only role badge in
   the header card.
-- **Gender and Country use the shadcn `Select`, not a native `<select>`.**
-  This page originally shipped with a hand-styled native `<select>` (an
-  older pattern than the `/savings` and `/loans` builds that established
-  the shadcn-everywhere standard). Brought in line with the rest of the
-  app when this page was reworked — both fields are wired through RHF's
-  `Controller` since Base UI's `Select` isn't an uncontrolled native
-  element `register()` can attach to directly.
+- **Gender uses the shadcn `Select`, not a native `<select>`.** This page
+  originally shipped with a hand-styled native `<select>` (an older
+  pattern than the `/savings` and `/loans` builds that established the
+  shadcn-everywhere standard). Brought in line with the rest of the app
+  when this page was reworked — wired through RHF's `Controller` since
+  Base UI's `Select` isn't an uncontrolled native element `register()`
+  can attach to directly.
+- **Country/State/City are now a live, cascading `<LocationFields>`, not
+  a static country list plus a free-text state input.** Picking a
+  country fetches its real states; picking a state fetches its real
+  cities — both from a live, keyless API. Shared across every form in
+  this app that captures an address, so it's documented once in
+  [payments-and-payouts.md](./payments-and-payouts.md#design-decisions)
+  rather than repeated per page. `city` is a new required field on
+  `profileSchema`/`ProfileRecord` that didn't exist before.
 - **Avatar photo upload is real, via Cloudinary — not a "coming soon"
   toast.** The camera button opens a hidden `<input type="file">`
   (PNG/JPEG/WEBP, capped at 5MB client-side), which posts the file as
@@ -153,6 +165,10 @@ access.
   plus the in-memory update function.
 - `src/app/api/upload/route.ts` — server-side route handler that validates
   and signs uploads to Cloudinary for the avatar photo.
+- `src/components/features/shared/location-fields.tsx`,
+  `src/hooks/use-bank-list.ts`, `src/lib/bank-lookup.ts` — the live
+  bank/geo pieces used by the Bank Account and Address fields; see
+  [payments-and-payouts.md](./payments-and-payouts.md).
 
 ## Animations
 
@@ -169,9 +185,10 @@ they can start typing). Page-level entrance still comes from the root
   quota — fine for a demo, worth adding (plus deleting the previous
   Cloudinary asset on re-upload, rather than leaving orphaned images) once
   this is backed by real user accounts.
-- BVN/NIN "Verified" badges are hardcoded permanently `true`; once there's
-  a real KYC provider, that status (and whether the field should even be
-  user-editable after verification) should come from that provider
-  instead.
+- NIN's "Verified" badge is still hardcoded permanently `true`; once
+  there's a real KYC provider, that status (and whether the field should
+  even be user-editable after verification) should come from that
+  provider instead. Bank Account's badge is no longer in this category —
+  it's real now, see [payments-and-payouts.md](./payments-and-payouts.md).
 - No confirmation prompt before "Cancel" discards edits — fine for a demo,
   worth adding once real users could lose meaningful unsaved work.

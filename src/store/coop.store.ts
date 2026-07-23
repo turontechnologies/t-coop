@@ -19,6 +19,10 @@ export type MemberEditableFields = Pick<
   | "guarantor"
   | "country"
   | "state"
+  | "city"
+  | "bankCode"
+  | "accountNumber"
+  | "accountName"
 >;
 
 interface CoopState {

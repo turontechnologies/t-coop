@@ -1,11 +1,14 @@
 import { z } from "zod";
 
 export const addMemberSchema = z.object({
-  bvn: z
+  accountNumber: z
     .string()
     .trim()
-    .length(11, "BVN must be 11 digits")
-    .regex(/^\d+$/, "BVN must contain numbers only"),
+    .length(10, "Account number must be 10 digits")
+    .regex(/^\d+$/, "Account number must contain numbers only"),
+  bankCode: z.string().trim().min(1, "Select a bank"),
+  /** Resolved from Paystack — read-only in the UI, not directly typed by the user. */
+  accountName: z.string().trim().optional(),
   firstName: z.string().trim().min(1, "Enter a first name"),
   lastName: z.string().trim().min(1, "Enter a last name"),
   otherName: z.string().trim().optional(),
@@ -19,6 +22,7 @@ export const addMemberSchema = z.object({
   homeAddress: z.string().trim().optional(),
   country: z.string().min(1, "Select a country"),
   state: z.string().trim().optional(),
+  city: z.string().trim().optional(),
   facebook: z.string().trim().optional(),
   membershipId: z.string().trim().min(1, "Enter a membership ID"),
   guarantor: z.string().trim().min(1, "Select a guarantor"),

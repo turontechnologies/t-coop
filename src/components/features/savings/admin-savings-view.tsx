@@ -29,6 +29,8 @@ import {
 } from "@/lib/coop-data";
 import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
 import { formatNaira } from "@/lib/format";
+import { initiateTransfer } from "@/lib/paystack-transfer";
+import { getProfileData } from "@/lib/profile-data";
 import type { ExportColumn } from "@/lib/table-export";
 import { useCoopStore } from "@/store/coop.store";
 import { useSavingsStore } from "@/store/savings.store";
@@ -80,10 +82,16 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     [savingsRecords, member.id],
   );
 
+  const personalRequests = useSavingsStore((state) => state.requests);
+  const resolvePersonalRequest = useSavingsStore(
+    (state) => state.resolveRequest,
+  );
+
   const [activeTab, setActiveTab] = useState<AdminSavingsTab>("members");
   const [tellerOpen, setTellerOpen] = useState(false);
   const [tellerBusy, setTellerBusy] = useState(false);
   const [myAddOpen, setMyAddOpen] = useState(false);
+  const [myWithdrawOpen, setMyWithdrawOpen] = useState(false);
 
   if (!coop) {
     return (
@@ -94,7 +102,10 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   }
 
   const totalsByType = coopSavingsBySummaryType(coop);
-  const pendingRequests = coop.savingsRequests.filter(
+  const allRequests = [...coop.savingsRequests, ...personalRequests].sort(
+    (a, b) => b.requestedAt.localeCompare(a.requestedAt),
+  );
+  const pendingRequests = allRequests.filter(
     (request) => request.status === "Pending",
   );
 
@@ -140,26 +151,83 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     requestId: string,
     status: "Approved" | "Declined",
   ) => {
-    const request = coop.savingsRequests.find((r) => r.id === requestId);
-    resolveSavingsRequest(coop.id, requestId, status);
-    if (request) {
-      toast.success(
-        status === "Approved" ? "Request approved" : "Request declined",
-        {
+    const isCoopRequest = coop.savingsRequests.some((r) => r.id === requestId);
+    const request = isCoopRequest
+      ? coop.savingsRequests.find((r) => r.id === requestId)
+      : personalRequests.find((r) => r.id === requestId);
+    if (!request) return;
+
+    // Approving a withdrawal is real money leaving the co-op's Paystack
+    // balance for the member's bank account — attempt that transfer first,
+    // and only mark the request Approved (and create the ledger record) if
+    // it actually goes through. A failed/misconfigured transfer should
+    // never silently look like a successful withdrawal.
+    if (status === "Approved" && request.type === "Withdrawal") {
+      const bankDetails = isCoopRequest
+        ? coop.members.find((m) => m.id === request.memberId)
+        : getProfileData(request.memberId);
+
+      if (!bankDetails?.accountNumber || !bankDetails?.bankCode) {
+        toast.error("Can't disburse this withdrawal", {
+          description: `${request.memberName} hasn't verified their bank account yet.`,
+        });
+        return;
+      }
+
+      try {
+        await initiateTransfer({
+          accountNumber: bankDetails.accountNumber,
+          bankCode: bankDetails.bankCode,
+          accountName: bankDetails.accountName || request.memberName,
+          amount: request.amount,
+          reason: `T-Coop savings withdrawal — ${request.savingsType}`,
+        });
+      } catch (error) {
+        toast.error("Payout failed", {
           description:
-            status === "Approved"
-              ? `${formatNaira(request.amount)} ${request.type === "Deposit" ? "deposit" : "withdrawal"} recorded for ${request.memberName}.`
-              : `${request.memberName}'s request was declined.`,
-        },
-      );
+            error instanceof Error
+              ? error.message
+              : "Couldn't process this withdrawal payout.",
+        });
+        return;
+      }
     }
+
+    if (isCoopRequest) {
+      resolveSavingsRequest(coop.id, requestId, status);
+    } else {
+      resolvePersonalRequest(requestId, status);
+    }
+
+    toast.success(
+      status === "Approved" ? "Request approved" : "Request declined",
+      {
+        description:
+          status === "Approved"
+            ? request.type === "Withdrawal"
+              ? `${formatNaira(request.amount)} paid out to ${request.memberName}.`
+              : `${formatNaira(request.amount)} deposit recorded for ${request.memberName}.`
+            : `${request.memberName}'s request was declined.`,
+      },
+    );
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
-        {activeTab !== "request" ? (
+        {activeTab === "my" ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setMyWithdrawOpen(true)}
+              disabled={myTotal <= 0}
+            >
+              Withdraw
+            </Button>
+            <Button onClick={handlePrimaryAction}>+ New Savings</Button>
+          </div>
+        ) : activeTab === "members" ? (
           <Button onClick={handlePrimaryAction}>+ New Savings</Button>
         ) : null}
       </div>
@@ -197,7 +265,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
               ) : null}
               {activeTab === "request" ? (
                 <ExportImportMenu
-                  rows={coop.savingsRequests}
+                  rows={allRequests}
                   columns={REQUEST_EXPORT_COLUMNS}
                   filenamePrefix={`${coop.id}-savings-requests`}
                   exportTitle={`${coop.name} — Savings Requests`}
@@ -219,12 +287,14 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
                 showSummary={false}
                 addOpen={myAddOpen}
                 onAddOpenChange={setMyAddOpen}
+                withdrawOpen={myWithdrawOpen}
+                onWithdrawOpenChange={setMyWithdrawOpen}
               />
             </TabsPanel>
 
             <TabsPanel value="request">
               <SavingsRequestsTable
-                requests={coop.savingsRequests}
+                requests={allRequests}
                 onResolve={handleResolveRequest}
               />
             </TabsPanel>

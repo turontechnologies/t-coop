@@ -109,17 +109,40 @@ deleted in a future cleanup once nobody's relying on it as reference.
   sum, so a withdrawal nets out of "Total Savings & Contributions" with no
   special-casing anywhere it's displayed or exported — one honest
   representation, not two code paths that could drift apart.
-- **The Request tab is real end-to-end (approve/decline actually mutate
-  state), but there's deliberately no member-facing "submit a request"
-  screen yet.** The ask was specifically for the admin side of this page;
-  building a member-side submission form would be scope no one asked for
-  yet. `coop-data.ts` seeds a few realistic pending/resolved requests so
-  the tab has something real to act on, and `useCoopStore.resolveSavingsRequest`
-  genuinely creates the resulting savings record (or just marks the
-  request "Declined") rather than faking the approval — but a member
-  currently has no in-app way to create a new request themselves. Flagged
-  explicitly in [Future Improvements](#future-improvements) rather than
-  silently left out.
+- **Members can now submit a real withdrawal request — the gap flagged
+  in this doc's previous revision is closed.** A "Withdraw" button next
+  to "+ New Savings" (disabled when the balance is 0) opens
+  `<RequestWithdrawalModal>`: pick a Savings Type (shows that type's
+  current balance), enter an amount validated against it, an optional
+  note, submit. This uses the legacy personal `useSavingsStore` — the
+  same store `/savings` itself already uses — not the co-op model, since
+  the member role's own records live there (see the next bullet for how
+  this reconciles with the admin's coop-scoped Request tab).
+- **`useSavingsStore` gained its own `requests`/`addRequest`/
+  `resolveRequest`, reusing the exact same `SavingsRequest` type
+  `coop-data.ts` already defined for coop-scoped requests** — the shape
+  needed no coop-specific fields, so duplicating it for the personal
+  model would have been two types drifting apart for no reason.
+  `AdminSavingsView`'s Request tab now shows **both** sources merged
+  into one list (`[...coop.savingsRequests, ...personalRequests]`,
+  sorted newest-first) with one shared table and one resolve handler
+  that checks which store a given request came from before routing the
+  approve/decline call — this is also the only in-app way to test the
+  full request flow against the app's one real "member" login (the
+  admin's own coop members have no login of their own, see
+  [loans-page.md](./loans-page.md#design-decisions) for the same
+  guarantor-identity boundary).
+- **Approving a withdrawal now moves real money — the request first,
+  the record only if it worked.** Both the coop and personal paths
+  attempt an actual Paystack Transfer to the member's verified bank
+  account before creating any record or changing any status; a failure
+  (missing bank details, or Paystack's real-bank-resolve quota) shows a
+  clear error and leaves the request `Pending` rather than silently
+  faking success. Full design reasoning, the bank-detail plumbing, and
+  the quota constraint discovered while building this all live in
+  [payments-and-payouts.md](./payments-and-payouts.md) — deliberately
+  not repeated here since Loans' disbursement approval uses the exact
+  same mechanism.
 - **New `Dialog`, `Tabs`, `Select`, `Popover`, and `Calendar` primitives
   were added** (`src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`,
   `popover.tsx`, `calendar.tsx`) via `pnpm dlx shadcn@latest add`, not
@@ -188,6 +211,10 @@ Member "+ New Savings" → <AddSavingsModal> (pick type, enter amount within its
         → paid → <PaymentSuccessModal>, new record added, table/summary update live
         → popup closed without paying → modal stays open, no record added
 
+Member "Withdraw" → <RequestWithdrawalModal> (pick type, amount within balance)
+  → "Submit Request" → real SavingsRequest added (status: Pending) — awaits
+     admin approval on their Requests tab (see Admin-only, below)
+
 Any row in a records table → /savings/[id] → Savings Details page
   (full record: type, amount, method, date, member — linked to /profile —
   balance after, transaction ID, status)
@@ -208,9 +235,14 @@ Members Savings tab + "+ New Savings" → <UploadTellerModal>
   → "Upload" → real CoopSavingsRecord added (method: "Manual Upload"),
      balance computed from that member's prior records for the type
 
-Request tab → <SavingsRequestsTable> (seeded Deposit/Withdrawal requests)
-  → "Approve" → confirm → creates a real CoopSavingsRecord
-       (Deposit: positive amount, Withdrawal: negative amount)
+Request tab → <SavingsRequestsTable> (coop-seeded requests + every real
+  member-submitted personal withdrawal request, merged into one list)
+  → "Approve" (Deposit) → confirm → creates a real record, positive amount
+  → "Approve" (Withdrawal) → confirm → real Paystack Transfer to the
+       member's verified bank account attempted first; only on success
+       does a negative-amount record get created and the request resolve
+       (failure → error toast, request stays Pending — see
+       payments-and-payouts.md)
   → "Decline" → confirm → request marked Declined, no record created
 ```
 
@@ -237,6 +269,9 @@ Request tab → <SavingsRequestsTable> (seeded Deposit/Withdrawal requests)
   deposits.
 - `src/components/features/savings/savings-requests-table.tsx` — the
   Request tab's table, with `AlertDialog`-confirmed Approve/Decline.
+- `src/components/features/savings/request-withdrawal-modal.tsx` — the
+  member-facing withdrawal request form (Savings Type with live balance,
+  amount, optional note).
 - `src/components/features/savings/members-savings-overview.tsx` — an
   earlier, unwired admin aggregate view; no longer imported anywhere (see
   [Admin view](#admin-view)) — candidate for deletion in a future cleanup.
@@ -268,9 +303,13 @@ Request tab → <SavingsRequestsTable> (seeded Deposit/Withdrawal requests)
 - `src/lib/savings-import.ts` — import template generation + parsing/
   validation for `<ExportImportMenu>`'s Import flow.
 - `src/store/savings.store.ts` — the reactive record store for the
-  member/admin's own personal savings.
+  member/admin's own personal savings, now also holding `requests` +
+  `addRequest`/`resolveRequest` for personal withdrawal requests.
 - `src/store/coop.store.ts` — `addSavingsRecord` (Upload Teller) and
   `resolveSavingsRequest` (Approve/Decline) mutators.
+- `src/lib/paystack-transfer.ts` — `initiateTransfer`, called by both
+  request-resolution paths on Approve; see
+  [payments-and-payouts.md](./payments-and-payouts.md).
 - `src/components/ui/dialog.tsx`, `tabs.tsx`, `select.tsx`, `popover.tsx`,
   `calendar.tsx` — new shared primitives (see Design Decisions).
 
@@ -288,6 +327,12 @@ browser that loads the app. Without this variable set, "Proceed" in the
 Add to Savings modal fails gracefully with a toast explaining what's
 missing, rather than a silent no-op or a fake success.
 
+Approving a withdrawal request needs the separate `PAYSTACK_SECRET_KEY`
+(server-only) — see
+[payments-and-payouts.md](./payments-and-payouts.md#setup) for that
+setup and why it's a genuinely different Paystack capability than the
+public key above.
+
 ## Animations
 
 Follows the same "lighter touch on data-dense screens" rule established in
@@ -299,10 +344,11 @@ language).
 
 ## Future Improvements
 
-- **A member-facing "submit a request" screen.** The Request tab's
-  approve/decline side is fully real, but nothing in the app currently
-  lets a member create a new deposit/withdrawal request themselves — the
-  seeded requests are the only ones that exist until this is built.
+- **No member-facing "submit a deposit request" UI yet** — only
+  withdrawal requests are member-submittable today (see Design
+  Decisions); a deposit-request equivalent would follow the same
+  pattern if ever needed, though a deposit is arguably better served by
+  just using "+ New Savings" directly.
 - **A dedicated super-admin `/savings` view**, if ever requested — today
   super admin's oversight equivalent lives per-co-operative under
   `/co-operatives/[id]/savings/...` (see

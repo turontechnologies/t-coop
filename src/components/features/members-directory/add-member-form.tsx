@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DEMO_BVNS, lookupBvn } from "@/lib/bvn-lookup";
-import { COUNTRIES } from "@/lib/countries";
+import { LocationFields } from "@/components/features/shared/location-fields";
+import { useBankList } from "@/hooks/use-bank-list";
+import { resolveBankAccount } from "@/lib/bank-lookup";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
 import {
@@ -33,13 +34,28 @@ interface AddMemberFormProps {
   existingMembers: CoopMember[];
 }
 
+/** Naive "JOHN DOE" -> { firstName: "John", lastName: "Doe" } split — a resolved bank account name has no first/last boundary marker, this is the best a bank resolve can offer. */
+function splitResolvedName(fullName: string): {
+  firstName: string;
+  lastName: string;
+} {
+  const parts = fullName.trim().split(/\s+/);
+  const toTitleCase = (word: string) =>
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  return {
+    firstName: toTitleCase(parts[0] ?? ""),
+    lastName: parts.slice(1).map(toTitleCase).join(" "),
+  };
+}
+
 export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
   const router = useRouter();
   const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState(false);
   const addMember = useCoopStore((state) => state.addMember);
+  const { banks, loading: banksLoading } = useBankList();
 
-  const bvnId = useId();
+  const bankId = useId();
+  const accountNumberId = useId();
   const firstNameId = useId();
   const lastNameId = useId();
   const otherNameId = useId();
@@ -47,8 +63,6 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
   const phoneId = useId();
   const emailId = useId();
   const homeAddressId = useId();
-  const countryId = useId();
-  const stateId = useId();
   const facebookId = useId();
   const membershipIdId = useId();
   const guarantorId = useId();
@@ -59,6 +73,7 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
     register,
     handleSubmit,
     control,
+    watch,
     setValue,
     setError,
     trigger,
@@ -67,7 +82,9 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
   } = useForm<AddMemberFormValues>({
     resolver: zodResolver(addMemberSchema),
     defaultValues: {
-      bvn: "",
+      accountNumber: "",
+      bankCode: "",
+      accountName: "",
       firstName: "",
       lastName: "",
       otherName: "",
@@ -76,6 +93,7 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
       homeAddress: "",
       country: "",
       state: "",
+      city: "",
       facebook: "",
       membershipId: "",
       guarantor: "",
@@ -84,23 +102,28 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
     },
   });
 
-  const handleProceed = async () => {
-    const bvnValid = await trigger("bvn");
-    if (!bvnValid) return;
+  const accountName = watch("accountName");
+  const verified = !!accountName;
+
+  const handleVerify = async () => {
+    const fieldsValid = await trigger(["accountNumber", "bankCode"]);
+    if (!fieldsValid) return;
 
     setVerifying(true);
     try {
-      const identity = await lookupBvn(getValues("bvn"));
-      setValue("firstName", identity.firstName, { shouldValidate: true });
-      setValue("lastName", identity.lastName, { shouldValidate: true });
-      setValue("phone", identity.phone, { shouldValidate: true });
-      setValue("email", identity.email, { shouldValidate: true });
-      setVerified(true);
-      toast.success("BVN verified", {
-        description: "Identity details have been auto-filled below.",
+      const resolvedName = await resolveBankAccount(
+        getValues("accountNumber"),
+        getValues("bankCode"),
+      );
+      const { firstName, lastName } = splitResolvedName(resolvedName);
+      setValue("accountName", resolvedName, { shouldValidate: true });
+      setValue("firstName", firstName, { shouldValidate: true });
+      setValue("lastName", lastName, { shouldValidate: true });
+      toast.success("Account verified", {
+        description: `${resolvedName} — name auto-filled below.`,
       });
     } catch (error) {
-      setError("bvn", {
+      setError("accountNumber", {
         message:
           error instanceof Error ? error.message : "Verification failed.",
       });
@@ -133,6 +156,10 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
       guarantor: values.guarantor,
       country: values.country,
       state: values.state?.trim() ?? "",
+      city: values.city?.trim() ?? "",
+      bankCode: values.bankCode,
+      accountNumber: values.accountNumber,
+      accountName: values.accountName ?? "",
     };
 
     addMember(ADMIN_DIRECTORY_COOP_ID, member);
@@ -157,19 +184,49 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor={bvnId}>Bank Verification Number (BVN)</Label>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <Label>Bank Account</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <Controller
+                control={control}
+                name="bankCode"
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(value) => field.onChange(value ?? "")}
+                    disabled={verifying || verified || banksLoading}
+                  >
+                    <SelectTrigger
+                      id={bankId}
+                      className="h-11 w-full"
+                      aria-invalid={!!errors.bankCode}
+                    >
+                      <SelectValue
+                        placeholder={
+                          banksLoading ? "Loading banks…" : "Select bank"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {banks.map((bank) => (
+                        <SelectItem key={bank.code} value={bank.code}>
+                          {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               <Input
-                id={bvnId}
-                placeholder="Enter B.V.N"
+                id={accountNumberId}
+                placeholder="10-digit account number"
                 disabled={verifying || verified}
-                className="h-11 sm:flex-1"
-                aria-invalid={!!errors.bvn}
-                {...register("bvn")}
+                className="h-11"
+                aria-invalid={!!errors.accountNumber}
+                {...register("accountNumber")}
               />
               <Button
                 type="button"
-                onClick={handleProceed}
+                onClick={handleVerify}
                 disabled={verifying || verified}
                 className="h-11 sm:w-32"
               >
@@ -178,16 +235,23 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
                 ) : verified ? (
                   "Verified"
                 ) : (
-                  "Proceed"
+                  "Verify"
                 )}
               </Button>
             </div>
-            <FieldError message={errors.bvn?.message} />
-            {!verified ? (
+            <FieldError
+              message={
+                errors.accountNumber?.message ?? errors.bankCode?.message
+              }
+            />
+            {verified ? (
+              <p className="text-xs font-medium text-success">{accountName}</p>
+            ) : (
               <p className="text-xs text-muted-foreground">
-                Demo BVNs: {DEMO_BVNS.join(", ")}
+                This is where the member&apos;s loan disbursements and savings
+                withdrawals will be paid out to.
               </p>
-            ) : null}
+            )}
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -195,7 +259,7 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
               <Label htmlFor={firstNameId}>First Name</Label>
               <Input
                 id={firstNameId}
-                placeholder="Auto filled"
+                placeholder="Auto filled once verified"
                 disabled={!verified || isSubmitting}
                 aria-invalid={!!errors.firstName}
                 className="h-11"
@@ -207,7 +271,7 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
               <Label htmlFor={lastNameId}>Last Name</Label>
               <Input
                 id={lastNameId}
-                placeholder="Auto filled"
+                placeholder="Auto filled once verified"
                 disabled={!verified || isSubmitting}
                 aria-invalid={!!errors.lastName}
                 className="h-11"
@@ -259,7 +323,7 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
               <Input
                 id={phoneId}
                 type="tel"
-                placeholder="Auto filled"
+                placeholder="Enter phone number"
                 disabled={!verified || isSubmitting}
                 aria-invalid={!!errors.phone}
                 className="h-11"
@@ -272,7 +336,7 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
               <Input
                 id={emailId}
                 type="email"
-                placeholder="Auto filled"
+                placeholder="Enter email address"
                 disabled={!verified || isSubmitting}
                 aria-invalid={!!errors.email}
                 className="h-11"
@@ -289,7 +353,7 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
           <CardTitle>Address</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label htmlFor={homeAddressId}>Home Address</Label>
             <Input
               id={homeAddressId}
@@ -299,46 +363,18 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
               {...register("homeAddress")}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor={countryId}>Country</Label>
-            <Controller
-              control={control}
-              name="country"
-              render={({ field }) => (
-                <Select
-                  value={field.value ?? ""}
-                  onValueChange={(value) => field.onChange(value ?? "")}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger
-                    id={countryId}
-                    className="h-11 w-full"
-                    aria-invalid={!!errors.country}
-                  >
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRIES.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <FieldError message={errors.country?.message} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={stateId}>State</Label>
-            <Input
-              id={stateId}
-              placeholder="Enter state"
-              disabled={isSubmitting}
-              className="h-11"
-              {...register("state")}
-            />
-          </div>
+          <LocationFields
+            country={watch("country")}
+            state={watch("state") ?? ""}
+            city={watch("city") ?? ""}
+            onCountryChange={(value) =>
+              setValue("country", value, { shouldValidate: true })
+            }
+            onStateChange={(value) => setValue("state", value)}
+            onCityChange={(value) => setValue("city", value)}
+            disabled={isSubmitting}
+            countryError={errors.country?.message}
+          />
           <div className="space-y-2">
             <Label htmlFor={facebookId}>Facebook</Label>
             <Input

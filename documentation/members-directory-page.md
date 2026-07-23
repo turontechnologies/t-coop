@@ -11,8 +11,8 @@ super admin's [Co-operatives](./co-operatives-page.md) oversight area.
 ## Purpose
 
 Let an admin see and manage the members of the one co-operative they run:
-list them, add a new one (with a real BVN-verification-style auto-fill
-step), open an individual member's own details, and see that member's
+list them, add a new one (with a real bank-account verification step),
+open an individual member's own details, and see that member's
 savings and loan records — the same "regular savings and loan view"
 already built for the super admin's per-member drill-down, reused rather
 than rebuilt.
@@ -47,19 +47,35 @@ than rebuilt.
   since no role-level route blocking exists anywhere in this app (nav
   items simply aren't shown for roles that don't have them — see
   [co-operatives-page.md](./co-operatives-page.md)).
-- **A real, if small, mock BVN-lookup service — not a fake that always
-  succeeds.** The reference's "Bank Verification Number (BVN)" field with
-  a "Proceed" button that auto-fills First Name/Last Name/Phone/Email
-  implies a genuine identity-verification step, so
-  `src/lib/bvn-lookup.ts` ships a small hardcoded BVN → identity table
-  (three demo BVNs, listed as a hint under the field, the same
-  click-to-help pattern as the login page's demo-account picker) rather
-  than accepting any 11-digit string. An unrecognized BVN surfaces a real
-  inline error, matching the honesty-about-mocks convention used for
-  duplicate membership/co-op IDs elsewhere. First Name/Last Name/Phone/
-  Email stay disabled (placeholder "Auto filled") until verification
-  succeeds, then populate and become editable — verified, not locked
-  forever, since the admin may need to correct a value.
+- **The BVN field is now a real Bank Account verification step, not a
+  mock identity lookup.** The original "Bank Verification Number (BVN)" +
+  "Proceed" auto-fill (a small hardcoded BVN → identity table) was
+  replaced app-wide with a real Paystack bank-account resolve — see
+  [payments-and-payouts.md](./payments-and-payouts.md) for the full
+  reasoning and the shared infrastructure behind it. A bank account
+  resolve can only return an account holder's _name_, not their phone or
+  email, so this form's "Verify" step now splits the resolved name into
+  First/Last Name (`splitResolvedName` — a naive first-word/rest-of-name
+  split, the best a name string alone can offer) and leaves Phone/Email
+  as ordinary fields the admin fills in themselves, rather than
+  pretending a bank lookup verified those too. This is also _why_ the
+  field exists at all now, beyond identity — the account captured here is
+  where this member's loan disbursements and savings-withdrawal payouts
+  actually get sent.
+- **Country/State/City use the same live, cascading `<LocationFields>`
+  as every other address in this app** — see
+  [payments-and-payouts.md](./payments-and-payouts.md#design-decisions).
+  `city` is a new field on `addMemberSchema`/`editMemberSchema` and on
+  `CoopMember` itself, alongside the new `bankCode`/`accountNumber`/
+  `accountName` fields — every seeded `CoopMember` was given plausible
+  bank details so the payout flows have real data to work against
+  out of the box.
+- **Edit Member can now also update a member's bank details**, not just
+  name/role/guarantor/address — the same Bank + Account Number + Verify
+  group from Add Member, reused in `edit-member-modal.tsx`. Necessary
+  because bulk-imported members (see the Export/Import section below)
+  arrive with empty bank fields — this is how an admin fills them in
+  afterward.
 - **Standardized confirmation-dialog copy, applied retroactively across
   the whole app, not just this new page.** The reference showed a
   specific pattern — title "Disable Member," description `Are you sure
@@ -149,15 +165,17 @@ parseFile, onImport }` instead of a hard-coded savings import, plus an
 | Route                 | Purpose                                                                                                                   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `/members`            | List every member of the admin's co-operative — search, Export, pagination, responsive mobile cards, "+ Add New Members." |
-| `/members/new`        | Add a member, with the BVN-verification auto-fill step.                                                                   |
+| `/members/new`        | Add a member, with the bank-account verification step.                                                                    |
 | `/members/[memberId]` | One member's own header (Membership ID, Full Name, Email, Access, Guarantor, Country, State) + Savings/Loans tabs.        |
 
 ## Components
 
 - `src/lib/member-directory.ts` — `ADMIN_DIRECTORY_COOP_ID` and the
   directory-scoped data helpers.
-- `src/lib/bvn-lookup.ts` — the mock BVN → identity lookup service and
-  `DEMO_BVNS`.
+- `src/lib/bank-lookup.ts`, `src/hooks/use-bank-list.ts`,
+  `src/components/features/shared/location-fields.tsx` — the real bank
+  verification and live address fields; see
+  [payments-and-payouts.md](./payments-and-payouts.md).
 - `src/lib/member-import.ts` — `downloadMemberImportTemplate`,
   `parseMemberImportFile`, `ImportedMemberRow`.
 - `src/lib/table-import.ts` — the shared `ImportRowError`/
@@ -174,9 +192,11 @@ parseFile, onImport }` instead of a hard-coded savings import, plus an
   the list, including the responsive mobile card view.
 - `src/components/features/members-directory/add-member-form.tsx` — the
   Add New Member form.
-- Reuses `src/components/features/coop/edit-member-modal.tsx`,
-  `coop-member-header-card.tsx`, `coop-member-savings-table.tsx`, and
-  `coop-member-loans-table.tsx` unmodified.
+- Reuses `src/components/features/coop/coop-member-header-card.tsx`,
+  `coop-member-savings-table.tsx`, and `coop-member-loans-table.tsx`
+  unmodified. `edit-member-modal.tsx` gained the same Bank Account
+  verification group as Add Member (see Design Decisions) — the only one
+  of these that changed.
 
 ## Navigation
 
@@ -189,9 +209,11 @@ parseFile, onImport }` instead of a hard-coded savings import, plus an
   a hardcoded one), `ADMIN_DIRECTORY_COOP_ID` is the one place that
   decision needs to become a real lookup (e.g. tied to the logged-in
   admin's own membership record).
-- The BVN lookup only recognizes three demo values — fine for a mock, but
-  a real integration would call an actual verification provider and
-  handle partial matches / rate limiting.
+- Paystack's test-mode account-resolve quota (3 real-bank lookups/day —
+  see [payments-and-payouts.md](./payments-and-payouts.md#design-decisions))
+  applies here too; the sandbox "Test Bank" option in the bank list works
+  around it for demoing the Verify step specifically, not for a real
+  payout.
 - Import only adds new members — no bulk edit/delete of existing ones,
   matching the same limitation already documented for `/savings`' import.
 - A large import file would call the store's `addMember` once per row in

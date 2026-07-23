@@ -41,6 +41,7 @@ import {
 } from "@/lib/file-to-data-url";
 import { formatDateLong, formatNaira, getInitials } from "@/lib/format";
 import { getDirectoryCoop } from "@/lib/member-directory";
+import { initiateTransfer } from "@/lib/paystack-transfer";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
@@ -92,9 +93,35 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   };
 
   const handleApprove = async () => {
+    const borrower = coop.members.find((m) => m.id === record.memberId);
+    if (!borrower?.accountNumber || !borrower?.bankCode) {
+      toast.error("Can't disburse this loan", {
+        description: `${record.memberName} hasn't verified their bank account yet.`,
+      });
+      return;
+    }
+
+    try {
+      await initiateTransfer({
+        accountNumber: borrower.accountNumber,
+        bankCode: borrower.bankCode,
+        accountName: borrower.accountName || record.memberName,
+        amount: record.amount,
+        reason: `T-Coop loan disbursement — ${record.loanType}`,
+      });
+    } catch (error) {
+      toast.error("Disbursement failed", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Couldn't process this payout.",
+      });
+      return;
+    }
+
     resolveLoanRequest(coop.id, record.id, "Approved");
     toast.success("Loan approved and disbursed", {
-      description: `${formatNaira(record.amount)} marked as paid out to ${record.memberName}.`,
+      description: `${formatNaira(record.amount)} paid out to ${record.memberName}.`,
     });
   };
 

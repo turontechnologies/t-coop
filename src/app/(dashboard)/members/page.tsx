@@ -43,6 +43,12 @@ export default function MembersDirectoryPage() {
         guarantor: row.guarantor,
         country: row.country,
         state: row.state,
+        // Bulk import doesn't capture bank details — the admin adds these
+        // later via Edit, same as any other field the template omits.
+        city: "",
+        bankCode: "",
+        accountNumber: "",
+        accountName: "",
       };
       addMember(ADMIN_DIRECTORY_COOP_ID, member);
     });

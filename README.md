@@ -61,6 +61,24 @@ Without these set, choosing a photo fails with a toast rather than
 silently doing nothing. See
 [profile-page.md](./documentation/profile-page.md#design-decisions).
 
+**Real bank verification and payouts require a Paystack _secret_ key** —
+a different key from the public one above. Loan disbursement and savings-
+withdrawal approval, plus the "Verify" step on any Bank Account field
+(Profile, Add Member, Edit Member), call Paystack server-side via
+`src/app/api/paystack/*`. Add to the same `.env.local`:
+
+```
+PAYSTACK_SECRET_KEY=sk_test_REDACTED
+```
+
+Use a **test-mode** secret key, and never put it in a `NEXT_PUBLIC_*`
+variable — it can move real money, unlike the public key. See
+[payments-and-payouts.md](./documentation/payments-and-payouts.md#setup)
+for the full picture, including a real constraint discovered while
+building this: Paystack's test mode caps real-bank account resolves at
+3/day — bank code `001` ("Test Bank") works around that for the Verify
+step specifically (unlimited, but not usable for an actual payout).
+
 ## Demo Accounts
 
 There is no public sign-up path into the app — these three hardcoded roles
@@ -90,6 +108,10 @@ page reload, since there's no backend to persist to).
 | `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)              | [dashboard.md](./documentation/dashboard.md)                           |
 | `/profile`                                      | View your own member details, Edit to change them (any role)     | [profile-page.md](./documentation/profile-page.md)                     |
 | `/api/upload`                                   | Route handler: signs and uploads the profile photo to Cloudinary | [profile-page.md](./documentation/profile-page.md)                     |
+| `/api/paystack/resolve-account`                 | Route handler: resolves a bank account number to its real name   | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
+| `/api/paystack/banks`                           | Route handler: live list of transfer-capable Nigerian banks      | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
+| `/api/paystack/transfer`                        | Route handler: initiates a real payout (loan/withdrawal)         | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
+| `/api/paystack/transfer/finalize`               | Route handler: OTP-confirms a payout, if Paystack requires it    | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
 | `/savings`                                      | Savings & Contributions (member + admin; real Paystack)          | [savings-page.md](./documentation/savings-page.md)                     |
 | `/savings/[id]`                                 | Individual savings record detail (member's own)                  | [savings-page.md](./documentation/savings-page.md)                     |
 | `/savings/type/[type]`                          | Admin: all members' records for one savings type                 | [savings-page.md](./documentation/savings-page.md)                     |
@@ -108,7 +130,7 @@ page reload, since there's no backend to persist to).
 | `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op           | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
 | `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions        | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
 | `/members`                                      | Admin: list the members of their co-operative, add a new one     | [members-directory-page.md](./documentation/members-directory-page.md) |
-| `/members/new`                                  | Add a member, with a BVN-verification auto-fill step             | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/members/new`                                  | Add a member, with a real bank-account verification step         | [members-directory-page.md](./documentation/members-directory-page.md) |
 | `/members/[memberId]`                           | One member's own details + Savings/Loans tabs                    | [members-directory-page.md](./documentation/members-directory-page.md) |
 | `/notice-board`                                 | All roles: real-time announcements/meeting notices/minutes       | [notice-board-page.md](./documentation/notice-board-page.md)           |
 | `/notice-board/new`                             | Create a notice (admin/super admin only)                         | [notice-board-page.md](./documentation/notice-board-page.md)           |
@@ -138,6 +160,8 @@ src/
     (dashboard)/              role-aware dashboard, auth-guarded
                               (co-operatives/, members/, notice-board/ nested under here)
     api/upload/               route handler: signed Cloudinary upload for avatars
+    api/paystack/             route handlers: bank resolve, live bank list,
+                              transfer + finalize (loan/withdrawal payouts)
     layout.tsx, template.tsx, loading.tsx   root providers + page transitions
   components/
     brand/                   logo, animated loading mark, route transitions
@@ -152,7 +176,8 @@ src/
     features/savings/        savings list/modal/detail; admin-savings-view.tsx
                               (Quick Summary + tabs), upload-teller-modal.tsx,
                               savings-requests-table.tsx
-    features/shared/         cross-feature components (export/import menu)
+    features/shared/         cross-feature components (export/import menu,
+                              live cascading Country/State/City fields)
     layouts/                 the three shared page shells (auth / centered / dashboard)
     theme/                   next-themes provider + toggle
     ui/                      shadcn primitives (Base UI-based)
@@ -181,15 +206,17 @@ them when the feature's behavior changes, not just when it's first built.
 - [x] Forgot password → OTP → new password
 - [x] Dashboard (super admin / admin / member views)
 - [x] My Profile (read-only by default, Edit toggle, all roles; real Cloudinary photo upload)
-- [x] Savings & Contributions (member: real Paystack checkout, savings detail page. admin: Quick Summary, Members Savings/My Savings/Request tabs, Upload Teller with receipt attachment, deposit/withdrawal request approval — super-admin oversight view still pending)
-- [x] Loans (member: eligibility-based application flow, repayment schedule + transactions detail page. admin: Quick Summary, Requests/Members Loans/My Loans tabs, guarantor accept/reject with payslip upload, admin approve-and-disburse/reject-with-reason — super-admin oversight view still pending)
+- [x] Savings & Contributions (member: real Paystack checkout, real withdrawal requests, savings detail page. admin: Quick Summary, Members Savings/My Savings/Request tabs, Upload Teller with receipt attachment, deposit approval + real-payout withdrawal approval — super-admin oversight view still pending)
+- [x] Loans (member: eligibility-based application flow, repayment schedule + transactions detail page. admin: Quick Summary, Requests/Members Loans/My Loans tabs, guarantor accept/reject with payslip upload, admin real-payout approve-and-disburse/reject-with-reason — super-admin oversight view still pending)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
-- [x] Members Directory (admin: list, add with BVN auto-fill, bulk import via template, export, edit, disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
+- [x] Members Directory (admin: list, add with real bank-account verification, bulk import via template, export, edit (including bank details), disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
 - [x] Notice Board (all roles; real cross-tab real-time via `storage` events — announcements, meeting notices, meeting minutes with PDF attachment, scheduled send, reply/feedback thread, live notification bell)
+- [x] Real Paystack Transfers (loan disbursement, savings withdrawal payouts), real bank-account verification, live bank list, live cascading Country/State/City — see [payments-and-payouts.md](./documentation/payments-and-payouts.md)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
-- [ ] Server-side Paystack transaction verification (client-side callback is trusted for now — see savings-page.md)
+- [ ] Server-side Paystack transaction verification for Inline checkout (client-side callback is trusted for now — see savings-page.md; Transfers, unlike Inline, are already server-initiated)
 - [ ] Admin approval for the member's own "Take a Loan" flow (the legacy personal `LoanRecord` — separate from the co-op loan pipeline the admin Loans page now resolves — stays "Awaiting Approval" indefinitely; see loans-page.md)
+- [ ] OTP confirmation UI for Paystack Transfers that require it (not exercised in test mode — see payments-and-payouts.md)
 - [ ] The dashboard's other non-Dashboard nav items (Subscriptions, Settings, etc.)
 
 ## Known Gotchas

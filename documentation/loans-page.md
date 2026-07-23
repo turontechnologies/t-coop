@@ -65,10 +65,14 @@ Awaiting Guarantor → Awaiting Admin → Active (approved) | Rejected
   Request** (optionally attaching proof of income, e.g. a payslip) or
   **Reject Request**.
 - **Awaiting Admin**: once the guarantor accepts, the admin makes the
-  final call — **Approve Request** marks the loan `Active` and represents
-  disbursing the approved amount to the member (simulated — there's no
-  real payout capability, see [Future Improvements](#future-improvements)),
-  or **Reject Request**, which _requires_ a reason before the button
+  final call — **Approve Request** attempts a real Paystack Transfer of
+  the approved amount to the member's verified bank account first, and
+  only marks the loan `Active` if that transfer actually succeeds (a
+  missing bank account or a failed transfer shows a clear error and
+  leaves the loan `Awaiting Admin`, so it can be retried — see
+  [payments-and-payouts.md](./payments-and-payouts.md) for the full
+  mechanism, shared with Savings' withdrawal-approval payouts), or
+  **Reject Request**, which _requires_ a reason before the button
   enables, stored as `rejectionReason` and shown wherever the record is
   viewed afterward.
 
@@ -237,7 +241,9 @@ Requests tab → <LoanRequestsTable> (every loan Awaiting Guarantor/Awaiting
         "Accept Request" (optional payslip upload) → status → "Awaiting Admin"
         "Reject Request" (simple confirm) → status → "Rejected"
       status "Awaiting Admin" → Loan Details only
-        "Approve Request" (confirm) → status → "Active" (simulated disbursement)
+        "Approve Request" (confirm) → real Paystack Transfer to the
+          borrower's verified bank account → only on success: status → "Active"
+          (failure → error toast, stays "Awaiting Admin")
         "Reject Request" (reason required) → status → "Rejected", reason stored
 ```
 
@@ -315,12 +321,12 @@ Transactions tabs use Base UI's `Tabs.Indicator` sliding highlight.
   super admin's oversight equivalent lives per-co-operative under
   `/co-operatives/[id]/loans/...` (see
   [co-operatives-page.md](./co-operatives-page.md)).
-- **No real disbursement or repayment collection.** Approving a co-op
-  loan request marks it `Active` and is explicitly labeled as a
-  simulated disbursement — there's no real payout capability (no
-  backend, no Paystack Transfers API/secret key) and no real repayment
-  collection either; `repaymentsMade` is still a static seed number, not
-  something that advances over time.
+- **Disbursement is real (a genuine Paystack Transfer); repayment
+  collection is not.** Approving a co-op loan request now attempts a real
+  payout — see [payments-and-payouts.md](./payments-and-payouts.md) — but
+  nothing collects the repayments afterward; `repaymentsMade` is still a
+  static seed number, not something that advances over time or gets
+  charged on each due date.
 - **Guarantor list is a flat mock array** (`GUARANTORS` in
   `loans-data.ts`), not the real member directory — good enough to
   demonstrate the field, but a real version would pull from whatever

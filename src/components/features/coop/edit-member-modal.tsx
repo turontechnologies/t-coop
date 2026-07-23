@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { Loader2, TriangleAlert } from "lucide-react";
@@ -23,7 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { COUNTRIES } from "@/lib/countries";
+import { LocationFields } from "@/components/features/shared/location-fields";
+import { useBankList } from "@/hooks/use-bank-list";
+import { resolveBankAccount } from "@/lib/bank-lookup";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
   editMemberSchema,
@@ -45,19 +47,26 @@ export function EditMemberModal({
   onOpenChange,
 }: EditMemberModalProps) {
   const updateMember = useCoopStore((state) => state.updateMember);
+  const { banks, loading: banksLoading } = useBankList();
+  const [verifying, setVerifying] = useState(false);
 
   const firstNameId = useId();
   const lastNameId = useId();
   const emailId = useId();
   const roleId = useId();
   const guarantorId = useId();
-  const countryId = useId();
-  const stateId = useId();
+  const bankId = useId();
+  const accountNumberId = useId();
 
   const {
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
+    getValues,
+    setError,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<EditMemberFormValues>({
     resolver: zodResolver(editMemberSchema),
@@ -69,12 +78,43 @@ export function EditMemberModal({
       guarantor: member.guarantor,
       country: member.country,
       state: member.state,
+      city: member.city,
+      bankCode: member.bankCode,
+      accountNumber: member.accountNumber,
+      accountName: member.accountName,
     },
   });
 
+  const accountName = watch("accountName");
+
+  const handleVerify = async () => {
+    const fieldsValid = await trigger(["accountNumber", "bankCode"]);
+    if (!fieldsValid) return;
+
+    setVerifying(true);
+    try {
+      const resolvedName = await resolveBankAccount(
+        getValues("accountNumber"),
+        getValues("bankCode"),
+      );
+      setValue("accountName", resolvedName, { shouldValidate: true });
+      toast.success("Account verified", { description: resolvedName });
+    } catch (error) {
+      setError("accountNumber", {
+        message:
+          error instanceof Error ? error.message : "Verification failed.",
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     await new Promise((resolve) => setTimeout(resolve, 700));
-    updateMember(coopId, member.id, values);
+    updateMember(coopId, member.id, {
+      ...values,
+      accountName: values.accountName ?? "",
+    });
     toast.success("Member updated", {
       description: `${values.firstName} ${values.lastName}'s details were saved.`,
     });
@@ -164,47 +204,90 @@ export function EditMemberModal({
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={countryId}>Country</Label>
+            <LocationFields
+              country={watch("country")}
+              state={watch("state")}
+              city={watch("city")}
+              onCountryChange={(value) =>
+                setValue("country", value, { shouldValidate: true })
+              }
+              onStateChange={(value) =>
+                setValue("state", value, { shouldValidate: true })
+              }
+              onCityChange={(value) =>
+                setValue("city", value, { shouldValidate: true })
+              }
+              disabled={isSubmitting}
+              countryError={errors.country?.message}
+              stateError={errors.state?.message}
+              cityError={errors.city?.message}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Bank Account</Label>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
               <Controller
                 control={control}
-                name="country"
+                name="bankCode"
                 render={({ field }) => (
                   <Select
                     value={field.value ?? ""}
                     onValueChange={(value) => field.onChange(value ?? "")}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || verifying || banksLoading}
                   >
                     <SelectTrigger
-                      id={countryId}
+                      id={bankId}
                       className="h-11 w-full"
-                      aria-invalid={!!errors.country}
+                      aria-invalid={!!errors.bankCode}
                     >
-                      <SelectValue placeholder="Select country" />
+                      <SelectValue
+                        placeholder={
+                          banksLoading ? "Loading banks…" : "Select bank"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {COUNTRIES.map((country) => (
-                        <SelectItem key={country} value={country}>
-                          {country}
+                      {banks.map((bank) => (
+                        <SelectItem key={bank.code} value={bank.code}>
+                          {bank.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 )}
               />
-              <FieldError message={errors.country?.message} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={stateId}>State</Label>
               <Input
-                id={stateId}
-                disabled={isSubmitting}
-                aria-invalid={!!errors.state}
+                id={accountNumberId}
+                placeholder="10-digit account number"
+                disabled={isSubmitting || verifying}
+                aria-invalid={!!errors.accountNumber}
                 className="h-11"
-                {...register("state")}
+                {...register("accountNumber", {
+                  onChange: () => setValue("accountName", ""),
+                })}
               />
-              <FieldError message={errors.state?.message} />
+              <Button
+                type="button"
+                onClick={handleVerify}
+                disabled={isSubmitting || verifying}
+                className="h-11"
+              >
+                {verifying ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  "Verify"
+                )}
+              </Button>
             </div>
+            <FieldError
+              message={
+                errors.accountNumber?.message ?? errors.bankCode?.message
+              }
+            />
+            {accountName ? (
+              <p className="text-xs font-medium text-success">{accountName}</p>
+            ) : null}
           </div>
 
           <DialogFooter>

@@ -13,7 +13,8 @@ export const addCooperativeSchema = z.object({
     .regex(/^[\d+\s-]+$/, "Enter a valid phone number"),
   address: z.string().trim().min(1, "Enter the co-operative's address"),
   country: z.string().min(1, "Select a country"),
-  state: z.string().trim().min(1, "Enter the state"),
+  state: z.string().trim().min(1, "Select a state"),
+  city: z.string().trim().min(1, "Select a city"),
 });
 
 export type AddCooperativeFormValues = z.infer<typeof addCooperativeSchema>;
@@ -25,7 +26,15 @@ export const editMemberSchema = z.object({
   role: z.enum(["Member", "Admin"]),
   guarantor: z.string().trim().min(1, "Enter a guarantor"),
   country: z.string().min(1, "Select a country"),
-  state: z.string().trim().min(1, "Enter a state"),
+  state: z.string().trim().min(1, "Select a state"),
+  city: z.string().trim().min(1, "Select a city"),
+  bankCode: z.string().trim().min(1, "Select a bank"),
+  accountNumber: z
+    .string()
+    .trim()
+    .length(10, "Account number must be 10 digits")
+    .regex(/^\d+$/, "Account number must contain numbers only"),
+  accountName: z.string().trim().optional(),
 });
 
 export type EditMemberFormValues = z.infer<typeof editMemberSchema>;

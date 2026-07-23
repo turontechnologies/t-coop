@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -12,14 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { COUNTRIES } from "@/lib/countries";
+import { LocationFields } from "@/components/features/shared/location-fields";
 import type { Cooperative } from "@/lib/coop-data";
 import {
   addCooperativeSchema,
@@ -40,13 +33,12 @@ export function AddCooperativeForm() {
   const contactEmailId = useId();
   const contactPhoneId = useId();
   const addressId = useId();
-  const countryId = useId();
-  const stateId = useId();
 
   const {
     register,
     handleSubmit,
-    control,
+    watch,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<AddCooperativeFormValues>({
@@ -61,6 +53,7 @@ export function AddCooperativeForm() {
       address: "",
       country: "",
       state: "",
+      city: "",
     },
   });
 
@@ -87,6 +80,7 @@ export function AddCooperativeForm() {
       address: values.address.trim(),
       country: values.country,
       state: values.state.trim(),
+      city: values.city.trim(),
       status: "Active",
       members: [],
       savings: [],
@@ -210,48 +204,24 @@ export function AddCooperativeForm() {
             />
             <FieldError message={errors.address?.message} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor={countryId}>Country</Label>
-            <Controller
-              control={control}
-              name="country"
-              render={({ field }) => (
-                <Select
-                  value={field.value ?? ""}
-                  onValueChange={(value) => field.onChange(value ?? "")}
-                  disabled={busy}
-                >
-                  <SelectTrigger
-                    id={countryId}
-                    className="h-11 w-full"
-                    aria-invalid={!!errors.country}
-                  >
-                    <SelectValue placeholder="Select country" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COUNTRIES.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <FieldError message={errors.country?.message} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={stateId}>State</Label>
-            <Input
-              id={stateId}
-              placeholder="Enter state"
-              disabled={busy}
-              className="h-11"
-              aria-invalid={!!errors.state}
-              {...register("state")}
-            />
-            <FieldError message={errors.state?.message} />
-          </div>
+          <LocationFields
+            country={watch("country")}
+            state={watch("state")}
+            city={watch("city")}
+            onCountryChange={(value) =>
+              setValue("country", value, { shouldValidate: true })
+            }
+            onStateChange={(value) =>
+              setValue("state", value, { shouldValidate: true })
+            }
+            onCityChange={(value) =>
+              setValue("city", value, { shouldValidate: true })
+            }
+            disabled={busy}
+            countryError={errors.country?.message}
+            stateError={errors.state?.message}
+            cityError={errors.city?.message}
+          />
         </CardContent>
       </Card>
 

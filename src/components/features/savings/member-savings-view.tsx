@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AddSavingsModal } from "@/components/features/savings/add-savings-modal";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { PaymentSuccessModal } from "@/components/features/savings/payment-success-modal";
+import { RequestWithdrawalModal } from "@/components/features/savings/request-withdrawal-modal";
 import { SavingsRecordsTable } from "@/components/features/savings/savings-records-table";
 import { openPaystackCheckout } from "@/lib/paystack";
 import { formatNaira } from "@/lib/format";
@@ -45,6 +46,9 @@ interface MemberSavingsViewProps {
   /** Controls the Add Savings modal from outside, for use alongside `showSummary={false}`. Falls back to internal state when omitted. */
   addOpen?: boolean;
   onAddOpenChange?: (open: boolean) => void;
+  /** Same idea as `addOpen`, for the Request Withdrawal modal. */
+  withdrawOpen?: boolean;
+  onWithdrawOpenChange?: (open: boolean) => void;
 }
 
 export function MemberSavingsView({
@@ -55,9 +59,12 @@ export function MemberSavingsView({
   showSummary = true,
   addOpen: addOpenProp,
   onAddOpenChange,
+  withdrawOpen: withdrawOpenProp,
+  onWithdrawOpenChange,
 }: MemberSavingsViewProps) {
   const records = useSavingsStore((state) => state.records);
   const addRecord = useSavingsStore((state) => state.addRecord);
+  const addRequest = useSavingsStore((state) => state.addRequest);
 
   const memberRecords = useMemo(
     () => records.filter((record) => record.memberId === memberId),
@@ -71,7 +78,11 @@ export function MemberSavingsView({
   const [internalAddOpen, setInternalAddOpen] = useState(false);
   const addOpen = addOpenProp ?? internalAddOpen;
   const setAddOpen = onAddOpenChange ?? setInternalAddOpen;
+  const [internalWithdrawOpen, setInternalWithdrawOpen] = useState(false);
+  const withdrawOpen = withdrawOpenProp ?? internalWithdrawOpen;
+  const setWithdrawOpen = onWithdrawOpenChange ?? setInternalWithdrawOpen;
   const [busy, setBusy] = useState(false);
+  const [withdrawBusy, setWithdrawBusy] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastAmount, setLastAmount] = useState(0);
 
@@ -110,6 +121,32 @@ export function MemberSavingsView({
     }
   };
 
+  const handleRequestWithdrawal = async (
+    savingsType: string,
+    amount: number,
+    note: string,
+  ) => {
+    setWithdrawBusy(true);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    addRequest({
+      id: `sav-req-${Date.now()}`,
+      memberId,
+      memberName,
+      type: "Withdrawal",
+      savingsType,
+      amount,
+      note: note || undefined,
+      status: "Pending",
+      requestedAt: new Date().toISOString(),
+    });
+    setWithdrawBusy(false);
+    setWithdrawOpen(false);
+    toast.success("Withdrawal requested", {
+      description: `Your request for ${formatNaira(amount)} from ${savingsType} is awaiting admin approval.`,
+    });
+  };
+
   const handleImport = (importedRows: ImportedSavingsRow[]) => {
     let runningTotal = total;
     importedRows.forEach((row, index) => {
@@ -138,7 +175,16 @@ export function MemberSavingsView({
             <h2 className="text-sm font-semibold text-foreground">
               Quick Summary
             </h2>
-            <Button onClick={() => setAddOpen(true)}>+ New Savings</Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setWithdrawOpen(true)}
+                disabled={total <= 0}
+              >
+                Withdraw
+              </Button>
+              <Button onClick={() => setAddOpen(true)}>+ New Savings</Button>
+            </div>
           </div>
 
           <Card className="max-w-xs">
@@ -189,6 +235,13 @@ export function MemberSavingsView({
         open={successOpen}
         onOpenChange={setSuccessOpen}
         amount={lastAmount}
+      />
+      <RequestWithdrawalModal
+        open={withdrawOpen}
+        onOpenChange={setWithdrawOpen}
+        busy={withdrawBusy}
+        memberRecords={memberRecords}
+        onProceed={handleRequestWithdrawal}
       />
     </div>
   );
