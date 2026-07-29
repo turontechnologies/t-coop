@@ -481,6 +481,17 @@ export function coopSavingsTotal(coop: Cooperative): number {
   return coop.savings.reduce((sum, record) => sum + record.amount, 0);
 }
 
+export function allCoopsSavingsTotal(cooperatives: Cooperative[]): number {
+  return cooperatives.reduce((sum, coop) => sum + coopSavingsTotal(coop), 0);
+}
+
+/** Illustrative platform revenue figure (0.25% of savings volume), not a real fee ledger. */
+const PLATFORM_SAVINGS_FEE_RATE = 0.0025;
+
+export function platformSavingsFeesTotal(cooperatives: Cooperative[]): number {
+  return allCoopsSavingsTotal(cooperatives) * PLATFORM_SAVINGS_FEE_RATE;
+}
+
 /** A member's running balance for one savings type, before a new record is added. */
 export function coopMemberSavingsBalance(
   coop: Cooperative,

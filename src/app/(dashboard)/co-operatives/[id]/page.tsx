@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoopHeaderCard } from "@/components/features/coop/coop-header-card";
@@ -27,6 +27,9 @@ export default function CooperativeDetailsPage({
 }: CooperativeDetailsPageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab =
+    searchParams.get("tab") === "savings" ? "savings" : "members";
   const cooperatives = useCoopStore((state) => state.cooperatives);
   const coop = findCooperative(cooperatives, id);
 
@@ -58,7 +61,7 @@ export default function CooperativeDetailsPage({
 
       <CoopHeaderCard coop={coop} />
 
-      <Tabs defaultValue="members">
+      <Tabs defaultValue={initialTab}>
         <TabsList>
           <TabsTab value="members">Members</TabsTab>
           <TabsTab value="savings">Savings</TabsTab>

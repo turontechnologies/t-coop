@@ -2,15 +2,18 @@
 
 import { AdminSavingsView } from "@/components/features/savings/admin-savings-view";
 import { MemberSavingsView } from "@/components/features/savings/member-savings-view";
+import { SuperAdminSavingsView } from "@/components/features/savings/super-admin-savings-view";
 import { useAuthStore } from "@/store/auth.store";
 
 export default function SavingsPage() {
   const member = useAuthStore((state) => state.member);
-  if (!member || member.role === "super_admin") return null;
+  if (!member) return null;
 
   return (
     <div className="pt-6">
-      {member.role === "member" ? (
+      {member.role === "super_admin" ? (
+        <SuperAdminSavingsView />
+      ) : member.role === "member" ? (
         <MemberSavingsView
           memberId={member.id}
           memberName={member.name}
