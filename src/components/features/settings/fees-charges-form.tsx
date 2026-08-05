@@ -54,7 +54,10 @@ export function FeesChargesForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-start">
+      {/* One shared grid for both rows so the Charge Type / Amount columns
+          line up — two separate grids would size their "auto" columns
+          independently and drift out of alignment. */}
+      <div className="grid grid-cols-1 items-start gap-x-4 gap-y-6 sm:grid-cols-[1fr_auto_auto]">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Savings Charges</p>
           <p className="text-xs text-muted-foreground">
@@ -100,11 +103,9 @@ export function FeesChargesForm() {
           />
           <FieldError message={errors.savingsChargeAmount?.message} />
         </div>
-      </div>
 
-      <div className="h-px bg-border" />
+        <div className="h-px bg-border sm:col-span-3" />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-start">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Loans Charges</p>
           <p className="text-xs text-muted-foreground">
