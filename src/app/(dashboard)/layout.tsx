@@ -46,6 +46,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/co-operatives/")) return "Co-operative Details";
   if (pathname.startsWith("/subscriptions/"))
     return "Co-operative Subscription Details";
+  if (pathname === "/settings/loans/new") return "New Loan Type";
   return "Dashboard";
 }
 

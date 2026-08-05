@@ -8,6 +8,10 @@ import {
   TabsPanel,
   TabsTab,
 } from "@/components/ui/tabs";
+import { AdminCooperativeSettingsTab } from "@/components/features/admin-settings/admin-cooperative-settings-tab";
+import { AdminLoanSettingsTab } from "@/components/features/admin-settings/admin-loan-settings-tab";
+import { AdminSavingsSettingsTab } from "@/components/features/admin-settings/admin-savings-settings-tab";
+import { AdminSettingsProfileTab } from "@/components/features/admin-settings/admin-settings-profile-tab";
 import { SettingsIntegrationsTab } from "@/components/features/settings/settings-integrations-tab";
 import { SettingsLogsTab } from "@/components/features/settings/settings-logs-tab";
 import { SettingsPaymentTab } from "@/components/features/settings/settings-payment-tab";
@@ -17,38 +21,69 @@ import { useAuthStore } from "@/store/auth.store";
 
 export default function SettingsPage() {
   const member = useAuthStore((state) => state.member);
-  if (!member || member.role !== "super_admin") return null;
+  if (!member || (member.role !== "super_admin" && member.role !== "admin")) {
+    return null;
+  }
 
   return (
     <div className="pt-6">
       <Card>
         <CardContent>
-          <Tabs defaultValue="profile">
-            <TabsList>
-              <TabsTab value="profile">Profile</TabsTab>
-              <TabsTab value="payment">Payment Settings</TabsTab>
-              <TabsTab value="integrations">Integrations</TabsTab>
-              <TabsTab value="users">User Management</TabsTab>
-              <TabsTab value="logs">Logs</TabsTab>
-              <TabsIndicator />
-            </TabsList>
+          {member.role === "super_admin" ? (
+            <Tabs defaultValue="profile">
+              <TabsList>
+                <TabsTab value="profile">Profile</TabsTab>
+                <TabsTab value="payment">Payment Settings</TabsTab>
+                <TabsTab value="integrations">Integrations</TabsTab>
+                <TabsTab value="users">User Management</TabsTab>
+                <TabsTab value="logs">Logs</TabsTab>
+                <TabsIndicator />
+              </TabsList>
 
-            <TabsPanel value="profile">
-              <SettingsProfileTab member={member} />
-            </TabsPanel>
-            <TabsPanel value="payment">
-              <SettingsPaymentTab />
-            </TabsPanel>
-            <TabsPanel value="integrations">
-              <SettingsIntegrationsTab />
-            </TabsPanel>
-            <TabsPanel value="users">
-              <SettingsUserManagementTab />
-            </TabsPanel>
-            <TabsPanel value="logs">
-              <SettingsLogsTab />
-            </TabsPanel>
-          </Tabs>
+              <TabsPanel value="profile">
+                <SettingsProfileTab member={member} />
+              </TabsPanel>
+              <TabsPanel value="payment">
+                <SettingsPaymentTab />
+              </TabsPanel>
+              <TabsPanel value="integrations">
+                <SettingsIntegrationsTab />
+              </TabsPanel>
+              <TabsPanel value="users">
+                <SettingsUserManagementTab />
+              </TabsPanel>
+              <TabsPanel value="logs">
+                <SettingsLogsTab />
+              </TabsPanel>
+            </Tabs>
+          ) : (
+            <Tabs defaultValue="profile">
+              <TabsList>
+                <TabsTab value="profile">Profile</TabsTab>
+                <TabsTab value="savings">Savings Settings</TabsTab>
+                <TabsTab value="loans">Loan Settings</TabsTab>
+                <TabsTab value="cooperative">Co-operative Settings</TabsTab>
+                <TabsTab value="users">User Management</TabsTab>
+                <TabsIndicator />
+              </TabsList>
+
+              <TabsPanel value="profile">
+                <AdminSettingsProfileTab member={member} />
+              </TabsPanel>
+              <TabsPanel value="savings">
+                <AdminSavingsSettingsTab />
+              </TabsPanel>
+              <TabsPanel value="loans">
+                <AdminLoanSettingsTab />
+              </TabsPanel>
+              <TabsPanel value="cooperative">
+                <AdminCooperativeSettingsTab />
+              </TabsPanel>
+              <TabsPanel value="users">
+                <SettingsUserManagementTab />
+              </TabsPanel>
+            </Tabs>
+          )}
         </CardContent>
       </Card>
     </div>

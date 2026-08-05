@@ -28,7 +28,13 @@
       "Bash(node \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-sam-t-coop-app\\\\83b85de9-e8bc-49d4-9fa4-9601d95e5721\\\\scratchpad\\\\screenshot-fees.mjs\")",
       "Bash(node \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-sam-t-coop-app\\\\83b85de9-e8bc-49d4-9fa4-9601d95e5721\\\\scratchpad\\\\verify-audit-panel.mjs\")",
       "Bash(tail -60 /tmp/dev-server7.log 2>/dev/null)",
-      "Bash(node /tmp/debug-logs.mjs)"
+      "Bash(node /tmp/debug-logs.mjs)",
+      "PowerShell(Get-Process -Id 3900)",
+      "PowerShell(Stop-Process -Id 3900 -Force)",
+      "Bash(powershell -NoProfile -Command \"New-Item -ItemType Directory -Force -Path 'C:\\\\temp-chrome-profile-verify4' | Out-Null\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --remote-debugging-port=9222 --user-data-dir=\"C:\\\\\\\\temp-chrome-profile-verify4\" --no-first-run --no-default-browser-check about:blank)",
+      "Bash(node \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-sam-t-coop-app\\\\83b85de9-e8bc-49d4-9fa4-9601d95e5721\\\\scratchpad\\\\verify-admin-settings.mjs\")",
+      "Bash(grep -n \"'/settings'\\\\|/settings\\\\`\\\\|settings-page.md\\\\]\\\\|Full Per-Feature Docs\" \"c:\\\\Users\\\\user\\\\Documents\\\\sam\\\\t-coop-app\\\\documentation\\\\project-overview.md\")"
     ]
   }
 }
