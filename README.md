@@ -99,44 +99,45 @@ page reload, since there's no backend to persist to).
 
 ## Routes
 
-| Route                                           | Purpose                                                          | Docs                                                                   |
-| ----------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `/login`                                        | Sign in with a membership ID + password                          | [login-page.md](./documentation/login-page.md)                         |
-| `/forgot-password`                              | Request a one-time password by email                             | [password-recovery.md](./documentation/password-recovery.md)           |
-| `/verify-otp`                                   | Enter the OTP sent (simulated) to your email                     | [password-recovery.md](./documentation/password-recovery.md)           |
-| `/create-new-password`                          | Set a new password after OTP verification                        | [password-recovery.md](./documentation/password-recovery.md)           |
-| `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)              | [dashboard.md](./documentation/dashboard.md)                           |
-| `/profile`                                      | View your own member details, Edit to change them (any role)     | [profile-page.md](./documentation/profile-page.md)                     |
-| `/api/upload`                                   | Route handler: signs and uploads the profile photo to Cloudinary | [profile-page.md](./documentation/profile-page.md)                     |
-| `/api/paystack/resolve-account`                 | Route handler: resolves a bank account number to its real name   | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
-| `/api/paystack/banks`                           | Route handler: live list of transfer-capable Nigerian banks      | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
-| `/api/paystack/transfer`                        | Route handler: initiates a real payout (loan/withdrawal)         | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
-| `/api/paystack/transfer/finalize`               | Route handler: OTP-confirms a payout, if Paystack requires it    | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
-| `/savings`                                      | Savings & Contributions (member + admin; real Paystack)          | [savings-page.md](./documentation/savings-page.md)                     |
-| `/savings/[id]`                                 | Individual savings record detail (member's own)                  | [savings-page.md](./documentation/savings-page.md)                     |
-| `/savings/type/[type]`                          | Admin: all members' records for one savings type                 | [savings-page.md](./documentation/savings-page.md)                     |
-| `/savings/record/[recordId]`                    | Admin: individual savings record detail                          | [savings-page.md](./documentation/savings-page.md)                     |
-| `/loans`                                        | Loans (member + admin; eligibility + application flow)           | [loans-page.md](./documentation/loans-page.md)                         |
-| `/loans/[id]`                                   | Individual loan detail (member's own)                            | [loans-page.md](./documentation/loans-page.md)                         |
-| `/loans/type/[type]`                            | Admin: all members' records for one loan type                    | [loans-page.md](./documentation/loans-page.md)                         |
-| `/loans/record/[recordId]`                      | Admin: individual loan detail                                    | [loans-page.md](./documentation/loans-page.md)                         |
-| `/loans/request/[recordId]`                     | Admin: guarantor/admin decision on a pending loan request        | [loans-page.md](./documentation/loans-page.md)                         |
-| `/co-operatives`                                | Super admin: list every co-operative, add a new one              | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`)     | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs                 | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/members/[memberId]`        | One member's own details + Savings/Loans tabs                    | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/savings/[type]`            | All transactions of one savings product in the co-op             | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/savings/record/[recordId]` | Individual savings record detail (co-op scoped)                  | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op           | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions        | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
-| `/members`                                      | Admin: list the members of their co-operative, add a new one     | [members-directory-page.md](./documentation/members-directory-page.md) |
-| `/members/new`                                  | Add a member, with a real bank-account verification step         | [members-directory-page.md](./documentation/members-directory-page.md) |
-| `/members/[memberId]`                           | One member's own details + Savings/Loans tabs                    | [members-directory-page.md](./documentation/members-directory-page.md) |
-| `/notice-board`                                 | All roles: real-time announcements/meeting notices/minutes       | [notice-board-page.md](./documentation/notice-board-page.md)           |
-| `/notice-board/new`                             | Create a notice (admin/super admin only)                         | [notice-board-page.md](./documentation/notice-board-page.md)           |
-| `/notice-board/[id]`                            | A notice + attachment download + the reply/feedback thread       | [notice-board-page.md](./documentation/notice-board-page.md)           |
-| `/subscriptions`                                | Super admin: every co-op's subscription standing + manual upload | [subscriptions-page.md](./documentation/subscriptions-page.md)         |
-| `/subscriptions/[id]`                           | One co-op's full subscription payment history                    | [subscriptions-page.md](./documentation/subscriptions-page.md)         |
+| Route                                           | Purpose                                                           | Docs                                                                   |
+| ----------------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `/login`                                        | Sign in with a membership ID + password                           | [login-page.md](./documentation/login-page.md)                         |
+| `/forgot-password`                              | Request a one-time password by email                              | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/verify-otp`                                   | Enter the OTP sent (simulated) to your email                      | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/create-new-password`                          | Set a new password after OTP verification                         | [password-recovery.md](./documentation/password-recovery.md)           |
+| `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)               | [dashboard.md](./documentation/dashboard.md)                           |
+| `/profile`                                      | View your own member details, Edit to change them (any role)      | [profile-page.md](./documentation/profile-page.md)                     |
+| `/api/upload`                                   | Route handler: signs and uploads the profile photo to Cloudinary  | [profile-page.md](./documentation/profile-page.md)                     |
+| `/api/paystack/resolve-account`                 | Route handler: resolves a bank account number to its real name    | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
+| `/api/paystack/banks`                           | Route handler: live list of transfer-capable Nigerian banks       | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
+| `/api/paystack/transfer`                        | Route handler: initiates a real payout (loan/withdrawal)          | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
+| `/api/paystack/transfer/finalize`               | Route handler: OTP-confirms a payout, if Paystack requires it     | [payments-and-payouts.md](./documentation/payments-and-payouts.md)     |
+| `/savings`                                      | Savings & Contributions (member + admin; real Paystack)           | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/[id]`                                 | Individual savings record detail (member's own)                   | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/type/[type]`                          | Admin: all members' records for one savings type                  | [savings-page.md](./documentation/savings-page.md)                     |
+| `/savings/record/[recordId]`                    | Admin: individual savings record detail                           | [savings-page.md](./documentation/savings-page.md)                     |
+| `/loans`                                        | Loans (member + admin; eligibility + application flow)            | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/[id]`                                   | Individual loan detail (member's own)                             | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/type/[type]`                            | Admin: all members' records for one loan type                     | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/record/[recordId]`                      | Admin: individual loan detail                                     | [loans-page.md](./documentation/loans-page.md)                         |
+| `/loans/request/[recordId]`                     | Admin: guarantor/admin decision on a pending loan request         | [loans-page.md](./documentation/loans-page.md)                         |
+| `/co-operatives`                                | Super admin: list every co-operative, add a new one               | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/new`                            | Add a new co-operative (moved here from the old `/register`)      | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]`                           | One co-op's details + Members/Savings/Loans tabs                  | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/members/[memberId]`        | One member's own details + Savings/Loans tabs                     | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/savings/[type]`            | All transactions of one savings product in the co-op              | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/savings/record/[recordId]` | Individual savings record detail (co-op scoped)                   | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/loans/[type]`              | All loan applications of one loan product in the co-op            | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/co-operatives/[id]/loans/record/[recordId]`   | Individual loan detail, repayment schedule + transactions         | [co-operatives-page.md](./documentation/co-operatives-page.md)         |
+| `/members`                                      | Admin: list the members of their co-operative, add a new one      | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/members/new`                                  | Add a member, with a real bank-account verification step          | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/members/[memberId]`                           | One member's own details + Savings/Loans tabs                     | [members-directory-page.md](./documentation/members-directory-page.md) |
+| `/notice-board`                                 | All roles: real-time announcements/meeting notices/minutes        | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/notice-board/new`                             | Create a notice (admin/super admin only)                          | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/notice-board/[id]`                            | A notice + attachment download + the reply/feedback thread        | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/subscriptions`                                | Super admin: every co-op's subscription standing + manual upload  | [subscriptions-page.md](./documentation/subscriptions-page.md)         |
+| `/subscriptions/[id]`                           | One co-op's full subscription payment history                     | [subscriptions-page.md](./documentation/subscriptions-page.md)         |
+| `/settings`                                     | Super admin: profile, fees, integrations, staff users/roles, logs | [settings-page.md](./documentation/settings-page.md)                   |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -221,12 +222,13 @@ contracts a real backend needs to implement, see
 - [x] Notice Board (all roles; real cross-tab real-time via `storage` events — announcements, meeting notices, meeting minutes with PDF attachment, scheduled send, reply/feedback thread, live notification bell)
 - [x] Real Paystack Transfers (loan disbursement, savings withdrawal payouts), real bank-account verification, live bank list, live cascading Country/State/City — see [payments-and-payouts.md](./documentation/payments-and-payouts.md)
 - [x] Subscriptions (super admin: every co-op's subscription standing, revenue, manual payment upload, per-co-op payment history — see [subscriptions-page.md](./documentation/subscriptions-page.md))
+- [x] Settings (super admin only: profile + password, fees & collections account, integrations record, platform staff users/roles, activity logs — see [settings-page.md](./documentation/settings-page.md))
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client-side callback is trusted for now — see savings-page.md; Transfers, unlike Inline, are already server-initiated)
 - [ ] Admin approval for the member's own "Take a Loan" flow (the legacy personal `LoanRecord` — separate from the co-op loan pipeline the admin Loans page now resolves — stays "Awaiting Approval" indefinitely; see loans-page.md)
 - [ ] OTP confirmation UI for Paystack Transfers that require it (not exercised in test mode — see payments-and-payouts.md)
-- [ ] Settings nav item (still not built)
+- [ ] Settings for admin/member roles (super admin only for now)
 
 ## Known Gotchas
 

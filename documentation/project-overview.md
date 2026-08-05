@@ -172,6 +172,24 @@ Savings/Total Loan + Disable Co-operative), plus that one co-op's full
 gateway here (money coming _in_ from a co-op, recorded manually, not a
 Paystack flow) — see [subscriptions-page.md](./subscriptions-page.md).
 
+### Settings (`/settings`, super admin only)
+
+Five tabs: **Profile** (avatar, name/email/address/phone/country, and
+an optional inline password change — all backed by the same
+`ProfileRecord`/mock-password functions `/profile` and password recovery
+already use, so it can't drift out of sync). **Payment Settings** →
+Fees & Charges (savings/loan charge type + amount) and Account Details
+(the platform's own collections bank account, same real Paystack
+"Verify" flow as everywhere else). **Integrations** — Paystack
+enable toggle + key fields (saved as a record only; the live
+integration still reads its keys from the server environment, never
+from this) and a disabled Flutterwave toggle (genuinely not
+integrated anywhere). **User Management** — platform staff accounts
+and roles (distinct from co-operative members), Invite User / Create
+Role modals, a fixed-module permission multi-select. **Logs** — a
+read-only, currently-static activity table. Not yet extended to
+admin/member roles. See [settings-page.md](./settings-page.md).
+
 ### Payments & Payouts (cross-cutting)
 
 Covered under Savings/Loans above and Profile/Members Directory's bank
@@ -354,20 +372,21 @@ interface NoticeReply {
 
 ## Routes
 
-| Route                                                                                                                                                                       | Purpose                                    |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `/login`                                                                                                                                                                    | Sign in with membership ID + password      |
-| `/forgot-password`, `/verify-otp`, `/create-new-password`                                                                                                                   | Password recovery loop                     |
-| `/dashboard`                                                                                                                                                                | Role-aware dashboard                       |
-| `/profile`                                                                                                                                                                  | Own member details, editable, all roles    |
-| `/savings`, `/savings/[id]`, `/savings/type/[type]`, `/savings/record/[recordId]`                                                                                           | Savings (member + admin + now super admin) |
-| `/loans`, `/loans/[id]`, `/loans/type/[type]`, `/loans/record/[recordId]`, `/loans/request/[recordId]`                                                                      | Loans (member + admin)                     |
-| `/co-operatives`, `/co-operatives/new`, `/co-operatives/[id]`, `/co-operatives/[id]/members/[memberId]`, `/co-operatives/[id]/savings/...`, `/co-operatives/[id]/loans/...` | Super admin oversight                      |
-| `/members`, `/members/new`, `/members/[memberId]`                                                                                                                           | Admin's own member directory               |
-| `/notice-board`, `/notice-board/new`, `/notice-board/[id]`                                                                                                                  | Announcements/meetings/minutes, all roles  |
-| `/subscriptions`, `/subscriptions/[id]`                                                                                                                                     | Super admin: subscription oversight        |
-| `/api/upload`                                                                                                                                                               | Cloudinary avatar upload (real)            |
-| `/api/paystack/resolve-account`, `/banks`, `/transfer`, `/transfer/finalize`                                                                                                | Paystack route handlers (real)             |
+| Route                                                                                                                                                                       | Purpose                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `/login`                                                                                                                                                                    | Sign in with membership ID + password                 |
+| `/forgot-password`, `/verify-otp`, `/create-new-password`                                                                                                                   | Password recovery loop                                |
+| `/dashboard`                                                                                                                                                                | Role-aware dashboard                                  |
+| `/profile`                                                                                                                                                                  | Own member details, editable, all roles               |
+| `/savings`, `/savings/[id]`, `/savings/type/[type]`, `/savings/record/[recordId]`                                                                                           | Savings (member + admin + now super admin)            |
+| `/loans`, `/loans/[id]`, `/loans/type/[type]`, `/loans/record/[recordId]`, `/loans/request/[recordId]`                                                                      | Loans (member + admin)                                |
+| `/co-operatives`, `/co-operatives/new`, `/co-operatives/[id]`, `/co-operatives/[id]/members/[memberId]`, `/co-operatives/[id]/savings/...`, `/co-operatives/[id]/loans/...` | Super admin oversight                                 |
+| `/members`, `/members/new`, `/members/[memberId]`                                                                                                                           | Admin's own member directory                          |
+| `/notice-board`, `/notice-board/new`, `/notice-board/[id]`                                                                                                                  | Announcements/meetings/minutes, all roles             |
+| `/subscriptions`, `/subscriptions/[id]`                                                                                                                                     | Super admin: subscription oversight                   |
+| `/settings`                                                                                                                                                                 | Super admin: profile, fees, integrations, staff, logs |
+| `/api/upload`                                                                                                                                                               | Cloudinary avatar upload (real)                       |
+| `/api/paystack/resolve-account`, `/banks`, `/transfer`, `/transfer/finalize`                                                                                                | Paystack route handlers (real)                        |
 
 ## Project Structure
 
@@ -391,7 +410,7 @@ src/
   lib/                       mock data, validation schemas, small utilities
   services/                  auth/profile/etc. — the seam a real backend plugs into
   store/                     Zustand stores (auth session, password-reset session,
-                              savings, loans, co-operatives, notice board)
+                              savings, loans, co-operatives, notice board, settings)
   types/                     shared domain types
 ```
 
@@ -408,13 +427,14 @@ src/
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
 - [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload, per-co-op history)
+- [x] Settings (super admin only: profile/password, fees & collections account, integrations record, staff users/roles, activity logs)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything in `src/services/*.service.ts` is mocked)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client callback trusted for now)
 - [ ] Admin approval path for the member's own simple "Take a Loan" flow (stays "Awaiting Approval" forever — separate from the co-op guarantor pipeline)
 - [ ] OTP confirmation UI for Paystack Transfers (not exercised in test mode)
 - [ ] Dashboard's real numbers (currently 100% static)
-- [ ] Settings nav item (not built — nav label only, no `href`)
+- [ ] Settings for admin/member roles (super admin only for now — those two still have a Settings nav label with no `href`)
 
 ## Known Gotchas
 
@@ -451,6 +471,7 @@ CLOUDINARY_API_SECRET=...
 - [members-directory-page.md](./members-directory-page.md)
 - [notice-board-page.md](./notice-board-page.md)
 - [subscriptions-page.md](./subscriptions-page.md)
+- [settings-page.md](./settings-page.md)
 - [payments-and-payouts.md](./payments-and-payouts.md)
 - [theming-and-motion.md](./theming-and-motion.md)
 - [api-contracts.md](./api-contracts.md) — what a real backend needs to build

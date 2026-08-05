@@ -34,7 +34,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Loans", icon: Landmark },
     { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
     { label: "Support", icon: LifeBuoy },
-    { label: "Settings", icon: Settings },
+    { label: "Settings", href: "/settings", icon: Settings },
   ],
   admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },

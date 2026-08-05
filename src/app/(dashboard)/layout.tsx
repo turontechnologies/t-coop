@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/notice-board": "Notice Board",
   "/notice-board/new": "Create Notice",
   "/subscriptions": "Subscriptions",
+  "/settings": "Settings",
 };
 
 function getPageTitle(pathname: string): string {
