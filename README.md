@@ -200,13 +200,19 @@ see the [Routes](#routes) table above for the map. These are living
 documents: read them before changing the feature they describe, and update
 them when the feature's behavior changes, not just when it's first built.
 
+For a single-file snapshot of everything currently built (instead of
+reading each doc separately), see
+[project-overview.md](./documentation/project-overview.md). For the API
+contracts a real backend needs to implement, see
+[api-contracts.md](./documentation/api-contracts.md).
+
 ## Status
 
 - [x] Login (3 hardcoded roles, demo-account picker)
 - [x] Forgot password → OTP → new password
 - [x] Dashboard (super admin / admin / member views)
 - [x] My Profile (read-only by default, Edit toggle, all roles; real Cloudinary photo upload)
-- [x] Savings & Contributions (member: real Paystack checkout, real withdrawal requests, savings detail page. admin: Quick Summary, Members Savings/My Savings/Request tabs, Upload Teller with receipt attachment, deposit approval + real-payout withdrawal approval — super-admin oversight view still pending)
+- [x] Savings & Contributions (member: real Paystack checkout, real withdrawal requests, savings detail page. admin: Quick Summary, Members Savings/My Savings/Request tabs, Upload Teller with receipt attachment, deposit approval + real-payout withdrawal approval. super admin: `/savings` oversight page — all co-ops' savings totals, drills into each co-op's existing Savings tab)
 - [x] Loans (member: eligibility-based application flow, repayment schedule + transactions detail page. admin: Quick Summary, Requests/Members Loans/My Loans tabs, guarantor accept/reject with payslip upload, admin real-payout approve-and-disburse/reject-with-reason — super-admin oversight view still pending)
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
 - [x] Members Directory (admin: list, add with real bank-account verification, bulk import via template, export, edit (including bank details), disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
