@@ -6,6 +6,7 @@ import {
   type Notice,
   type NoticeReply,
 } from "@/lib/notice-data";
+import { logActivity } from "@/lib/audit-log";
 
 export const NOTICE_STORE_NAME = "tcoop-notice-board";
 
@@ -23,27 +24,36 @@ interface NoticeState {
 
 export const useNoticeStore = create<NoticeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       notices: INITIAL_NOTICES,
       replies: INITIAL_NOTICE_REPLIES,
       readMarkers: {},
-      addNotice: (notice) =>
-        set((state) => ({ notices: [notice, ...state.notices] })),
-      deleteNotice: (id) =>
+      addNotice: (notice) => {
+        set((state) => ({ notices: [notice, ...state.notices] }));
+        logActivity(`Notice created: ${notice.title}`);
+      },
+      deleteNotice: (id) => {
+        const notice = get().notices.find((n) => n.id === id);
         set((state) => ({
-          notices: state.notices.filter((notice) => notice.id !== id),
+          notices: state.notices.filter((n) => n.id !== id),
           replies: state.replies.filter((reply) => reply.noticeId !== id),
-        })),
-      resendNotice: (id) =>
+        }));
+        if (notice) logActivity(`Notice deleted: ${notice.title}`);
+      },
+      resendNotice: (id) => {
+        const notice = get().notices.find((n) => n.id === id);
         set((state) => ({
-          notices: state.notices.map((notice) =>
-            notice.id === id
-              ? { ...notice, sendAt: new Date().toISOString() }
-              : notice,
+          notices: state.notices.map((n) =>
+            n.id === id ? { ...n, sendAt: new Date().toISOString() } : n,
           ),
-        })),
-      addReply: (reply) =>
-        set((state) => ({ replies: [...state.replies, reply] })),
+        }));
+        if (notice) logActivity(`Notice resent: ${notice.title}`);
+      },
+      addReply: (reply) => {
+        set((state) => ({ replies: [...state.replies, reply] }));
+        const notice = get().notices.find((n) => n.id === reply.noticeId);
+        logActivity(`Replied to notice: ${notice?.title ?? reply.noticeId}`);
+      },
       markRead: (memberId, noticeId) =>
         set((state) => ({
           readMarkers: {

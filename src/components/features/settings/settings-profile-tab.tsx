@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCountries } from "@/hooks/use-countries";
+import { logActivity } from "@/lib/audit-log";
 import { getInitials } from "@/lib/format";
 import {
   updateMockUserPassword,
@@ -131,6 +132,7 @@ export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Upload failed");
       setAvatarUrl(data.url);
+      logActivity("Profile photo updated");
       toast.success("Profile photo updated");
     } catch (error) {
       toast.error("Couldn't upload photo", {
@@ -183,9 +185,11 @@ export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
       phone: values.phone,
       country: values.country,
     });
+    logActivity("Profile updated");
 
     if (anyPasswordFilled) {
       updateMockUserPassword(member.id, passwordFields.newPassword);
+      logActivity("Password changed");
     }
 
     setSaving(false);

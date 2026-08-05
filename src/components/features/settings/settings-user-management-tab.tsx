@@ -11,6 +11,7 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { CreateRoleModal } from "@/components/features/settings/create-role-modal";
+import { EditUserModal } from "@/components/features/settings/edit-user-modal";
 import { InviteUserModal } from "@/components/features/settings/invite-user-modal";
 import { PlatformRolesTable } from "@/components/features/settings/platform-roles-table";
 import { PlatformUsersTable } from "@/components/features/settings/platform-users-table";
@@ -28,10 +29,30 @@ export function SettingsUserManagementTab() {
   const platformUsers = useSettingsStore((state) => state.platformUsers);
   const platformRoles = useSettingsStore((state) => state.platformRoles);
   const inviteUser = useSettingsStore((state) => state.inviteUser);
+  const updatePlatformUserRole = useSettingsStore(
+    (state) => state.updatePlatformUserRole,
+  );
+  const setPlatformUserStatus = useSettingsStore(
+    (state) => state.setPlatformUserStatus,
+  );
+  const removePlatformUser = useSettingsStore(
+    (state) => state.removePlatformUser,
+  );
   const createRole = useSettingsStore((state) => state.createRole);
+  const updatePlatformRole = useSettingsStore(
+    (state) => state.updatePlatformRole,
+  );
+  const setPlatformRoleStatus = useSettingsStore(
+    (state) => state.setPlatformRoleStatus,
+  );
+  const removePlatformRole = useSettingsStore(
+    (state) => state.removePlatformRole,
+  );
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [roleOpen, setRoleOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<PlatformUser | null>(null);
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<PlatformRole | null>(null);
   const [busy, setBusy] = useState(false);
 
   const handleInvite = async (values: InviteUserFormValues) => {
@@ -53,20 +74,73 @@ export function SettingsUserManagementTab() {
     });
   };
 
-  const handleCreateRole = async (values: CreateRoleFormValues) => {
+  const handleSaveUser = async (userId: string, role: string) => {
+    setBusy(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    updatePlatformUserRole(userId, role);
+    setBusy(false);
+    setEditingUser(null);
+    toast.success("User updated");
+  };
+
+  const handleToggleUserStatus = async (user: PlatformUser) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const next = user.status === "Active" ? "Inactive" : "Active";
+    setPlatformUserStatus(user.id, next);
+    toast.success(
+      next === "Active" ? `${user.name} activated` : `${user.name} disabled`,
+    );
+  };
+
+  const handleRemoveUser = (user: PlatformUser) => {
+    removePlatformUser(user.id);
+    toast.success(`${user.name} removed`);
+  };
+
+  const handleRoleSubmit = async (values: CreateRoleFormValues) => {
     setBusy(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
-    const role: PlatformRole = {
-      id: `role-${Date.now()}`,
-      name: values.roleName,
-      permissions: values.permissions,
-      dateAdded: new Date().toISOString().slice(0, 10),
-      status: "Active",
-    };
-    createRole(role);
+    if (editingRole) {
+      updatePlatformRole(editingRole.id, {
+        name: values.roleName,
+        permissions: values.permissions,
+      });
+      toast.success("Role updated", { description: values.roleName });
+    } else {
+      const role: PlatformRole = {
+        id: `role-${Date.now()}`,
+        name: values.roleName,
+        permissions: values.permissions,
+        dateAdded: new Date().toISOString().slice(0, 10),
+        status: "Active",
+      };
+      createRole(role);
+      toast.success("Role created", { description: values.roleName });
+    }
     setBusy(false);
-    setRoleOpen(false);
-    toast.success("Role created", { description: values.roleName });
+    setRoleModalOpen(false);
+    setEditingRole(null);
+  };
+
+  const handleToggleRoleStatus = async (role: PlatformRole) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const next = role.status === "Active" ? "Inactive" : "Active";
+    setPlatformRoleStatus(role.id, next);
+    toast.success(
+      next === "Active" ? `${role.name} activated` : `${role.name} disabled`,
+    );
+  };
+
+  const handleRemoveRole = (role: PlatformRole) => {
+    const inUse = platformUsers.some((user) => user.role === role.name);
+    if (inUse) {
+      toast.error("Can't remove that role", {
+        description: `${role.name} is still assigned to at least one user — reassign them first.`,
+      });
+      return;
+    }
+    removePlatformRole(role.id);
+    toast.success(`${role.name} removed`);
   };
 
   return (
@@ -84,15 +158,36 @@ export function SettingsUserManagementTab() {
           {activeTab === "users" ? (
             <Button onClick={() => setInviteOpen(true)}>Invite Users</Button>
           ) : (
-            <Button onClick={() => setRoleOpen(true)}>Create Role</Button>
+            <Button
+              onClick={() => {
+                setEditingRole(null);
+                setRoleModalOpen(true);
+              }}
+            >
+              Create Role
+            </Button>
           )}
         </div>
 
         <TabsPanel value="users">
-          <PlatformUsersTable users={platformUsers} />
+          <PlatformUsersTable
+            users={platformUsers}
+            onEdit={setEditingUser}
+            onToggleStatus={handleToggleUserStatus}
+            onRemove={handleRemoveUser}
+          />
         </TabsPanel>
         <TabsPanel value="roles">
-          <PlatformRolesTable roles={platformRoles} />
+          <PlatformRolesTable
+            roles={platformRoles}
+            users={platformUsers}
+            onEdit={(role) => {
+              setEditingRole(role);
+              setRoleModalOpen(true);
+            }}
+            onToggleStatus={handleToggleRoleStatus}
+            onRemove={handleRemoveRole}
+          />
         </TabsPanel>
       </Tabs>
 
@@ -103,11 +198,24 @@ export function SettingsUserManagementTab() {
         busy={busy}
         onInvite={handleInvite}
       />
-      <CreateRoleModal
-        open={roleOpen}
-        onOpenChange={setRoleOpen}
+      <EditUserModal
+        user={editingUser}
+        onOpenChange={(open) => {
+          if (!open) setEditingUser(null);
+        }}
+        roles={platformRoles}
         busy={busy}
-        onCreate={handleCreateRole}
+        onSave={handleSaveUser}
+      />
+      <CreateRoleModal
+        open={roleModalOpen}
+        onOpenChange={(open) => {
+          setRoleModalOpen(open);
+          if (!open) setEditingRole(null);
+        }}
+        editingRole={editingRole}
+        busy={busy}
+        onSubmit={handleRoleSubmit}
       />
     </>
   );

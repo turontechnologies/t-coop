@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import {
+  coopMemberFullName,
   coopMemberSavingsBalance,
+  findCooperative,
   INITIAL_COOPERATIVES,
   type CoopMember,
   type CoopMemberStatus,
@@ -10,6 +12,8 @@ import {
   type Cooperative,
   type SavingsRequestStatus,
 } from "@/lib/coop-data";
+import { logActivity } from "@/lib/audit-log";
+import { formatNaira } from "@/lib/format";
 
 export type MemberEditableFields = Pick<
   CoopMember,
@@ -65,86 +69,109 @@ interface CoopState {
   ) => void;
 }
 
-export const useCoopStore = create<CoopState>((set) => ({
+export const useCoopStore = create<CoopState>((set, get) => ({
   cooperatives: INITIAL_COOPERATIVES,
-  addCooperative: (coop) =>
-    set((state) => ({ cooperatives: [coop, ...state.cooperatives] })),
-  setCooperativeStatus: (coopId, status) =>
+  addCooperative: (coop) => {
+    set((state) => ({ cooperatives: [coop, ...state.cooperatives] }));
+    logActivity(`Co-operative created: ${coop.name}`);
+  },
+  setCooperativeStatus: (coopId, status) => {
+    const coop = findCooperative(get().cooperatives, coopId);
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) =>
-        coop.id === coopId ? { ...coop, status } : coop,
+      cooperatives: state.cooperatives.map((c) =>
+        c.id === coopId ? { ...c, status } : c,
       ),
-    })),
-  setMemberStatus: (coopId, memberId, status) =>
+    }));
+    if (coop) {
+      logActivity(
+        `Co-operative ${status === "Active" ? "activated" : "disabled"}: ${coop.name}`,
+      );
+    }
+  },
+  setMemberStatus: (coopId, memberId, status) => {
+    const coop = findCooperative(get().cooperatives, coopId);
+    const member = coop?.members.find((m) => m.id === memberId);
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) =>
-        coop.id === coopId
+      cooperatives: state.cooperatives.map((c) =>
+        c.id === coopId
           ? {
-              ...coop,
-              members: coop.members.map((member) =>
-                member.id === memberId ? { ...member, status } : member,
+              ...c,
+              members: c.members.map((m) =>
+                m.id === memberId ? { ...m, status } : m,
               ),
             }
-          : coop,
+          : c,
       ),
-    })),
-  updateMember: (coopId, memberId, updates) =>
+    }));
+    if (member) {
+      logActivity(
+        `Member ${status === "Active" ? "activated" : "deactivated"}: ${coopMemberFullName(member)}`,
+      );
+    }
+  },
+  updateMember: (coopId, memberId, updates) => {
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) =>
-        coop.id === coopId
+      cooperatives: state.cooperatives.map((c) =>
+        c.id === coopId
           ? {
-              ...coop,
-              members: coop.members.map((member) =>
-                member.id === memberId ? { ...member, ...updates } : member,
+              ...c,
+              members: c.members.map((m) =>
+                m.id === memberId ? { ...m, ...updates } : m,
               ),
             }
-          : coop,
+          : c,
       ),
-    })),
-  addMember: (coopId, member) =>
+    }));
+    logActivity(`Member updated: ${updates.firstName} ${updates.lastName}`);
+  },
+  addMember: (coopId, member) => {
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) =>
-        coop.id === coopId
-          ? { ...coop, members: [member, ...coop.members] }
-          : coop,
+      cooperatives: state.cooperatives.map((c) =>
+        c.id === coopId ? { ...c, members: [member, ...c.members] } : c,
       ),
-    })),
-  addSavingsRecord: (coopId, record) =>
+    }));
+    logActivity(`Member added: ${coopMemberFullName(member)}`);
+  },
+  addSavingsRecord: (coopId, record) => {
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) =>
-        coop.id === coopId
-          ? { ...coop, savings: [record, ...coop.savings] }
-          : coop,
+      cooperatives: state.cooperatives.map((c) =>
+        c.id === coopId ? { ...c, savings: [record, ...c.savings] } : c,
       ),
-    })),
-  resolveSavingsRequest: (coopId, requestId, status) =>
+    }));
+    logActivity(
+      `Savings recorded: ${formatNaira(record.amount)} for ${record.memberName}`,
+    );
+  },
+  resolveSavingsRequest: (coopId, requestId, status) => {
+    const coop = findCooperative(get().cooperatives, coopId);
+    const request = coop?.savingsRequests.find((r) => r.id === requestId);
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) => {
-        if (coop.id !== coopId) return coop;
-        const request = coop.savingsRequests.find((r) => r.id === requestId);
-        if (!request || request.status !== "Pending") return coop;
+      cooperatives: state.cooperatives.map((c) => {
+        if (c.id !== coopId) return c;
+        const req = c.savingsRequests.find((r) => r.id === requestId);
+        if (!req || req.status !== "Pending") return c;
 
         const resolvedAt = new Date().toISOString();
-        const savingsRequests = coop.savingsRequests.map((r) =>
+        const savingsRequests = c.savingsRequests.map((r) =>
           r.id === requestId ? { ...r, status, resolvedAt } : r,
         );
 
         if (status === "Declined") {
-          return { ...coop, savingsRequests };
+          return { ...c, savingsRequests };
         }
 
         const signedAmount =
-          request.type === "Withdrawal" ? -request.amount : request.amount;
+          req.type === "Withdrawal" ? -req.amount : req.amount;
         const balanceBefore = coopMemberSavingsBalance(
-          coop,
-          request.memberId,
-          request.savingsType,
+          c,
+          req.memberId,
+          req.savingsType,
         );
         const record: CoopSavingsRecord = {
           id: `coop-sav-${Date.now()}`,
-          memberId: request.memberId,
-          memberName: request.memberName,
-          savingsType: request.savingsType,
+          memberId: req.memberId,
+          memberName: req.memberName,
+          savingsType: req.savingsType,
           amount: signedAmount,
           balanceAfter: balanceBefore + signedAmount,
           method: "Manual Upload",
@@ -154,19 +181,27 @@ export const useCoopStore = create<CoopState>((set) => ({
         };
 
         return {
-          ...coop,
+          ...c,
           savingsRequests,
-          savings: [record, ...coop.savings],
+          savings: [record, ...c.savings],
         };
       }),
-    })),
-  respondToGuarantorRequest: (coopId, loanId, decision, documentUrl) =>
+    }));
+    if (request) {
+      logActivity(
+        `Savings ${request.type.toLowerCase()} request ${status.toLowerCase()}: ${formatNaira(request.amount)} for ${request.memberName}`,
+      );
+    }
+  },
+  respondToGuarantorRequest: (coopId, loanId, decision, documentUrl) => {
+    const coop = findCooperative(get().cooperatives, coopId);
+    const loan = coop?.loans.find((l) => l.id === loanId);
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) => {
-        if (coop.id !== coopId) return coop;
+      cooperatives: state.cooperatives.map((c) => {
+        if (c.id !== coopId) return c;
         return {
-          ...coop,
-          loans: coop.loans.map((loan) => {
+          ...c,
+          loans: c.loans.map((loan) => {
             if (loan.id !== loanId || loan.status !== "Awaiting Guarantor") {
               return loan;
             }
@@ -186,14 +221,22 @@ export const useCoopStore = create<CoopState>((set) => ({
           }),
         };
       }),
-    })),
-  resolveLoanRequest: (coopId, loanId, decision, rejectionReason) =>
+    }));
+    if (loan) {
+      logActivity(
+        `Guarantor ${decision.toLowerCase()} loan: ${formatNaira(loan.amount)} for ${loan.memberName}`,
+      );
+    }
+  },
+  resolveLoanRequest: (coopId, loanId, decision, rejectionReason) => {
+    const coop = findCooperative(get().cooperatives, coopId);
+    const loan = coop?.loans.find((l) => l.id === loanId);
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) => {
-        if (coop.id !== coopId) return coop;
+      cooperatives: state.cooperatives.map((c) => {
+        if (c.id !== coopId) return c;
         return {
-          ...coop,
-          loans: coop.loans.map((loan) => {
+          ...c,
+          loans: c.loans.map((loan) => {
             if (loan.id !== loanId || loan.status !== "Awaiting Admin") {
               return loan;
             }
@@ -203,16 +246,27 @@ export const useCoopStore = create<CoopState>((set) => ({
           }),
         };
       }),
-    })),
-  addSubscriptionPayment: (coopId, payment) =>
+    }));
+    if (loan) {
+      logActivity(
+        `Loan ${decision.toLowerCase()}: ${formatNaira(loan.amount)} for ${loan.memberName}`,
+      );
+    }
+  },
+  addSubscriptionPayment: (coopId, payment) => {
+    const coop = findCooperative(get().cooperatives, coopId);
     set((state) => ({
-      cooperatives: state.cooperatives.map((coop) =>
-        coop.id === coopId
+      cooperatives: state.cooperatives.map((c) =>
+        c.id === coopId
           ? {
-              ...coop,
-              subscriptionPayments: [payment, ...coop.subscriptionPayments],
+              ...c,
+              subscriptionPayments: [payment, ...c.subscriptionPayments],
             }
-          : coop,
+          : c,
       ),
-    })),
+    }));
+    logActivity(
+      `Subscription payment recorded: ${formatNaira(payment.amountPaid)} for ${coop?.name ?? coopId}`,
+    );
+  },
 }));

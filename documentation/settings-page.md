@@ -83,6 +83,19 @@ log.
   user as `Active` immediately, consistent with how this app's other
   "invite/create" actions already work without a real notification
   layer.
+- **Both Users and Roles are fully actionable, not just listed.** Each
+  row gets the same Edit/Disable-Activate/Remove pattern already
+  established by `coop-members-table.tsx` (pencil-icon edit, a
+  `ConfirmToggleDialog` status toggle, a destructive `AlertDialog`
+  remove) — reused rather than reinvented, down to the exact
+  "Disable"/"Activate" wording. Editing a user only changes their role
+  (name/email aren't editable here, same reasoning real systems use:
+  identity fields aren't casually reassignable). Editing a role reuses
+  `CreateRoleModal` in an edit mode (`editingRole` prop) instead of a
+  second near-identical modal. **Removing a role is blocked** if any
+  user is still assigned to it — checked against `platformUsers` before
+  calling the store action, with a toast explaining why, rather than
+  silently orphaning a user's role.
 - **Permissions are a fixed module list** (`PERMISSION_MODULES` —
   Dashboard, Co-operatives, Savings & Contributions, Loans,
   Subscriptions, Members Directory, Notice Board, Support, Settings),
@@ -92,11 +105,27 @@ log.
   `@base-ui/react/switch` export, just no shadcn wrapper existed yet).
   A role with every module checked displays as "All access" in the
   table, matching the mockup, rather than listing all nine.
-- **Logs is a static seeded list**, not wired to real actions elsewhere
-  in the app (adding a subscription payment, disabling a co-op, etc.
-  don't currently append a log entry) — genuinely wiring that up would
-  touch every mutating action across the whole app, out of scope for
-  this page alone. Flagged in Future Improvements.
+- **Logs is a genuine, app-wide audit trail, not a static list.** Moved
+  out of `useSettingsStore` into its own persisted `useAuditLogStore`
+  (`src/store/audit-log.store.ts`, localStorage-backed like the notice
+  board store) and a `logActivity(activity: string)` utility
+  (`src/lib/audit-log.ts`) that reads the signed-in member via
+  `useAuthStore.getState()` — callable from anywhere, including inside
+  other Zustand stores' actions, since it isn't a React hook. Wired
+  into every mutating action across the app: login, co-op create/
+  disable/member add/edit/status, savings records/requests/approvals,
+  loan requests/guarantor decisions/admin decisions, subscription
+  payments, notices (create/delete/resend/reply), and every Settings
+  action (fees, integrations, invite/edit/disable/remove user,
+  create/edit/disable/remove role, profile/password/photo changes).
+  Each entry also resolves an **approximate IP-based location**
+  (`src/lib/ip-location.ts`, via `ipwho.is` — free, keyless, CORS-open,
+  same pattern as `geo-lookup.ts`'s countriesnow.space) in the
+  background: the entry is written immediately with `location:
+"Locating…"`, then patched in place once the lookup resolves (or
+  `"Unknown"` if it fails). This is genuinely live and was verified
+  end-to-end — disabling a user in this session produced a real
+  "Just now" / real resolved-city entry, not a canned one.
 
 ## Components
 
@@ -112,15 +141,22 @@ log.
   Paystack and Flutterwave, both independently togglable via a shared
   `GatewayCard`, each showing its own credential fields when enabled.
 - `src/components/features/settings/platform-users-table.tsx`,
-  `invite-user-modal.tsx`, `platform-roles-table.tsx`,
-  `create-role-modal.tsx`, `settings-user-management-tab.tsx` — the
-  Users/Roles sub-tabs and their two modals.
-- `src/components/features/settings/settings-logs-tab.tsx` — read-only
-  activity table.
+  `platform-roles-table.tsx` — the two tables, each with per-row
+  Edit/Disable-Activate/Remove actions.
+- `src/components/features/settings/invite-user-modal.tsx`,
+  `edit-user-modal.tsx`, `create-role-modal.tsx` (create + edit mode),
+  `settings-user-management-tab.tsx` — the modals and wiring.
+- `src/components/features/settings/settings-logs-tab.tsx` — searchable
+  audit-log table with a Location column.
+- `src/lib/audit-log.ts`, `src/lib/audit-log-data.ts`,
+  `src/lib/ip-location.ts` — the logging utility, its entry type/seed
+  data, and the IP-geolocation lookup.
+- `src/store/audit-log.store.ts` — persisted audit-log entries.
 - `src/hooks/use-countries.ts` — cached country list hook.
 - `src/components/ui/switch.tsx` — new shadcn-style Switch primitive.
 - `src/store/settings.store.ts` — fee settings, collection account,
-  integrations, platform users, platform roles, activity log.
+  integrations, platform users, platform roles (no longer holds the
+  activity log — see `audit-log.store.ts`).
 
 ## Future Improvements
 
@@ -129,8 +165,10 @@ log.
   `coop-data.ts` stays hardcoded).
 - No real email is sent on "Invite User" — the account just appears as
   Active.
-- Activity Logs are seeded, not generated from real actions across the
-  app.
+- IP-based location is approximate (city/region-level, from the public
+  IP) and meaningless for requests from a local/dev network — a real
+  deployment would see this improve automatically once traffic comes
+  from real client IPs.
 - Not yet extended to `admin`/`member` roles — those two still show a
   Settings nav item with no destination.
 - Integration keys typed here aren't validated against either gateway

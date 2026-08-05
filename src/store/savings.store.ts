@@ -4,6 +4,8 @@ import {
   type SavingsRecord,
 } from "@/lib/savings-data";
 import type { SavingsRequest, SavingsRequestStatus } from "@/lib/coop-data";
+import { logActivity } from "@/lib/audit-log";
+import { formatNaira } from "@/lib/format";
 
 interface SavingsState {
   records: SavingsRecord[];
@@ -16,17 +18,26 @@ interface SavingsState {
   ) => void;
 }
 
-export const useSavingsStore = create<SavingsState>()((set) => ({
+export const useSavingsStore = create<SavingsState>()((set, get) => ({
   records: INITIAL_SAVINGS_RECORDS,
   requests: [],
-  addRecord: (record) =>
-    set((state) => ({ records: [record, ...state.records] })),
-  addRequest: (request) =>
-    set((state) => ({ requests: [request, ...state.requests] })),
-  resolveRequest: (requestId, status) =>
+  addRecord: (record) => {
+    set((state) => ({ records: [record, ...state.records] }));
+    logActivity(
+      `Savings recorded: ${formatNaira(record.amount)} (${record.savingsType})`,
+    );
+  },
+  addRequest: (request) => {
+    set((state) => ({ requests: [request, ...state.requests] }));
+    logActivity(
+      `${request.type} request submitted: ${formatNaira(request.amount)} (${request.savingsType})`,
+    );
+  },
+  resolveRequest: (requestId, status) => {
+    const request = get().requests.find((r) => r.id === requestId);
     set((state) => {
-      const request = state.requests.find((r) => r.id === requestId);
-      if (!request || request.status !== "Pending") return state;
+      const req = state.requests.find((r) => r.id === requestId);
+      if (!req || req.status !== "Pending") return state;
 
       const resolvedAt = new Date().toISOString();
       const requests = state.requests.map((r) =>
@@ -37,21 +48,20 @@ export const useSavingsStore = create<SavingsState>()((set) => ({
         return { requests };
       }
 
-      const signedAmount =
-        request.type === "Withdrawal" ? -request.amount : request.amount;
+      const signedAmount = req.type === "Withdrawal" ? -req.amount : req.amount;
       const balanceBefore = state.records
         .filter(
           (record) =>
-            record.memberId === request.memberId &&
-            record.savingsType === request.savingsType,
+            record.memberId === req.memberId &&
+            record.savingsType === req.savingsType,
         )
         .reduce((sum, record) => sum + record.amount, 0);
 
       const record: SavingsRecord = {
         id: `sav-${Date.now()}`,
-        memberId: request.memberId,
-        memberName: request.memberName,
-        savingsType: request.savingsType,
+        memberId: req.memberId,
+        memberName: req.memberName,
+        savingsType: req.savingsType,
         amount: signedAmount,
         balanceAfter: balanceBefore + signedAmount,
         method: "Manual Upload",
@@ -61,5 +71,11 @@ export const useSavingsStore = create<SavingsState>()((set) => ({
       };
 
       return { requests, records: [record, ...state.records] };
-    }),
+    });
+    if (request) {
+      logActivity(
+        `${request.type} request ${status.toLowerCase()}: ${formatNaira(request.amount)} for ${request.memberName}`,
+      );
+    }
+  },
 }));

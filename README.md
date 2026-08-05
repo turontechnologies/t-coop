@@ -191,7 +191,8 @@ src/
   services/                  auth/profile/etc. services — the seam a real backend plugs into
   store/                     Zustand stores (auth session, password-reset session,
                               savings records, loan records, co-operatives, notice board —
-                              the only one persisted + cross-tab synced, see notice-board-page.md)
+                              persisted + cross-tab synced, see notice-board-page.md —
+                              settings, audit log — also persisted, see settings-page.md)
   types/                     shared domain types
 ```
 
@@ -222,7 +223,7 @@ contracts a real backend needs to implement, see
 - [x] Notice Board (all roles; real cross-tab real-time via `storage` events — announcements, meeting notices, meeting minutes with PDF attachment, scheduled send, reply/feedback thread, live notification bell)
 - [x] Real Paystack Transfers (loan disbursement, savings withdrawal payouts), real bank-account verification, live bank list, live cascading Country/State/City — see [payments-and-payouts.md](./documentation/payments-and-payouts.md)
 - [x] Subscriptions (super admin: every co-op's subscription standing, revenue, manual payment upload, per-co-op payment history — see [subscriptions-page.md](./documentation/subscriptions-page.md))
-- [x] Settings (super admin only: profile + password, fees & collections account, integrations record, platform staff users/roles, activity logs — see [settings-page.md](./documentation/settings-page.md))
+- [x] Settings (super admin only: profile + password, fees & collections account, dual Paystack/Flutterwave integration toggles, platform staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location — see [settings-page.md](./documentation/settings-page.md))
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client-side callback is trusted for now — see savings-page.md; Transfers, unlike Inline, are already server-initiated)

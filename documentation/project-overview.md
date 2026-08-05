@@ -180,14 +180,20 @@ an optional inline password change — all backed by the same
 already use, so it can't drift out of sync). **Payment Settings** →
 Fees & Charges (savings/loan charge type + amount) and Account Details
 (the platform's own collections bank account, same real Paystack
-"Verify" flow as everywhere else). **Integrations** — Paystack
-enable toggle + key fields (saved as a record only; the live
-integration still reads its keys from the server environment, never
-from this) and a disabled Flutterwave toggle (genuinely not
-integrated anywhere). **User Management** — platform staff accounts
-and roles (distinct from co-operative members), Invite User / Create
-Role modals, a fixed-module permission multi-select. **Logs** — a
-read-only, currently-static activity table. Not yet extended to
+"Verify" flow as everywhere else). **Integrations** — Paystack and
+Flutterwave as two fully independent toggles (either, both, or
+neither), each with its own credential fields, saved as a record only
+(the live Paystack integration still reads its keys from the server
+environment; Flutterwave has no live route handler behind it yet).
+**User Management** — platform staff accounts and roles (distinct from
+co-operative members), each row fully actionable: edit (role for
+users, name/permissions for roles), disable/activate, remove (role
+removal is blocked while a user is still assigned to it). **Logs** — a
+real, searchable, app-wide audit trail: every mutating action across
+the whole app (login, co-op/member/savings/loan/subscription/notice/
+settings actions) writes an entry via a `logActivity()` utility
+callable from any store, each patched in place with an approximate
+IP-resolved location once it's looked up. Not yet extended to
 admin/member roles. See [settings-page.md](./settings-page.md).
 
 ### Payments & Payouts (cross-cutting)
@@ -427,7 +433,7 @@ src/
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
 - [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload, per-co-op history)
-- [x] Settings (super admin only: profile/password, fees & collections account, integrations record, staff users/roles, activity logs)
+- [x] Settings (super admin only: profile/password, fees & collections account, dual Paystack/Flutterwave toggles, staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything in `src/services/*.service.ts` is mocked)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client callback trusted for now)

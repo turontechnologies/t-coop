@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { ChevronDown, Loader2 } from "lucide-react";
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PERMISSION_MODULES } from "@/lib/settings-data";
+import { PERMISSION_MODULES, type PlatformRole } from "@/lib/settings-data";
 import {
   createRoleSchema,
   type CreateRoleFormValues,
@@ -29,17 +29,21 @@ import {
 interface CreateRoleModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pass to edit an existing role instead of creating a new one. */
+  editingRole?: PlatformRole | null;
   busy: boolean;
-  onCreate: (values: CreateRoleFormValues) => void;
+  onSubmit: (values: CreateRoleFormValues) => void;
 }
 
 export function CreateRoleModal({
   open,
   onOpenChange,
+  editingRole,
   busy,
-  onCreate,
+  onSubmit: onSubmitProp,
 }: CreateRoleModalProps) {
   const roleNameId = useId();
+  const isEditing = !!editingRole;
 
   const {
     control,
@@ -53,18 +57,26 @@ export function CreateRoleModal({
     mode: "onChange",
   });
 
+  useEffect(() => {
+    if (!open) return;
+    reset({
+      roleName: editingRole?.name ?? "",
+      permissions: editingRole?.permissions ?? [],
+    });
+  }, [open, editingRole, reset]);
+
   const handleOpenChange = (next: boolean) => {
-    if (!next) reset();
+    if (!next) reset({ roleName: "", permissions: [] });
     onOpenChange(next);
   };
 
-  const onSubmit = handleSubmit((values) => onCreate(values));
+  const onSubmit = handleSubmit((values) => onSubmitProp(values));
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Role</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Role" : "Create Role"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={onSubmit} noValidate className="space-y-4">
@@ -158,8 +170,10 @@ export function CreateRoleModal({
               {busy ? (
                 <>
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  Creating…
+                  {isEditing ? "Saving…" : "Creating…"}
                 </>
+              ) : isEditing ? (
+                "Save Changes"
               ) : (
                 "Create Role"
               )}
