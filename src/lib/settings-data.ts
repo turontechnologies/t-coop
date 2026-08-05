@@ -32,6 +32,9 @@ export interface IntegrationSettings {
   paystackSecretKey: string;
   paystackWebhookSecret: string;
   flutterwaveEnabled: boolean;
+  flutterwavePublicKey: string;
+  flutterwaveSecretKey: string;
+  flutterwaveEncryptionKey: string;
 }
 
 export const INITIAL_INTEGRATIONS: IntegrationSettings = {
@@ -40,6 +43,9 @@ export const INITIAL_INTEGRATIONS: IntegrationSettings = {
   paystackSecretKey: "",
   paystackWebhookSecret: "",
   flutterwaveEnabled: false,
+  flutterwavePublicKey: "",
+  flutterwaveSecretKey: "",
+  flutterwaveEncryptionKey: "",
 };
 
 export const PERMISSION_MODULES = [

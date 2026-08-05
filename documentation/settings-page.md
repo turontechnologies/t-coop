@@ -60,9 +60,21 @@ log.
   from the server environment, same as before this page existed — a
   real secret key must never live in client-observable Zustand state.
   The form says so directly under the key fields rather than implying
-  otherwise. Flutterwave's toggle is present (matching the mockup) but
-  disabled — there's no Flutterwave integration anywhere in this app,
-  so pretending the toggle does something would be dishonest.
+  otherwise.
+- **Paystack and Flutterwave are independent toggles, not a choice
+  between the two** — either can be on, both can be on, both can be
+  off. `GatewayCard` (`settings-integrations-tab.tsx`) renders both
+  gateways from the same shape (name, description, enable switch,
+  credential fields, caveat text) rather than special-casing one as
+  primary. Flutterwave gets its own three fields (Public Key, Secret
+  Key, Encryption Key — Flutterwave's actual credential set, not
+  Paystack's) in `IntegrationSettings`
+  (`src/lib/settings-data.ts`). Its caveat is more direct than
+  Paystack's: there's no Flutterwave route handler anywhere in this
+  app, so enabling it here is purely a settings record for now, not a
+  second live payment path — building that would mean duplicating the
+  whole `/api/paystack/*` effort (checkout, resolve, transfer) for a
+  second provider, out of scope for the settings screen alone.
 - **User Management is platform staff, not co-operative members.**
   `PlatformUser`/`PlatformRole` (`src/lib/settings-data.ts`) are a new,
   separate concept from `CoopMember` — people who help operate T-Coop
@@ -97,8 +109,8 @@ log.
 - `src/components/features/settings/settings-payment-tab.tsx` — wraps
   the two above in a nested `Tabs`.
 - `src/components/features/settings/settings-integrations-tab.tsx` —
-  Paystack (togglable, shows key fields when on) + Flutterwave
-  (disabled toggle).
+  Paystack and Flutterwave, both independently togglable via a shared
+  `GatewayCard`, each showing its own credential fields when enabled.
 - `src/components/features/settings/platform-users-table.tsx`,
   `invite-user-modal.tsx`, `platform-roles-table.tsx`,
   `create-role-modal.tsx`, `settings-user-management-tab.tsx` — the
@@ -121,5 +133,10 @@ log.
   app.
 - Not yet extended to `admin`/`member` roles — those two still show a
   Settings nav item with no destination.
-- Integration keys typed here aren't validated against Paystack (no
-  "test this key" action) — purely stored.
+- Integration keys typed here aren't validated against either gateway
+  (no "test this key" action) — purely stored.
+- Flutterwave has no live route handler behind it (unlike Paystack's
+  `/api/paystack/*`) — enabling it here doesn't add a second real
+  payment path yet. Building that would mean a parallel checkout/
+  resolve/transfer integration the same size as the existing Paystack
+  one.

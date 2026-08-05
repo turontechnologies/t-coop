@@ -56,6 +56,9 @@ export const integrationsSchema = z.object({
   paystackSecretKey: z.string().trim().optional(),
   paystackWebhookSecret: z.string().trim().optional(),
   flutterwaveEnabled: z.boolean(),
+  flutterwavePublicKey: z.string().trim().optional(),
+  flutterwaveSecretKey: z.string().trim().optional(),
+  flutterwaveEncryptionKey: z.string().trim().optional(),
 });
 
 export type IntegrationsFormValues = z.infer<typeof integrationsSchema>;

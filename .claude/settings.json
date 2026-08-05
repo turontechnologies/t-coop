@@ -8,7 +8,10 @@
       "Bash(curl -s -o /dev/null -w \"login:%{http_code}\\\\n\" http://localhost:3000/login --max-time 40)",
       "Bash(curl -s -o /dev/null -w \"dashboard:%{http_code}\\\\n\" http://localhost:3000/dashboard --max-time 40)",
       "Bash(node verify-member-import.mjs)",
-      "Bash(node verify-savings-import-regression.mjs)"
+      "Bash(node verify-savings-import-regression.mjs)",
+      "Bash(powershell -NoProfile -Command \"New-Item -ItemType Directory -Force -Path 'C:\\\\temp-chrome-profile-verify3' | Out-Null\")",
+      "Bash(\"/c/Program Files/Google/Chrome/Application/chrome.exe\" --headless=new --disable-gpu --remote-debugging-port=9222 --user-data-dir=\"C:\\\\\\\\temp-chrome-profile-verify3\" --no-first-run --no-default-browser-check about:blank)",
+      "Bash(node \"C:\\\\Users\\\\user\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-user-Documents-sam-t-coop-app\\\\83b85de9-e8bc-49d4-9fa4-9601d95e5721\\\\scratchpad\\\\verify-integrations.mjs\")"
     ]
   }
 }
