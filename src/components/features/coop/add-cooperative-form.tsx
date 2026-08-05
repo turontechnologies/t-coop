@@ -86,6 +86,8 @@ export function AddCooperativeForm() {
       savings: [],
       loans: [],
       savingsRequests: [],
+      subscriptionFee: 150_000,
+      subscriptionPayments: [],
     };
 
     addCooperative(coop);

@@ -6,6 +6,7 @@ import {
   type CoopMemberStatus,
   type CoopSavingsRecord,
   type CoopStatus,
+  type CoopSubscriptionPayment,
   type Cooperative,
   type SavingsRequestStatus,
 } from "@/lib/coop-data";
@@ -57,6 +58,10 @@ interface CoopState {
     loanId: string,
     decision: "Approved" | "Rejected",
     rejectionReason?: string,
+  ) => void;
+  addSubscriptionPayment: (
+    coopId: string,
+    payment: CoopSubscriptionPayment,
   ) => void;
 }
 
@@ -198,5 +203,16 @@ export const useCoopStore = create<CoopState>((set) => ({
           }),
         };
       }),
+    })),
+  addSubscriptionPayment: (coopId, payment) =>
+    set((state) => ({
+      cooperatives: state.cooperatives.map((coop) =>
+        coop.id === coopId
+          ? {
+              ...coop,
+              subscriptionPayments: [payment, ...coop.subscriptionPayments],
+            }
+          : coop,
+      ),
     })),
 }));

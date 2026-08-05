@@ -80,6 +80,20 @@ export interface CoopLoanRecord {
   rejectionReason?: string;
 }
 
+export type SubscriptionStatus = "Active" | "Overdue";
+export type SubscriptionPaymentMethod = "Manual" | "Paystack";
+
+export interface CoopSubscriptionPayment {
+  id: string;
+  paymentRef: string;
+  amountPaid: number;
+  method: SubscriptionPaymentMethod;
+  date: string;
+  narration: string;
+  /** The co-op's subscription standing as of this payment, not the payment's own success/failure. */
+  status: SubscriptionStatus;
+}
+
 export interface Cooperative {
   id: string;
   name: string;
@@ -95,6 +109,8 @@ export interface Cooperative {
   savings: CoopSavingsRecord[];
   loans: CoopLoanRecord[];
   savingsRequests: SavingsRequest[];
+  subscriptionFee: number;
+  subscriptionPayments: CoopSubscriptionPayment[];
 }
 
 export const INITIAL_COOPERATIVES: Cooperative[] = [
@@ -335,6 +351,36 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         resolvedAt: "2026-07-11T08:30:00.000Z",
       },
     ],
+    subscriptionFee: 300_000,
+    subscriptionPayments: [
+      {
+        id: "coop-sub-1",
+        paymentRef: "1901922882339",
+        amountPaid: 300_000,
+        method: "Manual",
+        date: "2026-07-09",
+        narration: "Renewal",
+        status: "Active",
+      },
+      {
+        id: "coop-sub-2",
+        paymentRef: "1901922881120",
+        amountPaid: 300_000,
+        method: "Manual",
+        date: "2026-04-09",
+        narration: "Renewal",
+        status: "Active",
+      },
+      {
+        id: "coop-sub-3",
+        paymentRef: "1901922879804",
+        amountPaid: 300_000,
+        method: "Manual",
+        date: "2026-01-09",
+        narration: "Renewal",
+        status: "Active",
+      },
+    ],
   },
   {
     id: "COOP-0002",
@@ -424,6 +470,18 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
       },
     ],
     savingsRequests: [],
+    subscriptionFee: 150_000,
+    subscriptionPayments: [
+      {
+        id: "coop-sub-4",
+        paymentRef: "1901922884471",
+        amountPaid: 150_000,
+        method: "Manual",
+        date: "2026-06-20",
+        narration: "Renewal",
+        status: "Active",
+      },
+    ],
   },
   {
     id: "COOP-0003",
@@ -456,6 +514,18 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
     savings: [],
     loans: [],
     savingsRequests: [],
+    subscriptionFee: 150_000,
+    subscriptionPayments: [
+      {
+        id: "coop-sub-5",
+        paymentRef: "1901922870233",
+        amountPaid: 150_000,
+        method: "Manual",
+        date: "2026-01-14",
+        narration: "Renewal",
+        status: "Overdue",
+      },
+    ],
   },
 ];
 
@@ -490,6 +560,33 @@ const PLATFORM_SAVINGS_FEE_RATE = 0.0025;
 
 export function platformSavingsFeesTotal(cooperatives: Cooperative[]): number {
   return allCoopsSavingsTotal(cooperatives) * PLATFORM_SAVINGS_FEE_RATE;
+}
+
+/** Payments are stored newest-first. */
+export function coopSubscriptionRevenue(coop: Cooperative): number {
+  return coop.subscriptionPayments.reduce(
+    (sum, payment) => sum + payment.amountPaid,
+    0,
+  );
+}
+
+export function coopSubscriptionStatus(coop: Cooperative): SubscriptionStatus {
+  return coop.subscriptionPayments[0]?.status ?? "Overdue";
+}
+
+export function coopLastSubscriptionPaymentDate(
+  coop: Cooperative,
+): string | undefined {
+  return coop.subscriptionPayments[0]?.date;
+}
+
+export function allCoopsSubscriptionRevenue(
+  cooperatives: Cooperative[],
+): number {
+  return cooperatives.reduce(
+    (sum, coop) => sum + coopSubscriptionRevenue(coop),
+    0,
+  );
 }
 
 /** A member's running balance for one savings type, before a new record is added. */

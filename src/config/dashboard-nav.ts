@@ -32,7 +32,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Notice Board", href: "/notice-board", icon: Megaphone },
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
     { label: "Loans", icon: Landmark },
-    { label: "Subscriptions", icon: CreditCard },
+    { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
     { label: "Support", icon: LifeBuoy },
     { label: "Settings", icon: Settings },
   ],

@@ -158,6 +158,20 @@ event (not a server push — works across tabs in the same browser only,
 not across devices/users, since there's no backend). Reply thread, live
 notification bell, resend, delete.
 
+### Subscriptions (`/subscriptions`, super admin only)
+
+Every co-operative's subscription standing at a glance: Quick Summary
+(Mgt Fees Received — total across all co-ops), a table (Co-op ID, Co-op
+Name, Revenue Earned, Subscription Fee, Date of last payment, Active/
+Overdue status) with search + status filter + date range, "Manual
+Upload" to record a payment for any co-op. Clicking a row drills into
+`/subscriptions/[id]` — the same `CoopHeaderCard` used on
+`/co-operatives/[id]` (Co-op ID/Name/Contact/Admin/Address/Total
+Savings/Total Loan + Disable Co-operative), plus that one co-op's full
+"Subscription History" table and its own Manual Upload. No real payment
+gateway here (money coming _in_ from a co-op, recorded manually, not a
+Paystack flow) — see [subscriptions-page.md](./subscriptions-page.md).
+
 ### Payments & Payouts (cross-cutting)
 
 Covered under Savings/Loans above and Profile/Members Directory's bank
@@ -196,6 +210,17 @@ interface Cooperative {
   savings: CoopSavingsRecord[];
   loans: CoopLoanRecord[];
   savingsRequests: SavingsRequest[];
+  subscriptionFee: number;
+  subscriptionPayments: CoopSubscriptionPayment[];
+}
+interface CoopSubscriptionPayment {
+  id: string;
+  paymentRef: string;
+  amountPaid: number;
+  method: "Manual" | "Paystack";
+  date: string;
+  narration: string;
+  status: "Active" | "Overdue"; // subscription standing as of this payment
 }
 interface CoopMember {
   id: string;
@@ -340,6 +365,7 @@ interface NoticeReply {
 | `/co-operatives`, `/co-operatives/new`, `/co-operatives/[id]`, `/co-operatives/[id]/members/[memberId]`, `/co-operatives/[id]/savings/...`, `/co-operatives/[id]/loans/...` | Super admin oversight                      |
 | `/members`, `/members/new`, `/members/[memberId]`                                                                                                                           | Admin's own member directory               |
 | `/notice-board`, `/notice-board/new`, `/notice-board/[id]`                                                                                                                  | Announcements/meetings/minutes, all roles  |
+| `/subscriptions`, `/subscriptions/[id]`                                                                                                                                     | Super admin: subscription oversight        |
 | `/api/upload`                                                                                                                                                               | Cloudinary avatar upload (real)            |
 | `/api/paystack/resolve-account`, `/banks`, `/transfer`, `/transfer/finalize`                                                                                                | Paystack route handlers (real)             |
 
@@ -381,13 +407,14 @@ src/
 - [x] Members Directory (admin: list, add w/ bank verification, bulk import, export, edit, disable/activate)
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
+- [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload, per-co-op history)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything in `src/services/*.service.ts` is mocked)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client callback trusted for now)
 - [ ] Admin approval path for the member's own simple "Take a Loan" flow (stays "Awaiting Approval" forever — separate from the co-op guarantor pipeline)
 - [ ] OTP confirmation UI for Paystack Transfers (not exercised in test mode)
 - [ ] Dashboard's real numbers (currently 100% static)
-- [ ] Subscriptions, Settings nav items (not built — nav labels only, no `href`)
+- [ ] Settings nav item (not built — nav label only, no `href`)
 
 ## Known Gotchas
 
@@ -423,6 +450,7 @@ CLOUDINARY_API_SECRET=...
 - [co-operatives-page.md](./co-operatives-page.md)
 - [members-directory-page.md](./members-directory-page.md)
 - [notice-board-page.md](./notice-board-page.md)
+- [subscriptions-page.md](./subscriptions-page.md)
 - [payments-and-payouts.md](./payments-and-payouts.md)
 - [theming-and-motion.md](./theming-and-motion.md)
 - [api-contracts.md](./api-contracts.md) — what a real backend needs to build

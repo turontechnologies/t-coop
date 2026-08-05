@@ -172,7 +172,7 @@ Same shape as one list item, plus `savingsByType` and `loansByType` breakdowns:
 - `PATCH /cooperatives/:id/members/:memberId` — update `firstName, lastName, email, role, guarantor, country, state, city, bankCode, accountNumber, accountName`.
 - `PATCH /cooperatives/:id/members/:memberId/status` — `{ "status": "Active|Inactive" }`.
 
-**Bank fields**: `accountName` is never typed by the user — it's filled in from `POST /banks/resolve` (§9) after the user picks a bank + types an account number.
+**Bank fields**: `accountName` is never typed by the user — it's filled in from `POST /banks/resolve` (§10) after the user picks a bank + types an account number.
 
 ---
 
@@ -282,7 +282,7 @@ List, same shape as above plus `resolvedAt`. `admin` sees their own co-op's; `su
 { "status": "Approved|Declined" }
 ```
 
-On `Approved` + `type: Withdrawal`: backend must trigger a real payout via §9 (`/payouts/transfer`) to the member's saved bank details before marking it Approved. If the transfer fails, the request must stay `Pending` and the error surfaced back to the client — don't mark Approved if money didn't move.
+On `Approved` + `type: Withdrawal`: backend must trigger a real payout via §10 (`/payouts/transfer`) to the member's saved bank details before marking it Approved. If the transfer fails, the request must stay `Pending` and the error surfaced back to the client — don't mark Approved if money didn't move.
 
 ### `GET /savings/summary?coopId=`
 
@@ -349,7 +349,7 @@ Computed as `min(maxAmount, totalSavings * eligibilityPercent / 100)`.
 { "decision": "Approved|Rejected", "rejectionReason": "string?" }
 ```
 
-On `Approved`: trigger a real payout via §9 to the member's bank details, same "don't mark Approved unless the transfer succeeded" rule as savings withdrawals. Moves status to `Active` (or `Rejected`).
+On `Approved`: trigger a real payout via §10 to the member's bank details, same "don't mark Approved unless the transfer succeeded" rule as savings withdrawals. Moves status to `Active` (or `Rejected`).
 
 ### `GET /cooperatives/:id/loans`
 
@@ -406,7 +406,59 @@ Single record detail.
 
 ---
 
-## 8. Dashboard summary
+## 8. Subscriptions (super_admin only)
+
+```ts
+// CoopSubscriptionPayment shape
+{
+  "id": "string", "paymentRef": "string", "amountPaid": 300000,
+  "method": "Manual|Paystack", "date": "iso-date", "narration": "string",
+  "status": "Active|Overdue" // the co-op's subscription standing as of this payment
+}
+```
+
+### `GET /subscriptions`
+
+List every co-op's subscription standing. Supports `?status=&search=&from=&to=` (date range filters on last-payment date).
+
+```json
+[
+  {
+    "coopId": "string",
+    "coopName": "string",
+    "revenueEarned": 900000, // sum of all payments for this co-op
+    "subscriptionFee": 300000, // recurring fee amount
+    "lastPaymentDate": "iso-date",
+    "status": "Active|Overdue" // most recent payment's status
+  }
+]
+```
+
+### `GET /subscriptions/summary`
+
+```json
+{ "mgtFeesReceived": 1200000 }
+```
+
+Sum of `revenueEarned` across every co-op.
+
+### `GET /cooperatives/:id/subscriptions`
+
+Full payment history for one co-op, newest first — array of `CoopSubscriptionPayment`.
+
+### `POST /cooperatives/:id/subscriptions`
+
+```json
+// Request
+{ "amountPaid": 75000, "narration": "string" }
+// Response: the created CoopSubscriptionPayment (paymentRef and date generated server-side, status "Active")
+```
+
+This is a manual record of money already received (bank transfer, cheque, etc.) — not a payment gateway call. If a real online-collection flow is added later, `method` already supports `"Paystack"` alongside `"Manual"`.
+
+---
+
+## 9. Dashboard summary
 
 ### `GET /dashboard/summary`
 
@@ -424,7 +476,7 @@ This is currently 100% hardcoded fake data on the frontend with no connection to
 
 ---
 
-## 9. Bank & Payouts (already built — Paystack-backed)
+## 10. Bank & Payouts (already built — Paystack-backed)
 
 These four already work today as real Next.js API routes proxying Paystack. Decide with the backend engineer whether Next.js keeps owning them or they move server-side — the contract stays the same either way.
 
@@ -465,7 +517,7 @@ Only needed if Paystack comes back requiring OTP confirmation (live mode); not e
 
 ---
 
-## 10. File upload
+## 11. File upload
 
 ### `POST /uploads`
 
@@ -486,4 +538,3 @@ Currently only used for avatars — should also replace the base64 storage used 
 ## Not in scope
 
 - **Country/State/City dropdowns** — called directly from the browser against `countriesnow.space` (free, public, keyless). No backend work needed unless you want to bring it in-house later.
-- **Subscriptions** — nav item exists but nothing is built behind it yet. Not part of this contract.

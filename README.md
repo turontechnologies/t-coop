@@ -135,6 +135,8 @@ page reload, since there's no backend to persist to).
 | `/notice-board`                                 | All roles: real-time announcements/meeting notices/minutes       | [notice-board-page.md](./documentation/notice-board-page.md)           |
 | `/notice-board/new`                             | Create a notice (admin/super admin only)                         | [notice-board-page.md](./documentation/notice-board-page.md)           |
 | `/notice-board/[id]`                            | A notice + attachment download + the reply/feedback thread       | [notice-board-page.md](./documentation/notice-board-page.md)           |
+| `/subscriptions`                                | Super admin: every co-op's subscription standing + manual upload | [subscriptions-page.md](./documentation/subscriptions-page.md)         |
+| `/subscriptions/[id]`                           | One co-op's full subscription payment history                    | [subscriptions-page.md](./documentation/subscriptions-page.md)         |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -218,12 +220,13 @@ contracts a real backend needs to implement, see
 - [x] Members Directory (admin: list, add with real bank-account verification, bulk import via template, export, edit (including bank details), disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
 - [x] Notice Board (all roles; real cross-tab real-time via `storage` events — announcements, meeting notices, meeting minutes with PDF attachment, scheduled send, reply/feedback thread, live notification bell)
 - [x] Real Paystack Transfers (loan disbursement, savings withdrawal payouts), real bank-account verification, live bank list, live cascading Country/State/City — see [payments-and-payouts.md](./documentation/payments-and-payouts.md)
+- [x] Subscriptions (super admin: every co-op's subscription standing, revenue, manual payment upload, per-co-op payment history — see [subscriptions-page.md](./documentation/subscriptions-page.md))
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client-side callback is trusted for now — see savings-page.md; Transfers, unlike Inline, are already server-initiated)
 - [ ] Admin approval for the member's own "Take a Loan" flow (the legacy personal `LoanRecord` — separate from the co-op loan pipeline the admin Loans page now resolves — stays "Awaiting Approval" indefinitely; see loans-page.md)
 - [ ] OTP confirmation UI for Paystack Transfers that require it (not exercised in test mode — see payments-and-payouts.md)
-- [ ] The dashboard's other non-Dashboard nav items (Subscriptions, Settings, etc.)
+- [ ] Settings nav item (still not built)
 
 ## Known Gotchas
 
