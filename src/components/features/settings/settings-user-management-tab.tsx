@@ -15,6 +15,7 @@ import { EditUserModal } from "@/components/features/settings/edit-user-modal";
 import { InviteUserModal } from "@/components/features/settings/invite-user-modal";
 import { PlatformRolesTable } from "@/components/features/settings/platform-roles-table";
 import { PlatformUsersTable } from "@/components/features/settings/platform-users-table";
+import { logActivity } from "@/lib/audit-log";
 import type { PlatformRole, PlatformUser } from "@/lib/settings-data";
 import type {
   CreateRoleFormValues,
@@ -134,6 +135,12 @@ export function SettingsUserManagementTab() {
   const handleRemoveRole = (role: PlatformRole) => {
     const inUse = platformUsers.some((user) => user.role === role.name);
     if (inUse) {
+      logActivity({
+        module: "Users",
+        action: "Delete",
+        resource: role.name,
+        status: "Failed",
+      });
       toast.error("Can't remove that role", {
         description: `${role.name} is still assigned to at least one user — reassign them first.`,
       });

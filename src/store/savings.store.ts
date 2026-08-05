@@ -23,15 +23,20 @@ export const useSavingsStore = create<SavingsState>()((set, get) => ({
   requests: [],
   addRecord: (record) => {
     set((state) => ({ records: [record, ...state.records] }));
-    logActivity(
-      `Savings recorded: ${formatNaira(record.amount)} (${record.savingsType})`,
-    );
+    logActivity({
+      module: "Savings",
+      action: "Payment",
+      resource: `${formatNaira(record.amount)} — ${record.savingsType}`,
+    });
   },
   addRequest: (request) => {
     set((state) => ({ requests: [request, ...state.requests] }));
-    logActivity(
-      `${request.type} request submitted: ${formatNaira(request.amount)} (${request.savingsType})`,
-    );
+    logActivity({
+      module: "Savings",
+      action: "Create",
+      resource: `${request.type} request — ${formatNaira(request.amount)} (${request.savingsType})`,
+      status: "Info",
+    });
   },
   resolveRequest: (requestId, status) => {
     const request = get().requests.find((r) => r.id === requestId);
@@ -73,9 +78,12 @@ export const useSavingsStore = create<SavingsState>()((set, get) => ({
       return { requests, records: [record, ...state.records] };
     });
     if (request) {
-      logActivity(
-        `${request.type} request ${status.toLowerCase()}: ${formatNaira(request.amount)} for ${request.memberName}`,
-      );
+      logActivity({
+        module: "Savings",
+        action: status === "Approved" ? "Approve" : "Decline",
+        resource: `${formatNaira(request.amount)} ${request.type.toLowerCase()} — ${request.memberName}`,
+        status: status === "Approved" ? "Success" : "Warning",
+      });
     }
   },
 }));

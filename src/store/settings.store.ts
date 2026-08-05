@@ -46,20 +46,36 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   updateFeeSettings: (values) => {
     set({ feeSettings: values });
-    logActivity("Fees & charges updated");
+    logActivity({
+      module: "Settings",
+      action: "Update",
+      resource: "Fees & Charges",
+    });
   },
   updateCollectionAccount: (values) => {
     set({ collectionAccount: values });
-    logActivity("Collections account updated");
+    logActivity({
+      module: "Settings",
+      action: "Update",
+      resource: "Collections Account",
+    });
   },
   updateIntegrations: (values) => {
     set({ integrations: values });
-    logActivity("Integrations updated");
+    logActivity({
+      module: "Settings",
+      action: "Update",
+      resource: "Integrations",
+    });
   },
 
   inviteUser: (user) => {
     set((state) => ({ platformUsers: [user, ...state.platformUsers] }));
-    logActivity(`User invited: ${user.email} (${user.role})`);
+    logActivity({
+      module: "Users",
+      action: "Create",
+      resource: `${user.email} (${user.role})`,
+    });
   },
   updatePlatformUserRole: (userId, role) => {
     const user = get().platformUsers.find((u) => u.id === userId);
@@ -68,7 +84,13 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         u.id === userId ? { ...u, role } : u,
       ),
     }));
-    if (user) logActivity(`User role changed: ${user.name} → ${role}`);
+    if (user) {
+      logActivity({
+        module: "Users",
+        action: "Update",
+        resource: `${user.name} → ${role}`,
+      });
+    }
   },
   setPlatformUserStatus: (userId, status) => {
     const user = get().platformUsers.find((u) => u.id === userId);
@@ -78,9 +100,12 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       ),
     }));
     if (user) {
-      logActivity(
-        `User ${status === "Active" ? "activated" : "disabled"}: ${user.name}`,
-      );
+      logActivity({
+        module: "Users",
+        action: "Update",
+        resource: user.name,
+        status: status === "Active" ? "Success" : "Warning",
+      });
     }
   },
   removePlatformUser: (userId) => {
@@ -88,12 +113,19 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set((state) => ({
       platformUsers: state.platformUsers.filter((u) => u.id !== userId),
     }));
-    if (user) logActivity(`User removed: ${user.name}`);
+    if (user) {
+      logActivity({
+        module: "Users",
+        action: "Delete",
+        resource: user.name,
+        status: "Warning",
+      });
+    }
   },
 
   createRole: (role) => {
     set((state) => ({ platformRoles: [role, ...state.platformRoles] }));
-    logActivity(`Role created: ${role.name}`);
+    logActivity({ module: "Users", action: "Create", resource: role.name });
   },
   updatePlatformRole: (roleId, updates) => {
     set((state) => ({
@@ -101,7 +133,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         role.id === roleId ? { ...role, ...updates } : role,
       ),
     }));
-    logActivity(`Role updated: ${updates.name}`);
+    logActivity({
+      module: "Users",
+      action: "Update",
+      resource: updates.name,
+    });
   },
   setPlatformRoleStatus: (roleId, status) => {
     const role = get().platformRoles.find((r) => r.id === roleId);
@@ -111,9 +147,12 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       ),
     }));
     if (role) {
-      logActivity(
-        `Role ${status === "Active" ? "activated" : "disabled"}: ${role.name}`,
-      );
+      logActivity({
+        module: "Users",
+        action: "Update",
+        resource: role.name,
+        status: status === "Active" ? "Success" : "Warning",
+      });
     }
   },
   removePlatformRole: (roleId) => {
@@ -121,6 +160,13 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set((state) => ({
       platformRoles: state.platformRoles.filter((r) => r.id !== roleId),
     }));
-    if (role) logActivity(`Role removed: ${role.name}`);
+    if (role) {
+      logActivity({
+        module: "Users",
+        action: "Delete",
+        resource: role.name,
+        status: "Warning",
+      });
+    }
   },
 }));

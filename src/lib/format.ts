@@ -41,6 +41,17 @@ export function formatDateLong(date: Date = new Date()): string {
   return `${month} ${day}, ${year}`;
 }
 
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  const datePart = formatDateLong(date);
+  const timePart = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${datePart}, ${timePart}`;
+}
+
 export function formatTimeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const diffMinutes = Math.round(diffMs / 60_000);

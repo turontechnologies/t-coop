@@ -73,7 +73,11 @@ export const useCoopStore = create<CoopState>((set, get) => ({
   cooperatives: INITIAL_COOPERATIVES,
   addCooperative: (coop) => {
     set((state) => ({ cooperatives: [coop, ...state.cooperatives] }));
-    logActivity(`Co-operative created: ${coop.name}`);
+    logActivity({
+      module: "Co-operatives",
+      action: "Create",
+      resource: coop.name,
+    });
   },
   setCooperativeStatus: (coopId, status) => {
     const coop = findCooperative(get().cooperatives, coopId);
@@ -83,9 +87,12 @@ export const useCoopStore = create<CoopState>((set, get) => ({
       ),
     }));
     if (coop) {
-      logActivity(
-        `Co-operative ${status === "Active" ? "activated" : "disabled"}: ${coop.name}`,
-      );
+      logActivity({
+        module: "Co-operatives",
+        action: "Update",
+        resource: coop.name,
+        status: status === "Active" ? "Success" : "Warning",
+      });
     }
   },
   setMemberStatus: (coopId, memberId, status) => {
@@ -104,9 +111,12 @@ export const useCoopStore = create<CoopState>((set, get) => ({
       ),
     }));
     if (member) {
-      logActivity(
-        `Member ${status === "Active" ? "activated" : "deactivated"}: ${coopMemberFullName(member)}`,
-      );
+      logActivity({
+        module: "Members",
+        action: "Update",
+        resource: coopMemberFullName(member),
+        status: status === "Active" ? "Success" : "Warning",
+      });
     }
   },
   updateMember: (coopId, memberId, updates) => {
@@ -122,7 +132,11 @@ export const useCoopStore = create<CoopState>((set, get) => ({
           : c,
       ),
     }));
-    logActivity(`Member updated: ${updates.firstName} ${updates.lastName}`);
+    logActivity({
+      module: "Members",
+      action: "Update",
+      resource: `${updates.firstName} ${updates.lastName}`,
+    });
   },
   addMember: (coopId, member) => {
     set((state) => ({
@@ -130,7 +144,11 @@ export const useCoopStore = create<CoopState>((set, get) => ({
         c.id === coopId ? { ...c, members: [member, ...c.members] } : c,
       ),
     }));
-    logActivity(`Member added: ${coopMemberFullName(member)}`);
+    logActivity({
+      module: "Members",
+      action: "Create",
+      resource: coopMemberFullName(member),
+    });
   },
   addSavingsRecord: (coopId, record) => {
     set((state) => ({
@@ -138,9 +156,11 @@ export const useCoopStore = create<CoopState>((set, get) => ({
         c.id === coopId ? { ...c, savings: [record, ...c.savings] } : c,
       ),
     }));
-    logActivity(
-      `Savings recorded: ${formatNaira(record.amount)} for ${record.memberName}`,
-    );
+    logActivity({
+      module: "Savings",
+      action: "Payment",
+      resource: `${formatNaira(record.amount)} — ${record.memberName}`,
+    });
   },
   resolveSavingsRequest: (coopId, requestId, status) => {
     const coop = findCooperative(get().cooperatives, coopId);
@@ -188,9 +208,12 @@ export const useCoopStore = create<CoopState>((set, get) => ({
       }),
     }));
     if (request) {
-      logActivity(
-        `Savings ${request.type.toLowerCase()} request ${status.toLowerCase()}: ${formatNaira(request.amount)} for ${request.memberName}`,
-      );
+      logActivity({
+        module: "Savings",
+        action: status === "Approved" ? "Approve" : "Decline",
+        resource: `${formatNaira(request.amount)} ${request.type.toLowerCase()} — ${request.memberName}`,
+        status: status === "Approved" ? "Success" : "Warning",
+      });
     }
   },
   respondToGuarantorRequest: (coopId, loanId, decision, documentUrl) => {
@@ -223,9 +246,12 @@ export const useCoopStore = create<CoopState>((set, get) => ({
       }),
     }));
     if (loan) {
-      logActivity(
-        `Guarantor ${decision.toLowerCase()} loan: ${formatNaira(loan.amount)} for ${loan.memberName}`,
-      );
+      logActivity({
+        module: "Loans",
+        action: decision === "Accepted" ? "Approve" : "Decline",
+        resource: `${formatNaira(loan.amount)} — ${loan.memberName} (guarantor)`,
+        status: decision === "Accepted" ? "Success" : "Warning",
+      });
     }
   },
   resolveLoanRequest: (coopId, loanId, decision, rejectionReason) => {
@@ -248,9 +274,12 @@ export const useCoopStore = create<CoopState>((set, get) => ({
       }),
     }));
     if (loan) {
-      logActivity(
-        `Loan ${decision.toLowerCase()}: ${formatNaira(loan.amount)} for ${loan.memberName}`,
-      );
+      logActivity({
+        module: "Loans",
+        action: decision === "Approved" ? "Approve" : "Decline",
+        resource: `${formatNaira(loan.amount)} — ${loan.memberName}`,
+        status: decision === "Approved" ? "Success" : "Warning",
+      });
     }
   },
   addSubscriptionPayment: (coopId, payment) => {
@@ -265,8 +294,10 @@ export const useCoopStore = create<CoopState>((set, get) => ({
           : c,
       ),
     }));
-    logActivity(
-      `Subscription payment recorded: ${formatNaira(payment.amountPaid)} for ${coop?.name ?? coopId}`,
-    );
+    logActivity({
+      module: "Subscriptions",
+      action: "Payment",
+      resource: `${formatNaira(payment.amountPaid)} — ${coop?.name ?? coopId}`,
+    });
   },
 }));

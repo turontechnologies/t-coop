@@ -132,7 +132,11 @@ export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Upload failed");
       setAvatarUrl(data.url);
-      logActivity("Profile photo updated");
+      logActivity({
+        module: "Settings",
+        action: "Update",
+        resource: "Profile photo",
+      });
       toast.success("Profile photo updated");
     } catch (error) {
       toast.error("Couldn't upload photo", {
@@ -185,11 +189,16 @@ export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
       phone: values.phone,
       country: values.country,
     });
-    logActivity("Profile updated");
+    logActivity({ module: "Settings", action: "Update", resource: "Profile" });
 
     if (anyPasswordFilled) {
       updateMockUserPassword(member.id, passwordFields.newPassword);
-      logActivity("Password changed");
+      logActivity({
+        module: "Settings",
+        action: "Update",
+        resource: "Password",
+        status: "Info",
+      });
     }
 
     setSaving(false);

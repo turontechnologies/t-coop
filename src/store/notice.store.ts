@@ -30,7 +30,11 @@ export const useNoticeStore = create<NoticeState>()(
       readMarkers: {},
       addNotice: (notice) => {
         set((state) => ({ notices: [notice, ...state.notices] }));
-        logActivity(`Notice created: ${notice.title}`);
+        logActivity({
+          module: "Notices",
+          action: "Create",
+          resource: notice.title,
+        });
       },
       deleteNotice: (id) => {
         const notice = get().notices.find((n) => n.id === id);
@@ -38,7 +42,14 @@ export const useNoticeStore = create<NoticeState>()(
           notices: state.notices.filter((n) => n.id !== id),
           replies: state.replies.filter((reply) => reply.noticeId !== id),
         }));
-        if (notice) logActivity(`Notice deleted: ${notice.title}`);
+        if (notice) {
+          logActivity({
+            module: "Notices",
+            action: "Delete",
+            resource: notice.title,
+            status: "Warning",
+          });
+        }
       },
       resendNotice: (id) => {
         const notice = get().notices.find((n) => n.id === id);
@@ -47,12 +58,23 @@ export const useNoticeStore = create<NoticeState>()(
             n.id === id ? { ...n, sendAt: new Date().toISOString() } : n,
           ),
         }));
-        if (notice) logActivity(`Notice resent: ${notice.title}`);
+        if (notice) {
+          logActivity({
+            module: "Notices",
+            action: "Update",
+            resource: notice.title,
+          });
+        }
       },
       addReply: (reply) => {
         set((state) => ({ replies: [...state.replies, reply] }));
         const notice = get().notices.find((n) => n.id === reply.noticeId);
-        logActivity(`Replied to notice: ${notice?.title ?? reply.noticeId}`);
+        logActivity({
+          module: "Notices",
+          action: "Create",
+          resource: `Reply — ${notice?.title ?? reply.noticeId}`,
+          status: "Info",
+        });
       },
       markRead: (memberId, noticeId) =>
         set((state) => ({

@@ -105,19 +105,30 @@ log.
   `@base-ui/react/switch` export, just no shadcn wrapper existed yet).
   A role with every module checked displays as "All access" in the
   table, matching the mockup, rather than listing all nine.
-- **Logs is a genuine, app-wide audit trail, not a static list.** Moved
-  out of `useSettingsStore` into its own persisted `useAuditLogStore`
-  (`src/store/audit-log.store.ts`, localStorage-backed like the notice
-  board store) and a `logActivity(activity: string)` utility
-  (`src/lib/audit-log.ts`) that reads the signed-in member via
-  `useAuthStore.getState()` — callable from anywhere, including inside
-  other Zustand stores' actions, since it isn't a React hook. Wired
-  into every mutating action across the app: login, co-op create/
-  disable/member add/edit/status, savings records/requests/approvals,
-  loan requests/guarantor decisions/admin decisions, subscription
-  payments, notices (create/delete/resend/reply), and every Settings
-  action (fees, integrations, invite/edit/disable/remove user,
-  create/edit/disable/remove role, profile/password/photo changes).
+- **Logs is a genuine, structured, app-wide audit trail, not a static
+  list.** Moved out of `useSettingsStore` into its own persisted
+  `useAuditLogStore` (`src/store/audit-log.store.ts`, localStorage-
+  backed like the notice board store — key bumped to `tcoop-audit-log-v2`
+  when the entry shape changed mid-session, so stale pre-shape data in a
+  browser's storage doesn't crash the UI) and a `logActivity({ module,
+action, resource, status? })` utility (`src/lib/audit-log.ts`) that
+  reads the signed-in member via `useAuthStore.getState()` — callable
+  from anywhere, including inside other Zustand stores' actions, since
+  it isn't a React hook. Each entry has a real `module`
+  (`Authentication`, `Co-operatives`, `Members`, `Savings`, `Loans`,
+  `Subscriptions`, `Notices`, `Settings`, `Users`), `action` (`Login`,
+  `Create`, `Update`, `Delete`, `Approve`, `Decline`, `Payment`), and
+  `status` (`Success`/`Info`/`Warning`/`Failed`) — not a free-text
+  sentence — derived honestly from what actually happened (e.g. a
+  decline or disable logs `Warning`; the one place removal is genuinely
+  blocked — deleting a role still assigned to a user — logs a real
+  `Failed`, not a fabricated one). Wired into every mutating action
+  across the app: login, co-op create/disable/member add/edit/status,
+  savings records/requests/approvals, loan requests/guarantor
+  decisions/admin decisions, subscription payments, notices (create/
+  delete/resend/reply), and every Settings action (fees, integrations,
+  invite/edit/disable/remove user, create/edit/disable/remove role,
+  profile/password/photo changes).
   Each entry also resolves an **approximate IP-based location**
   (`src/lib/ip-location.ts`, via `ipwho.is` — free, keyless, CORS-open,
   same pattern as `geo-lookup.ts`'s countriesnow.space) in the
@@ -125,7 +136,21 @@ log.
 "Locating…"`, then patched in place once the lookup resolves (or
   `"Unknown"` if it fails). This is genuinely live and was verified
   end-to-end — disabling a user in this session produced a real
-  "Just now" / real resolved-city entry, not a canned one.
+  "Just now" / real resolved-city entry, not a canned one. The same
+  `ipwho.is` response also returns the caller's public IP, so the same
+  lookup fills both the Location and IP Address columns (`ip-location.ts`
+  now returns `{ location, ipAddress }` instead of a bare string).
+- **Row click or "More" opens a details side panel**, not another modal
+  — a new `Sheet` primitive (`src/components/ui/sheet.tsx`) reuses
+  `Dialog`'s exact structure/Base UI plumbing but slides in from the
+  right edge instead of centering, matching the reference's "comes in
+  by the side" request without introducing a different interaction
+  pattern. `ActivityDetailsPanel` shows every real field on the entry
+  (Event ID with copy-to-clipboard, Time, User, Role, Action, Module,
+  Resource, Status, IP Address, Location) plus a colored status banner
+  — deliberately **not** the reference's Device/Browser/Session
+  ID/File Size/Metadata fields, since this app doesn't track any of
+  those and fabricating them would misrepresent what's actually logged.
 
 ## Components
 
@@ -147,13 +172,20 @@ log.
   `edit-user-modal.tsx`, `create-role-modal.tsx` (create + edit mode),
   `settings-user-management-tab.tsx` — the modals and wiring.
 - `src/components/features/settings/settings-logs-tab.tsx` — searchable
-  audit-log table with a Location column.
+  audit-log table (Time/User/Role/Module/Action/Resource/Status/IP
+  Address/More), each Module and Action rendered with its own icon,
+  each Status as a colored badge.
+- `src/components/features/settings/activity-details-panel.tsx` — the
+  slide-in detail view for one entry.
 - `src/lib/audit-log.ts`, `src/lib/audit-log-data.ts`,
-  `src/lib/ip-location.ts` — the logging utility, its entry type/seed
-  data, and the IP-geolocation lookup.
+  `src/lib/audit-log-ui.ts`, `src/lib/ip-location.ts` — the logging
+  utility, its entry type/seed data, the shared module/action/status
+  icon and color maps (used by both the table and the panel), and the
+  IP-geolocation lookup.
 - `src/store/audit-log.store.ts` — persisted audit-log entries.
 - `src/hooks/use-countries.ts` — cached country list hook.
-- `src/components/ui/switch.tsx` — new shadcn-style Switch primitive.
+- `src/components/ui/switch.tsx`, `src/components/ui/sheet.tsx` — new
+  shadcn-style primitives (toggle switch; right-edge slide-in panel).
 - `src/store/settings.store.ts` — fee settings, collection account,
   integrations, platform users, platform roles (no longer holds the
   activity log — see `audit-log.store.ts`).

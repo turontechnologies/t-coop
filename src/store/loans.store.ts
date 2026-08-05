@@ -12,8 +12,11 @@ export const useLoansStore = create<LoansState>((set) => ({
   records: INITIAL_LOAN_RECORDS,
   addRecord: (record) => {
     set((state) => ({ records: [record, ...state.records] }));
-    logActivity(
-      `Loan requested: ${formatNaira(record.amount)} (${record.loanType})`,
-    );
+    logActivity({
+      module: "Loans",
+      action: "Create",
+      resource: `${formatNaira(record.amount)} — ${record.loanType}`,
+      status: "Info",
+    });
   },
 }));

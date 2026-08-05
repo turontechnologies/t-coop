@@ -64,7 +64,11 @@ export function LoginForm() {
       const response = await login.mutateAsync(values);
       setKeepLoggedIn(values.keepLoggedIn);
       setMember(response.member);
-      logActivity("User login");
+      logActivity({
+        module: "Authentication",
+        action: "Login",
+        resource: response.member.email,
+      });
       setSignedInName(response.member.name);
     } catch (error) {
       toast.error("Sign in failed", {
