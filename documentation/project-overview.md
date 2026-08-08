@@ -49,6 +49,8 @@ full page reload since there's no backend to persist to.
 | Paystack Transfers (loan disbursement, savings withdrawal payout)                 | **Real**                                                     | `src/app/api/paystack/transfer`, `/transfer/finalize`         |
 | Cloudinary profile-photo upload                                                   | **Real** — needs `CLOUDINARY_*` env vars                     | `src/app/api/upload`                                          |
 | Country/State/City cascade                                                        | **Real** — free public API, called directly from the browser | `src/lib/geo-lookup.ts` (countriesnow.space)                  |
+| IP geolocation for the audit log                                                  | **Real** — free public API, called directly from the browser | `src/lib/ip-location.ts` (ipwho.is)                           |
+| Live currency conversion rates                                                    | **Real** — free public API, polled every 5 min               | `src/lib/exchange-rate.ts` (open.er-api.com)                  |
 | Everything else (auth, members, savings/loan records, notices, dashboard numbers) | **Mocked** — in-memory only, resets on reload                | `src/lib/*-data.ts`, `src/store/*.store.ts`                   |
 
 Two known real-world constraints discovered while building the payout
@@ -208,11 +210,16 @@ same "illustrative settings" pattern as super admin's Fees & Charges);
 new/edit a loan type is a full page
 (`/settings/loans/new`, `?id=` for edit) since that form has far more
 fields than a modal comfortably holds. **Co-operative Settings** — the
-co-op's own profile + committee members, and its own bank account
-(Co-operative/Bank Accounts sub-tabs). **User Management** — the exact
-same component super admin uses (platform staff is currently shared
-between the two roles, not per-co-operative). See
-[admin-settings-page.md](./admin-settings-page.md).
+co-op's own profile + committee members, its own bank account
+(Co-operative/Bank Accounts sub-tabs), and its **currency** — a
+searchable picker over ~160 real ISO 4217 currencies, writing directly
+to the real `Cooperative` record (not the illustrative settings pattern
+above — this one needs to be genuinely visible to the super admin, so
+it can't live in a disconnected sandbox). **User Management** — the
+exact same component super admin uses (platform staff is currently
+shared between the two roles, not per-co-operative). See
+[admin-settings-page.md](./admin-settings-page.md) and
+[currency-conversion.md](./currency-conversion.md).
 
 Not yet extended to the member role.
 
@@ -454,7 +461,8 @@ src/
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
 - [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload, per-co-op history)
-- [x] Settings (super admin: profile/password, fees & collections account, dual Paystack/Flutterwave toggles, staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location. admin: profile + personal bank, savings/loan type catalog CRUD, co-op profile + bank account, shared staff management)
+- [x] Settings (super admin: profile/password, fees & collections account, dual Paystack/Flutterwave toggles, staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location. admin: profile + personal bank, savings/loan type catalog CRUD, co-op profile + bank account + currency, shared staff management)
+- [x] Per-co-op currency + live conversion rate (admin sets it, super admin sees it live everywhere a co-op shows up)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything in `src/services/*.service.ts` is mocked)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client callback trusted for now)
@@ -462,6 +470,7 @@ src/
 - [ ] OTP confirmation UI for Paystack Transfers (not exercised in test mode)
 - [ ] Dashboard's real numbers (currently 100% static)
 - [ ] Settings for the member role (still not built — the nav label has no `href` for member)
+- [ ] A co-op's currency isn't yet reflected in displayed amounts app-wide (savings/loans tables, dashboard) — only the currency label + live rate are wired up
 
 ## Known Gotchas
 
@@ -500,6 +509,7 @@ CLOUDINARY_API_SECRET=...
 - [subscriptions-page.md](./subscriptions-page.md)
 - [settings-page.md](./settings-page.md)
 - [admin-settings-page.md](./admin-settings-page.md)
+- [currency-conversion.md](./currency-conversion.md)
 - [payments-and-payouts.md](./payments-and-payouts.md)
 - [theming-and-motion.md](./theming-and-motion.md)
 - [api-contracts.md](./api-contracts.md) — what a real backend needs to build

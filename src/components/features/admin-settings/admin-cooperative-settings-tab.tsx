@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/tabs";
 import { CooperativeDetailsForm } from "@/components/features/admin-settings/cooperative-details-form";
 import { CoopBankAccountForm } from "@/components/features/admin-settings/coop-bank-account-form";
+import { CoopCurrencyForm } from "@/components/features/admin-settings/coop-currency-form";
 
 export function AdminCooperativeSettingsTab() {
   return (
@@ -19,7 +20,8 @@ export function AdminCooperativeSettingsTab() {
         <TabsIndicator />
       </TabsList>
 
-      <TabsPanel value="coop">
+      <TabsPanel value="coop" className="space-y-6">
+        <CoopCurrencyForm />
         <CooperativeDetailsForm />
       </TabsPanel>
       <TabsPanel value="bank">

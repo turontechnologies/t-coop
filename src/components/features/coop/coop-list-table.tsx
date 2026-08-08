@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CoopCurrencyDisplay } from "@/components/features/coop/coop-currency-display";
 import {
   coopLoansBySummaryType,
   coopLoansTotal,
@@ -114,6 +115,9 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
                 Total Loans
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
+                Currency
+              </th>
+              <th className="px-4 py-2.5 font-medium text-foreground">
                 Status
               </th>
             </tr>
@@ -122,7 +126,7 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
             {pageRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No co-operatives match your search.
@@ -160,6 +164,12 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       {formatNaira(totalLoans)}
+                    </td>
+                    <td
+                      className="px-4 py-3"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <CoopCurrencyDisplay currency={coop.currency} />
                     </td>
                     <td className="px-4 py-3">
                       <Badge

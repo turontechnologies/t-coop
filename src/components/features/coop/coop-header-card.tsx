@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
+import { CoopCurrencyDisplay } from "@/components/features/coop/coop-currency-display";
 import type { Cooperative } from "@/lib/coop-data";
 import { coopLoansTotal, coopSavingsTotal } from "@/lib/coop-data";
 import { formatNaira } from "@/lib/format";
@@ -72,6 +73,10 @@ export function CoopHeaderCard({ coop }: CoopHeaderCardProps) {
             value={formatNaira(coopSavingsTotal(coop))}
           />
           <Field label="Total Loan" value={formatNaira(coopLoansTotal(coop))} />
+        </div>
+
+        <div className="max-w-xs">
+          <CoopCurrencyDisplay currency={coop.currency} variant="full" />
         </div>
       </CardContent>
     </Card>

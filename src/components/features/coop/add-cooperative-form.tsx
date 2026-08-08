@@ -88,6 +88,7 @@ export function AddCooperativeForm() {
       savingsRequests: [],
       subscriptionFee: 150_000,
       subscriptionPayments: [],
+      currency: "NGN",
     };
 
     addCooperative(coop);

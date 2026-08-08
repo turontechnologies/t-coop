@@ -111,6 +111,8 @@ export interface Cooperative {
   savingsRequests: SavingsRequest[];
   subscriptionFee: number;
   subscriptionPayments: CoopSubscriptionPayment[];
+  /** ISO 4217 code — the currency this co-op's admin has set for its members. Set only by that co-op's admin. */
+  currency: string;
 }
 
 export const INITIAL_COOPERATIVES: Cooperative[] = [
@@ -381,6 +383,7 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Active",
       },
     ],
+    currency: "NGN",
   },
   {
     id: "COOP-0002",
@@ -482,6 +485,7 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Active",
       },
     ],
+    currency: "USD",
   },
   {
     id: "COOP-0003",
@@ -526,6 +530,7 @@ export const INITIAL_COOPERATIVES: Cooperative[] = [
         status: "Overdue",
       },
     ],
+    currency: "GHS",
   },
 ];
 

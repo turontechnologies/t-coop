@@ -67,6 +67,8 @@ interface CoopState {
     coopId: string,
     payment: CoopSubscriptionPayment,
   ) => void;
+  /** Admin-only in the UI — the store itself doesn't enforce role, callers do. */
+  setCoopCurrency: (coopId: string, currency: string) => void;
 }
 
 export const useCoopStore = create<CoopState>((set, get) => ({
@@ -298,6 +300,19 @@ export const useCoopStore = create<CoopState>((set, get) => ({
       module: "Subscriptions",
       action: "Payment",
       resource: `${formatNaira(payment.amountPaid)} — ${coop?.name ?? coopId}`,
+    });
+  },
+  setCoopCurrency: (coopId, currency) => {
+    const coop = findCooperative(get().cooperatives, coopId);
+    set((state) => ({
+      cooperatives: state.cooperatives.map((c) =>
+        c.id === coopId ? { ...c, currency } : c,
+      ),
+    }));
+    logActivity({
+      module: "Settings",
+      action: "Update",
+      resource: `Currency — ${coop?.name ?? coopId} → ${currency}`,
     });
   },
 }));
