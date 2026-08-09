@@ -3,6 +3,10 @@
 import { useMemo } from "react";
 import { Landmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { LOAN_TYPES, type LoanTypeDef } from "@/lib/loans-data";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -84,7 +88,7 @@ export function MembersLoansOverview() {
             />
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-b border-border bg-accent/60">
@@ -131,6 +135,27 @@ export function MembersLoansOverview() {
               </tbody>
             </table>
           </div>
+
+          <MobileRecordList>
+            {totalsByType.map((type) => (
+              <MobileRecordCard
+                key={type.name}
+                title={type.name}
+                fields={[
+                  { label: "Interest Rate", value: `${type.interestRate}%` },
+                  {
+                    label: "Max Amount",
+                    value: formatMoney(type.maxAmount, currency),
+                  },
+                  {
+                    label: "Total Disbursed",
+                    value: formatMoney(type.totalDisbursed, currency),
+                  },
+                  { label: "Active Loans", value: type.activeCount },
+                ]}
+              />
+            ))}
+          </MobileRecordList>
         </CardContent>
       </Card>
     </div>

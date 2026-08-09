@@ -2,17 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { CoopCurrencyDisplay } from "@/components/features/coop/coop-currency-display";
 import {
   coopLoansBySummaryType,
@@ -89,7 +86,7 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[880px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
@@ -192,67 +189,79 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <span>View</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => {
-              setPageSize(Number(value));
-              setPage(1);
-            }}
-          >
-            <SelectTrigger size="sm" className="w-16">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span>per page</span>
-        </div>
+      <MobileRecordList
+        isEmpty={pageRows.length === 0}
+        emptyMessage="No co-operatives match your search."
+      >
+        {pageRows.map(
+          ({
+            coop,
+            earningsOnSavings,
+            totalSavings,
+            earningsOnLoans,
+            totalLoans,
+          }) => (
+            <MobileRecordCard
+              key={coop.id}
+              onClick={() => router.push(`/co-operatives/${coop.id}`)}
+              title={coop.name}
+              badge={
+                <Badge
+                  variant={
+                    coop.status === "Active" ? "secondary" : "destructive"
+                  }
+                  className={cn(
+                    coop.status === "Active" && "bg-success/15 text-success",
+                  )}
+                >
+                  {coop.status}
+                </Badge>
+              }
+              fields={[
+                { label: "Co-op ID", value: coop.id },
+                {
+                  label: "No of members",
+                  value: coop.members.length.toLocaleString(),
+                },
+                {
+                  label: "Earnings on Savings",
+                  value: formatMoney(earningsOnSavings, coop.currency),
+                },
+                {
+                  label: "Total Savings",
+                  value: formatMoney(totalSavings, coop.currency),
+                },
+                {
+                  label: "Earnings on Loans",
+                  value: formatMoney(earningsOnLoans, coop.currency),
+                },
+                {
+                  label: "Total Loans",
+                  value: formatMoney(totalLoans, coop.currency),
+                },
+                {
+                  label: "Currency",
+                  value: <CoopCurrencyDisplay currency={coop.currency} />,
+                },
+              ]}
+            />
+          ),
+        )}
+      </MobileRecordList>
 
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="text-muted-foreground"
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-            <Button
-              key={num}
-              type="button"
-              variant={num === currentPage ? "default" : "ghost"}
-              size="icon"
-              onClick={() => setPage(num)}
-              className="text-sm font-medium"
-            >
-              {num}
-            </Button>
-          ))}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="text-muted-foreground"
-            aria-label="Next page"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+      {filtered.length > 0 ? (
+        <TablePagination
+          page={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

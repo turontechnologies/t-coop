@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
+import {
   Tabs,
   TabsIndicator,
   TabsList,
@@ -159,7 +163,7 @@ export default function CoopLoanRecordPage({
               </TabsList>
 
               <TabsPanel value="schedule">
-                <div className="overflow-x-auto rounded-xl border border-border">
+                <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
                   <table className="w-full min-w-[640px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-border bg-accent/60">
@@ -214,10 +218,51 @@ export default function CoopLoanRecordPage({
                     </tbody>
                   </table>
                 </div>
+
+                <MobileRecordList
+                  isEmpty={schedule.length === 0}
+                  emptyMessage="No repayment schedule yet."
+                >
+                  {schedule.map((item) => (
+                    <MobileRecordCard
+                      key={item.installment}
+                      title={`Installment ${item.installment}`}
+                      badge={
+                        <Badge
+                          variant={repaymentBadgeVariant(item.status)}
+                          className={cn(
+                            item.status === "Paid" &&
+                              "bg-success/15 text-success",
+                          )}
+                        >
+                          {item.status}
+                        </Badge>
+                      }
+                      fields={[
+                        {
+                          label: "Amount",
+                          value: formatMoney(item.amount, coop.currency),
+                        },
+                        {
+                          label: "Interest",
+                          value: formatMoney(item.interest, coop.currency),
+                        },
+                        {
+                          label: "Total Amount",
+                          value: formatMoney(item.totalAmount, coop.currency),
+                        },
+                        {
+                          label: "Due Date",
+                          value: formatDateLong(new Date(item.dueDate)),
+                        },
+                      ]}
+                    />
+                  ))}
+                </MobileRecordList>
               </TabsPanel>
 
               <TabsPanel value="transactions">
-                <div className="overflow-x-auto rounded-xl border border-border">
+                <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
                   <table className="w-full min-w-[560px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-border bg-accent/60">
@@ -280,6 +325,37 @@ export default function CoopLoanRecordPage({
                     </tbody>
                   </table>
                 </div>
+
+                <MobileRecordList
+                  isEmpty={transactions.length === 0}
+                  emptyMessage="No repayment transactions yet."
+                >
+                  {transactions.map((transaction) => (
+                    <MobileRecordCard
+                      key={transaction.transactionId}
+                      title={transaction.transactionId}
+                      badge={
+                        <Badge
+                          variant="secondary"
+                          className="bg-success/15 text-success"
+                        >
+                          {transaction.status}
+                        </Badge>
+                      }
+                      fields={[
+                        {
+                          label: "Amount",
+                          value: formatMoney(transaction.amount, coop.currency),
+                        },
+                        {
+                          label: "Date",
+                          value: formatDateLong(new Date(transaction.date)),
+                        },
+                        { label: "Method", value: transaction.method },
+                      ]}
+                    />
+                  ))}
+                </MobileRecordList>
               </TabsPanel>
             </Tabs>
           </CardContent>

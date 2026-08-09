@@ -2,18 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Pencil, Power, Search } from "lucide-react";
+import { Pencil, Power, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
@@ -161,118 +158,56 @@ export function MembersDirectoryTable({ members }: MembersDirectoryTableProps) {
         </table>
       </div>
 
-      {/* Mobile stacked cards */}
-      <div className="space-y-3 sm:hidden">
-        {pageMembers.length === 0 ? (
-          <div className="rounded-xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            No members match your search.
-          </div>
-        ) : (
-          pageMembers.map((member) => {
-            const isActive = member.status === "Active";
-            const goToMember = () => router.push(`/members/${member.id}`);
-            return (
-              <div
-                key={member.id}
-                role="button"
-                tabIndex={0}
-                onClick={goToMember}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    goToMember();
-                  }
-                }}
-                className="w-full cursor-pointer space-y-2 rounded-xl border border-border bg-card p-4 text-left text-sm"
-              >
-                <MobileField label="Member Id" value={member.id} />
-                <MobileField label="First Name" value={member.firstName} />
-                <MobileField label="Last Name" value={member.lastName} />
-                <MobileField label="Email Address" value={member.email} />
-                <div className="flex items-center justify-between border-t border-border pt-2">
-                  <span className="text-xs text-muted-foreground">Status</span>
-                  <Badge
-                    variant={isActive ? "secondary" : "outline"}
-                    className={cn(isActive && "bg-success/15 text-success")}
-                  >
-                    {member.status}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between border-t border-border pt-2">
-                  <span className="text-xs text-muted-foreground">Actions</span>
-                  <MemberRowActions
-                    member={member}
-                    onEdit={() => setEditingMember(member)}
-                    onToggle={() => handleToggleStatus(member)}
-                  />
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+      <MobileRecordList
+        isEmpty={pageMembers.length === 0}
+        emptyMessage="No members match your search."
+      >
+        {pageMembers.map((member) => {
+          const isActive = member.status === "Active";
+          return (
+            <MobileRecordCard
+              key={member.id}
+              onClick={() => router.push(`/members/${member.id}`)}
+              title={coopMemberFullName(member)}
+              badge={
+                <Badge
+                  variant={isActive ? "secondary" : "outline"}
+                  className={cn(isActive && "bg-success/15 text-success")}
+                >
+                  {member.status}
+                </Badge>
+              }
+              fields={[
+                { label: "Member Id", value: member.id },
+                { label: "First Name", value: member.firstName },
+                { label: "Last Name", value: member.lastName },
+                { label: "Email Address", value: member.email },
+              ]}
+              actions={
+                <MemberRowActions
+                  member={member}
+                  onEdit={() => setEditingMember(member)}
+                  onToggle={() => handleToggleStatus(member)}
+                />
+              }
+            />
+          );
+        })}
+      </MobileRecordList>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <span>View</span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => {
-              setPageSize(Number(value));
-              setPage(1);
-            }}
-          >
-            <SelectTrigger size="sm" className="w-16">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span>per page</span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="text-muted-foreground"
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-            <Button
-              key={num}
-              type="button"
-              variant={num === currentPage ? "default" : "ghost"}
-              size="icon"
-              onClick={() => setPage(num)}
-              className="text-sm font-medium"
-            >
-              {num}
-            </Button>
-          ))}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="text-muted-foreground"
-            aria-label="Next page"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
+      {filtered.length > 0 ? (
+        <TablePagination
+          page={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1);
+          }}
+        />
+      ) : null}
 
       {editingMember ? (
         <EditMemberModal
@@ -284,15 +219,6 @@ export function MembersDirectoryTable({ members }: MembersDirectoryTableProps) {
           }}
         />
       ) : null}
-    </div>
-  );
-}
-
-function MobileField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
     </div>
   );
 }

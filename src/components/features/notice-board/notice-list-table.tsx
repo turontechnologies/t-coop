@@ -19,6 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -333,7 +337,7 @@ export function NoticeListTable({ notices }: NoticeListTableProps) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
@@ -417,6 +421,51 @@ export function NoticeListTable({ notices }: NoticeListTableProps) {
           </tbody>
         </table>
       </div>
+
+      <MobileRecordList
+        isEmpty={pageNotices.length === 0}
+        emptyMessage="No notices match your filters."
+      >
+        {pageNotices.map((notice) => {
+          const status = getNoticeStatus(notice);
+          return (
+            <MobileRecordCard
+              key={notice.id}
+              onClick={() => router.push(`/notice-board/${notice.id}`)}
+              title={notice.title}
+              badge={
+                <Badge
+                  variant={status === "Sent" ? "secondary" : "outline"}
+                  className={cn(
+                    status === "Sent" && "bg-success/15 text-success",
+                  )}
+                >
+                  {status}
+                </Badge>
+              }
+              fields={[
+                {
+                  label: "Published Date",
+                  value: formatDateLong(new Date(notice.sendAt)),
+                },
+                { label: "Medium Type", value: notice.medium },
+                {
+                  label: "Announcement",
+                  value: noticeExcerpt(notice.message),
+                },
+              ]}
+              actions={
+                <Checkbox
+                  checked={selected.has(notice.id)}
+                  onCheckedChange={() => toggleSelected(notice.id)}
+                  onClick={(event) => event.stopPropagation()}
+                  aria-label={`Select ${notice.title}`}
+                />
+              }
+            />
+          );
+        })}
+      </MobileRecordList>
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <span>

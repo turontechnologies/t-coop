@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 import { MoreHorizontal, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ActivityDetailsPanel } from "@/components/features/settings/activity-details-panel";
+import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
 import { ACTION_ICONS, MODULE_ICONS, STATUS_STYLES } from "@/lib/audit-log-ui";
 import { formatTimeAgo, getInitials } from "@/lib/format";
 import type { AuditLogEntry } from "@/lib/audit-log-data";
@@ -54,7 +58,7 @@ export function SettingsLogsTab() {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[920px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
@@ -171,6 +175,72 @@ export function SettingsLogsTab() {
           </tbody>
         </table>
       </div>
+
+      <MobileRecordList
+        isEmpty={filtered.length === 0}
+        emptyMessage="No activity matches your search."
+      >
+        {filtered.map((entry) => {
+          const ModuleIcon = MODULE_ICONS[entry.module];
+          const ActionIcon = ACTION_ICONS[entry.action];
+          const statusStyle = STATUS_STYLES[entry.status];
+          const StatusIcon = statusStyle.icon;
+          return (
+            <MobileRecordCard
+              key={entry.id}
+              onClick={() => setSelectedEntry(entry)}
+              title={
+                <span className="flex items-center gap-2">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                    {getInitials(entry.activityBy)}
+                  </span>
+                  {entry.activityBy}
+                </span>
+              }
+              badge={
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                    statusStyle.badgeClassName,
+                  )}
+                >
+                  <StatusIcon className="size-3" aria-hidden="true" />
+                  {entry.status}
+                </span>
+              }
+              fields={[
+                { label: "Time", value: formatTimeAgo(entry.date) },
+                { label: "Role", value: entry.role },
+                {
+                  label: "Module",
+                  value: (
+                    <span className="flex items-center gap-1.5">
+                      <ModuleIcon className="size-3.5" aria-hidden="true" />
+                      {entry.module}
+                    </span>
+                  ),
+                },
+                {
+                  label: "Action",
+                  value: (
+                    <span className="flex items-center gap-1.5">
+                      <ActionIcon className="size-3.5" aria-hidden="true" />
+                      {entry.action}
+                    </span>
+                  ),
+                },
+                { label: "Resource", value: entry.resource },
+                {
+                  label: "IP Address",
+                  value: (
+                    <span className="font-mono text-xs">{entry.ipAddress}</span>
+                  ),
+                },
+              ]}
+            />
+          );
+        })}
+      </MobileRecordList>
 
       <ActivityDetailsPanel
         entry={selectedEntry}

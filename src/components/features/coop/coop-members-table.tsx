@@ -6,6 +6,10 @@ import { Pencil, Power, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
 import {
@@ -63,7 +67,7 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
@@ -177,6 +181,73 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
           </tbody>
         </table>
       </div>
+
+      <MobileRecordList
+        isEmpty={filtered.length === 0}
+        emptyMessage="No members match your search."
+      >
+        {filtered.map((member) => {
+          const isActive = member.status === "Active";
+          const fullName = coopMemberFullName(member);
+          return (
+            <MobileRecordCard
+              key={member.id}
+              onClick={() =>
+                router.push(`/co-operatives/${coop.id}/members/${member.id}`)
+              }
+              title={fullName}
+              badge={
+                <Badge
+                  variant={isActive ? "secondary" : "outline"}
+                  className={cn(isActive && "bg-success/15 text-success")}
+                >
+                  {member.status}
+                </Badge>
+              }
+              fields={[
+                { label: "Members Id", value: member.id },
+                { label: "Email Address", value: member.email },
+                { label: "Role", value: member.role },
+              ]}
+              actions={
+                <>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setEditingMember(member);
+                    }}
+                    className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label={`Edit ${fullName}`}
+                  >
+                    <Pencil className="size-3.5" aria-hidden="true" />
+                  </button>
+                  <ConfirmToggleDialog
+                    trigger={
+                      <button
+                        type="button"
+                        onClick={(event) => event.stopPropagation()}
+                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label={
+                          isActive
+                            ? `Disable ${fullName}`
+                            : `Activate ${fullName}`
+                        }
+                      />
+                    }
+                    entityLabel="Member"
+                    name={fullName}
+                    isActive={isActive}
+                    onConfirm={() => handleToggleStatus(member)}
+                  >
+                    <Power className="size-3.5" aria-hidden="true" />
+                  </ConfirmToggleDialog>
+                </>
+              }
+            />
+          );
+        })}
+      </MobileRecordList>
 
       {editingMember ? (
         <EditMemberModal

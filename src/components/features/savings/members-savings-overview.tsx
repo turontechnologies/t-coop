@@ -3,6 +3,10 @@
 import { useMemo } from "react";
 import { Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { SAVINGS_TYPES, type SavingsTypeDef } from "@/lib/savings-data";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -70,7 +74,7 @@ export function MembersSavingsOverview() {
             />
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
                 <tr className="border-b border-border bg-accent/60">
@@ -111,6 +115,29 @@ export function MembersSavingsOverview() {
               </tbody>
             </table>
           </div>
+
+          <MobileRecordList>
+            {totalsByType.map((type) => (
+              <MobileRecordCard
+                key={type.name}
+                title={type.name}
+                fields={[
+                  {
+                    label: "Minimum Savings",
+                    value: formatMoney(type.min, currency),
+                  },
+                  {
+                    label: "Maximum Savings",
+                    value: formatMoney(type.max, currency),
+                  },
+                  {
+                    label: "Total Savings & Contributions",
+                    value: formatMoney(type.total, currency),
+                  },
+                ]}
+              />
+            ))}
+          </MobileRecordList>
         </CardContent>
       </Card>
     </div>

@@ -16,6 +16,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -96,7 +100,7 @@ export function SavingsRequestsTable({
         </Select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
@@ -226,6 +230,103 @@ export function SavingsRequestsTable({
           </tbody>
         </table>
       </div>
+
+      <MobileRecordList
+        isEmpty={filtered.length === 0}
+        emptyMessage="No savings requests match your filter."
+      >
+        {filtered.map((request) => {
+          const busy = busyId === request.id;
+          return (
+            <MobileRecordCard
+              key={request.id}
+              title={request.memberName}
+              badge={
+                <Badge
+                  variant={
+                    request.status === "Approved"
+                      ? "secondary"
+                      : request.status === "Pending"
+                        ? "outline"
+                        : "destructive"
+                  }
+                  className={cn(
+                    request.status === "Approved" &&
+                      "bg-success/15 text-success",
+                  )}
+                >
+                  {request.status}
+                </Badge>
+              }
+              fields={[
+                {
+                  label: "Type",
+                  value: (
+                    <Badge variant="outline" className="gap-1 font-normal">
+                      {request.type === "Deposit" ? (
+                        <ArrowDownToLine
+                          className="size-3 text-success"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <ArrowUpFromLine
+                          className="size-3 text-destructive"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {request.type}
+                    </Badge>
+                  ),
+                },
+                { label: "Savings Type", value: request.savingsType },
+                {
+                  label: "Amount",
+                  value: (
+                    <>
+                      {formatMoney(request.amount, currency)}
+                      {request.type === "Withdrawal" &&
+                      request.netAmount != null ? (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {formatMoney(request.netAmount, currency)} net (
+                          {request.feePercent}% fee)
+                        </span>
+                      ) : null}
+                    </>
+                  ),
+                },
+                {
+                  label: "Requested",
+                  value: formatTimeAgo(request.requestedAt),
+                },
+              ]}
+              actions={
+                request.status === "Pending" ? (
+                  <>
+                    <ConfirmResolveDialog
+                      request={request}
+                      status="Approved"
+                      busy={busy}
+                      onConfirm={() => handleResolve(request.id, "Approved")}
+                    />
+                    <ConfirmResolveDialog
+                      request={request}
+                      status="Declined"
+                      busy={busy}
+                      onConfirm={() => handleResolve(request.id, "Declined")}
+                    />
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {request.resolvedAt
+                      ? `Resolved ${formatTimeAgo(request.resolvedAt)}`
+                      : "—"}
+                  </span>
+                )
+              }
+            />
+          );
+        })}
+      </MobileRecordList>
     </div>
   );
 }

@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import {
+  MobileRecordCard,
+  MobileRecordList,
+} from "@/components/ui/mobile-record-card";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -70,7 +74,7 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
         </Select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
@@ -141,6 +145,40 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
           </tbody>
         </table>
       </div>
+
+      <MobileRecordList
+        isEmpty={filtered.length === 0}
+        emptyMessage="No loan requests match your filter."
+      >
+        {filtered.map((record) => (
+          <MobileRecordCard
+            key={record.id}
+            onClick={() => router.push(`/loans/request/${record.id}`)}
+            title={record.memberName}
+            badge={
+              <Badge variant={coopLoanStatusBadgeVariant(record.status)}>
+                {record.status}
+              </Badge>
+            }
+            fields={[
+              { label: "Members Id", value: record.memberId },
+              { label: "Loan Type", value: record.loanType },
+              {
+                label: "Loan Amount",
+                value: formatMoney(record.amount, currency),
+              },
+              {
+                label: "No of Repayments",
+                value: `${record.numberOfRepayments} Months`,
+              },
+              {
+                label: "Date",
+                value: formatDateLong(new Date(record.date)),
+              },
+            ]}
+          />
+        ))}
+      </MobileRecordList>
     </div>
   );
 }
