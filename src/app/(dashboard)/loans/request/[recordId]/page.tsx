@@ -39,7 +39,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   readFileAsDataUrl,
 } from "@/lib/file-to-data-url";
-import { formatDateLong, formatNaira, getInitials } from "@/lib/format";
+import { formatDateLong, formatMoney, getInitials } from "@/lib/format";
 import { getDirectoryCoop } from "@/lib/member-directory";
 import { initiateTransfer } from "@/lib/paystack-transfer";
 import { useCoopStore } from "@/store/coop.store";
@@ -121,7 +121,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
 
     resolveLoanRequest(coop.id, record.id, "Approved");
     toast.success("Loan approved and disbursed", {
-      description: `${formatNaira(record.amount)} paid out to ${record.memberName}.`,
+      description: `${formatMoney(record.amount, coop.currency)} paid out to ${record.memberName}.`,
     });
   };
 
@@ -174,6 +174,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                   />
                   <AcceptGuarantorDialog
                     record={record}
+                    currency={coop.currency}
                     onConfirm={handleGuarantorAccept}
                   />
                 </div>
@@ -182,6 +183,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                   <RejectLoanDialog record={record} onConfirm={handleReject} />
                   <ApproveLoanDialog
                     record={record}
+                    currency={coop.currency}
                     onConfirm={handleApprove}
                   />
                 </div>
@@ -189,7 +191,10 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Loan Type" value={record.loanType} />
-              <Field label="Loan Amount" value={formatNaira(record.amount)} />
+              <Field
+                label="Loan Amount"
+                value={formatMoney(record.amount, coop.currency)}
+              />
               <Field
                 label="Interest Rate"
                 value={`${record.interestRate}% flat`}
@@ -200,11 +205,11 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
               />
               <Field
                 label="Monthly Repayment"
-                value={formatNaira(record.monthlyRepayment)}
+                value={formatMoney(record.monthlyRepayment, coop.currency)}
               />
               <Field
                 label="Total Repayment"
-                value={formatNaira(record.totalRepayment)}
+                value={formatMoney(record.totalRepayment, coop.currency)}
               />
               <Field
                 label="Date Applied"
@@ -312,9 +317,11 @@ function ProfileField({ label, value }: { label: string; value: string }) {
 
 function AcceptGuarantorDialog({
   record,
+  currency,
   onConfirm,
 }: {
   record: CoopLoanRecord;
+  currency: string;
   onConfirm: (documentUrl?: string) => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
@@ -361,7 +368,7 @@ function AcceptGuarantorDialog({
           <span className="font-semibold text-foreground">
             {record.memberName}
           </span>
-          , for a {record.loanType} of {formatNaira(record.amount)}?
+          , for a {record.loanType} of {formatMoney(record.amount, currency)}?
         </p>
         <div className="space-y-2">
           <Label>Guarantor Terms</Label>
@@ -480,9 +487,11 @@ function RejectGuarantorDialog({
 
 function ApproveLoanDialog({
   record,
+  currency,
   onConfirm,
 }: {
   record: CoopLoanRecord;
+  currency: string;
   onConfirm: () => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
@@ -504,7 +513,7 @@ function ApproveLoanDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Approve and disburse loan</AlertDialogTitle>
           <AlertDialogDescription>
-            This marks {formatNaira(record.amount)} as paid out to{" "}
+            This marks {formatMoney(record.amount, currency)} as paid out to{" "}
             {record.memberName} and sets the loan Active. This app has no real
             payout capability (no backend/Transfers API) — this simulates the
             disbursement honestly, the same way every other mock action here

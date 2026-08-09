@@ -12,12 +12,12 @@ import {
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { SuperAdminSavingsTable } from "@/components/features/coop/super-admin-savings-table";
 import {
-  allCoopsSavingsTotal,
   coopSavingsTotal,
   platformSavingsFeesTotal,
   type Cooperative,
 } from "@/lib/coop-data";
-import { formatNaira } from "@/lib/format";
+import { useAggregateInCurrency } from "@/hooks/use-aggregate-in-currency";
+import { formatMoney } from "@/lib/format";
 import { SAVINGS_TYPES } from "@/lib/savings-data";
 import type { ExportColumn } from "@/lib/table-export";
 import { useCoopStore } from "@/store/coop.store";
@@ -31,12 +31,19 @@ const EXPORT_COLUMNS: ExportColumn<{ coop: Cooperative; total: number }>[] = [
 
 export function SuperAdminSavingsView() {
   const cooperatives = useCoopStore((state) => state.cooperatives);
-  const totalSavings = allCoopsSavingsTotal(cooperatives);
   const transactionFees = platformSavingsFeesTotal(cooperatives);
   const exportRows = cooperatives.map((coop) => ({
     coop,
     total: coopSavingsTotal(coop),
   }));
+  const { total: totalSavings, loading: totalSavingsLoading } =
+    useAggregateInCurrency(
+      exportRows.map(({ coop, total }) => ({
+        amount: total,
+        currency: coop.currency,
+      })),
+      "NGN",
+    );
 
   return (
     <div className="space-y-6">
@@ -46,6 +53,7 @@ export function SuperAdminSavingsView() {
         <SummaryCard
           label="Total Savings"
           value={totalSavings}
+          loading={totalSavingsLoading}
           icon={PiggyBank}
         />
         <SummaryCard
@@ -85,10 +93,12 @@ export function SuperAdminSavingsView() {
 function SummaryCard({
   label,
   value,
+  loading = false,
   icon: Icon,
 }: {
   label: string;
-  value: number;
+  value: number | null;
+  loading?: boolean;
   icon: LucideIcon;
 }) {
   return (
@@ -97,7 +107,7 @@ function SummaryCard({
         <div className="space-y-1.5">
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="text-xl font-semibold text-foreground sm:text-2xl">
-            {formatNaira(value)}
+            {loading || value === null ? "…" : formatMoney(value, "NGN")}
           </p>
         </div>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

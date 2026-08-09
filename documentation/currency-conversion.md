@@ -57,15 +57,39 @@ number someone has to remember to refresh.
   combobox was built (`currency-combobox.tsx`, Popover + Input +
   ScrollArea) rather than forcing the existing plain `Select` primitive
   to do a job it isn't suited for.
-- **This only sets the label, not a global currency switch (yet).**
-  Choosing GHS changes what shows on the currency card and in the
-  Super Admin co-op list/detail — it does **not** currently reformat
-  every Naira amount displayed elsewhere in the app (savings/loans
-  tables, dashboard, etc. still show `formatNaira` everywhere). Actually
-  converting every displayed amount app-wide would mean touching dozens
-  of call sites and deciding a conversion-at-write-time vs.
-  conversion-at-display-time model — a materially bigger, separate
-  effort, flagged honestly below rather than silently half-done.
+- **Currency now formats every amount app-wide, not just the label.**
+  `formatMoney(amount, currencyCode)` (`src/lib/format.ts`) replaced
+  `formatNaira` at every call site that displays a co-op-scoped amount —
+  savings tables, loans tables, member/admin summary cards, modals,
+  and record detail pages. `formatNaira` itself still exists as a
+  thin NGN-only wrapper, kept deliberately for the platform-level
+  contexts that must never vary by co-op currency (Subscriptions
+  revenue, audit-log text — see below).
+- **Resolving "which currency" without prop-drilling through ~40
+  files**: `CurrencyProvider`/`useCurrency()`
+  (`src/components/providers/currency-provider.tsx`) is a small React
+  Context. Components that already receive a full `coop: Cooperative`
+  object use `coop.currency` directly (most robust). Components that
+  only receive raw records (no `coop` reference) call `useCurrency()`,
+  which resolves from the nearest `CurrencyProvider` ancestor.
+  `(dashboard)/layout.tsx` provides the outer default: an admin's whole
+  area resolves to their own co-op's currency; a member's or super
+  admin's default is NGN.
+- **Per-co-op isolation on the Super Admin side.** Every
+  `/co-operatives/[id]/**` page (details, savings/loans type & record
+  drill-downs, member detail) wraps its content in its own
+  `<CurrencyProvider currency={coop.currency}>`, nested inside the
+  layout's default. This is what keeps one co-op's currency from ever
+  leaking into another's — Turon (NGN), Harbor Light (USD), and
+  Northbridge (GHS) each render entirely in their own currency with no
+  cross-contamination, confirmed in a real headless-browser pass.
+- **Cross-co-op aggregates use real conversion, not raw summation.**
+  The Super Admin's `/savings` oversight "Total Savings" card can't
+  just add up amounts in different currencies, so it uses
+  `useAggregateInCurrency` (`src/hooks/use-aggregate-in-currency.ts`):
+  it fetches a live rate per unique currency present, then converts
+  and sums into NGN. Each co-op's own row in the oversight table still
+  shows in that co-op's own currency.
 
 ## Components
 
@@ -83,12 +107,24 @@ number someone has to remember to refresh.
   the admin-only setter, in Co-operative Settings → Co-operative.
 - `src/components/features/admin-settings/currency-combobox.tsx` — the
   searchable currency picker.
+- `src/lib/format.ts` — `formatMoney(amount, currencyCode)`.
+- `src/components/providers/currency-provider.tsx` — `CurrencyProvider`,
+  `useCurrency()`.
+- `src/hooks/use-aggregate-in-currency.ts` — cross-currency sum with
+  live conversion, used by the Super Admin savings oversight aggregate.
+
+## Deliberately still NGN-only
+
+- `formatNaira` (platform-level, not co-op-scoped): audit-log
+  `resource` text in `coop.store.ts`/`savings.store.ts`/`loans.store.ts`,
+  and everything under Subscriptions (`super-admin-subscriptions-view.tsx`,
+  `super-admin-subscriptions-table.tsx`, `subscription-history-table.tsx`,
+  `/subscriptions/[id]`) — subscription fees are what co-ops pay _to_
+  the platform, conceptually always in the platform's own currency,
+  not the co-op's member-facing one.
 
 ## Future Improvements
 
-- Amounts elsewhere in the app aren't reformatted into the co-op's
-  chosen currency yet — only the currency label + conversion-rate
-  display are live.
 - No historical rate chart — only the current rate.
 - If a co-op's currency changes, existing savings/loan records don't
   get relabeled or converted — they stay in whatever currency they were

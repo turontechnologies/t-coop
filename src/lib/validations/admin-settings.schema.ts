@@ -32,6 +32,15 @@ export const coopBankAccountSchema = z.object({
 
 export type CoopBankAccountFormValues = z.infer<typeof coopBankAccountSchema>;
 
+export const withdrawalFeeSchema = z.object({
+  withdrawalFeePercent: z
+    .number()
+    .min(0, "Enter a percentage of 0 or more")
+    .max(100, "Enter a percentage of 100 or less"),
+});
+
+export type WithdrawalFeeFormValues = z.infer<typeof withdrawalFeeSchema>;
+
 export const savingsTypeSettingSchema = z.object({
   name: z.string().trim().min(1, "Enter a savings type name"),
   min: z.number().min(0, "Enter a minimum amount"),
@@ -49,6 +58,7 @@ export const loanTypeSettingSchema = z.object({
   name: z.string().trim().min(1, "Enter a loan type name"),
   eligibilityPercent: z.number().min(1, "Enter an eligibility percentage"),
   durationMonths: z.number().min(1, "Select a duration"),
+  maxAmount: z.number().min(1, "Enter a maximum loan amount"),
   repaymentInterval: z.enum(["Weekly", "Monthly", "Quarterly"]),
   interestType: z.enum(["Percentage", "Fixed"]),
   interestAmount: z.number().min(0, "Enter an interest amount"),

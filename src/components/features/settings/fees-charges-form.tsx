@@ -31,6 +31,7 @@ export function FeesChargesForm() {
   const [saving, setSaving] = useState(false);
   const savingsTypeId = useId();
   const loansTypeId = useId();
+  const withdrawalFeeId = useId();
 
   const {
     control,
@@ -150,6 +151,30 @@ export function FeesChargesForm() {
             {...register("loansChargeAmount", { valueAsNumber: true })}
           />
           <FieldError message={errors.loansChargeAmount?.message} />
+        </div>
+
+        <div className="h-px bg-border sm:col-span-3" />
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">Withdrawal Fee</p>
+          <p className="text-xs text-muted-foreground">
+            The platform&apos;s cut of every member withdrawal — stacked on top
+            of each co-op&apos;s own withdrawal fee, and shown to the member
+            before they confirm.
+          </p>
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor={withdrawalFeeId}>Platform Fee %</Label>
+          <Input
+            id={withdrawalFeeId}
+            type="number"
+            inputMode="decimal"
+            placeholder="Enter percentage"
+            className="h-11 w-32"
+            aria-invalid={!!errors.withdrawalFeePercent}
+            {...register("withdrawalFeePercent", { valueAsNumber: true })}
+          />
+          <FieldError message={errors.withdrawalFeePercent?.message} />
         </div>
       </div>
 

@@ -14,7 +14,8 @@ import {
   coopLoanStatusBadgeVariant,
   type CoopLoanRecord,
 } from "@/lib/coop-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { LOAN_TYPES } from "@/lib/loans-data";
 
 interface LoanRequestsTableProps {
@@ -28,6 +29,7 @@ const TYPE_OPTIONS = [
 
 export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
   const router = useRouter();
+  const currency = useCurrency();
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
 
   const filtered = useMemo(
@@ -120,7 +122,7 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
                     {record.loanType}
                   </td>
                   <td className="px-4 py-3 text-foreground">
-                    {formatNaira(record.amount)}
+                    {formatMoney(record.amount, currency)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {record.numberOfRepayments} Months

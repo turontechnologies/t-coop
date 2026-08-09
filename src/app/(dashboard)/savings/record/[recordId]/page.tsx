@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDirectoryCoop } from "@/lib/member-directory";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
@@ -58,7 +58,10 @@ export default function AdminSavingsRecordPage({
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Savings Type" value={record.savingsType} />
-          <Field label="Savings Amount" value={formatNaira(record.amount)} />
+          <Field
+            label="Savings Amount"
+            value={formatMoney(record.amount, coop.currency)}
+          />
           <Field label="Method" value={record.method} />
           <Field
             label="Date Saved"
@@ -81,7 +84,7 @@ export default function AdminSavingsRecordPage({
           />
           <Field
             label="Savings Balance"
-            value={formatNaira(record.balanceAfter)}
+            value={formatMoney(record.balanceAfter, coop.currency)}
           />
           <Field label="Transaction ID" value={record.transactionId} />
           <div className="space-y-1">

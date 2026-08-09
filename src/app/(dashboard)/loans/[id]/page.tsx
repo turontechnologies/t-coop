@@ -20,7 +20,8 @@ import {
   type LoanStatus,
   type RepaymentStatus,
 } from "@/lib/loans-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { useLoansStore } from "@/store/loans.store";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
   const record = useLoansStore((state) =>
     state.records.find((item) => item.id === id),
   );
+  const currency = useCurrency();
 
   const schedule = useMemo(
     () => (record ? generateRepaymentSchedule(record) : []),
@@ -88,16 +90,19 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Loan Type" value={record.loanType} />
-          <Field label="Loan Amount" value={formatNaira(record.amount)} />
+          <Field
+            label="Loan Amount"
+            value={formatMoney(record.amount, currency)}
+          />
           <Field label="Interest Rate" value={`${record.interestRate}% flat`} />
           <Field label="Duration" value={`${record.durationMonths} months`} />
           <Field
             label="Monthly Repayment"
-            value={formatNaira(record.monthlyRepayment)}
+            value={formatMoney(record.monthlyRepayment, currency)}
           />
           <Field
             label="Total Repayment"
-            value={formatNaira(record.totalRepayment)}
+            value={formatMoney(record.totalRepayment, currency)}
           />
           <Field
             label="Date Applied"
@@ -168,13 +173,13 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
                         className="border-b border-border last:border-0"
                       >
                         <td className="px-4 py-3 text-foreground">
-                          {formatNaira(item.amount)}
+                          {formatMoney(item.amount, currency)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {formatNaira(item.interest)}
+                          {formatMoney(item.interest, currency)}
                         </td>
                         <td className="px-4 py-3 font-medium text-foreground">
-                          {formatNaira(item.totalAmount)}
+                          {formatMoney(item.totalAmount, currency)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {formatDateLong(new Date(item.dueDate))}
@@ -239,7 +244,7 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
                             {transaction.transactionId}
                           </td>
                           <td className="px-4 py-3 text-foreground">
-                            {formatNaira(transaction.amount)}
+                            {formatMoney(transaction.amount, currency)}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">
                             {formatDateLong(new Date(transaction.date))}

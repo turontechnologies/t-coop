@@ -7,7 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { useSavingsStore } from "@/store/savings.store";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ export default function SavingsDetailsPage({
   const record = useSavingsStore((state) =>
     state.records.find((item) => item.id === id),
   );
+  const currency = useCurrency();
 
   if (!record) {
     return (
@@ -56,7 +58,10 @@ export default function SavingsDetailsPage({
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Savings Type" value={record.savingsType} />
-          <Field label="Savings Amount" value={formatNaira(record.amount)} />
+          <Field
+            label="Savings Amount"
+            value={formatMoney(record.amount, currency)}
+          />
           <Field label="Method" value={record.method} />
           <Field
             label="Date Saved"
@@ -75,7 +80,7 @@ export default function SavingsDetailsPage({
           />
           <Field
             label="Savings Balance"
-            value={formatNaira(record.balanceAfter)}
+            value={formatMoney(record.balanceAfter, currency)}
           />
           <Field label="Transaction ID" value={record.transactionId} />
           <div className="space-y-1">

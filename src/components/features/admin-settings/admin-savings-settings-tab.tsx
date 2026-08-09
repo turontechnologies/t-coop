@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SavingsTypeModal } from "@/components/features/admin-settings/savings-type-modal";
 import { SavingsTypeSettingsTable } from "@/components/features/admin-settings/savings-type-settings-table";
+import { WithdrawalFeeForm } from "@/components/features/admin-settings/withdrawal-fee-form";
 import type { CoopSavingsTypeSetting } from "@/lib/admin-settings-data";
 import { coopMemberFullName } from "@/lib/coop-data";
 import { getDirectoryMembers } from "@/lib/member-directory";
@@ -80,7 +81,9 @@ export function AdminSavingsSettingsTab() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <WithdrawalFeeForm />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full max-w-xs">
           <Search

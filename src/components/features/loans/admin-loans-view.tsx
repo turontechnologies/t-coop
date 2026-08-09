@@ -17,7 +17,7 @@ import { LoanRequestsTable } from "@/components/features/loans/loan-requests-tab
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
 import { coopLoansBySummaryType, coopLoansTotal } from "@/lib/coop-data";
 import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import { useCoopStore } from "@/store/coop.store";
 import { useLoansStore } from "@/store/loans.store";
@@ -99,8 +99,16 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:max-w-lg">
-        <SummaryCard label="Total Loans" value={coopLoansTotal(coop)} />
-        <SummaryCard label="My Loans" value={myTotal} />
+        <SummaryCard
+          label="Total Loans"
+          value={coopLoansTotal(coop)}
+          currency={coop.currency}
+        />
+        <SummaryCard
+          label="My Loans"
+          value={myTotal}
+          currency={coop.currency}
+        />
       </div>
 
       <Card>
@@ -165,14 +173,22 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function SummaryCard({
+  label,
+  value,
+  currency = "NGN",
+}: {
+  label: string;
+  value: number;
+  currency?: string;
+}) {
   return (
     <Card>
       <CardContent className="flex items-start justify-between gap-3">
         <div className="space-y-1.5">
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="text-xl font-semibold text-foreground sm:text-2xl">
-            {formatNaira(value)}
+            {formatMoney(value, currency)}
           </p>
         </div>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

@@ -25,7 +25,8 @@ import {
   SAVINGS_TYPES,
   type SavingsRecord,
 } from "@/lib/savings-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function toIsoDate(date: Date): string {
@@ -50,6 +51,7 @@ const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
 export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
   const router = useRouter();
+  const currency = useCurrency();
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
@@ -246,13 +248,13 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
                       {record.savingsType}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {range ? formatNaira(range.min) : "—"}
+                      {range ? formatMoney(range.min, currency) : "—"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {range ? formatNaira(range.max) : "—"}
+                      {range ? formatMoney(range.max, currency) : "—"}
                     </td>
                     <td className="px-4 py-3 text-foreground">
-                      {formatNaira(record.amount)}
+                      {formatMoney(record.amount, currency)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {formatDateLong(new Date(record.date))}

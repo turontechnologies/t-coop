@@ -15,6 +15,7 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { findCoopMember, findCooperative } from "@/lib/coop-data";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { useCoopStore } from "@/store/coop.store";
 
 interface CoopMemberDetailsPageProps {
@@ -57,32 +58,34 @@ export default function CoopMemberDetailsPage({
   }
 
   return (
-    <div className="space-y-4 pt-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.push(`/co-operatives/${coop.id}`)}
-        className="text-muted-foreground"
-      >
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Back
-      </Button>
+    <CurrencyProvider currency={coop.currency}>
+      <div className="space-y-4 pt-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push(`/co-operatives/${coop.id}`)}
+          className="text-muted-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back
+        </Button>
 
-      <CoopMemberHeaderCard member={member} />
+        <CoopMemberHeaderCard member={member} />
 
-      <Tabs defaultValue="savings">
-        <TabsList>
-          <TabsTab value="savings">Savings</TabsTab>
-          <TabsTab value="loans">Loans</TabsTab>
-          <TabsIndicator />
-        </TabsList>
-        <TabsPanel value="savings">
-          <CoopMemberSavingsTable coopId={coop.id} records={savingsRecords} />
-        </TabsPanel>
-        <TabsPanel value="loans">
-          <CoopMemberLoansTable coopId={coop.id} records={loanRecords} />
-        </TabsPanel>
-      </Tabs>
-    </div>
+        <Tabs defaultValue="savings">
+          <TabsList>
+            <TabsTab value="savings">Savings</TabsTab>
+            <TabsTab value="loans">Loans</TabsTab>
+            <TabsIndicator />
+          </TabsList>
+          <TabsPanel value="savings">
+            <CoopMemberSavingsTable coopId={coop.id} records={savingsRecords} />
+          </TabsPanel>
+          <TabsPanel value="loans">
+            <CoopMemberLoansTable coopId={coop.id} records={loanRecords} />
+          </TabsPanel>
+        </Tabs>
+      </div>
+    </CurrencyProvider>
   );
 }

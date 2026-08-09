@@ -8,7 +8,7 @@ import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-d
 import { CoopCurrencyDisplay } from "@/components/features/coop/coop-currency-display";
 import type { Cooperative } from "@/lib/coop-data";
 import { coopLoansTotal, coopSavingsTotal } from "@/lib/coop-data";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { useCoopStore } from "@/store/coop.store";
 
 interface CoopHeaderCardProps {
@@ -70,9 +70,12 @@ export function CoopHeaderCard({ coop }: CoopHeaderCardProps) {
           <Field label="Address" value={`${coop.address}, ${coop.state}`} />
           <Field
             label="Total Savings"
-            value={formatNaira(coopSavingsTotal(coop))}
+            value={formatMoney(coopSavingsTotal(coop), coop.currency)}
           />
-          <Field label="Total Loan" value={formatNaira(coopLoansTotal(coop))} />
+          <Field
+            label="Total Loan"
+            value={formatMoney(coopLoansTotal(coop), coop.currency)}
+          />
         </div>
 
         <div className="max-w-xs">

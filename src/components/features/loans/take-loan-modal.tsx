@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/select";
 import {
   GUARANTORS,
-  LOAN_TYPES,
   computeEligibleAmount,
   computeLoanTerms,
-  findLoanType,
 } from "@/lib/loans-data";
-import { formatNaira } from "@/lib/format";
+import { activeLoanTypeDefs } from "@/lib/admin-settings-data";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
+import { useAdminSettingsStore } from "@/store/admin-settings.store";
 import { cn } from "@/lib/utils";
 
 interface TakeLoanModalProps {
@@ -49,11 +50,19 @@ export function TakeLoanModal({
   const typeId = useId();
   const amountId = useId();
   const guarantorId = useId();
+  const currency = useCurrency();
   const [loanType, setLoanType] = useState("");
   const [amount, setAmount] = useState("");
   const [guarantorName, setGuarantorName] = useState("");
 
-  const selectedType = findLoanType(loanType);
+  const loanTypeSettings = useAdminSettingsStore(
+    (state) => state.loanTypeSettings,
+  );
+  const loanTypes = useMemo(
+    () => activeLoanTypeDefs(loanTypeSettings),
+    [loanTypeSettings],
+  );
+  const selectedType = loanTypes.find((type) => type.name === loanType);
   const eligibleAmount = selectedType
     ? computeEligibleAmount(totalSavings, selectedType)
     : 0;
@@ -102,7 +111,7 @@ export function TakeLoanModal({
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                {LOAN_TYPES.map((type) => (
+                {loanTypes.map((type) => (
                   <SelectItem key={type.name} value={type.name}>
                     {type.name}
                   </SelectItem>
@@ -111,7 +120,7 @@ export function TakeLoanModal({
             </Select>
             {selectedType ? (
               <p className="text-xs text-muted-foreground">
-                Eligible amount: {formatNaira(eligibleAmount)} ·{" "}
+                Eligible amount: {formatMoney(eligibleAmount, currency)} ·{" "}
                 {selectedType.interestRate}% interest over{" "}
                 {selectedType.durationMonths} months
               </p>
@@ -133,7 +142,7 @@ export function TakeLoanModal({
             {selectedType && amountNumber > eligibleAmount ? (
               <p className="text-xs text-destructive">
                 Amount exceeds your eligible amount of{" "}
-                {formatNaira(eligibleAmount)}
+                {formatMoney(eligibleAmount, currency)}
               </p>
             ) : null}
           </div>
@@ -174,15 +183,15 @@ export function TakeLoanModal({
                 </dd>
                 <dt className="text-muted-foreground">Loan Amount</dt>
                 <dd className="text-right font-medium text-foreground">
-                  {formatNaira(amountNumber)}
+                  {formatMoney(amountNumber, currency)}
                 </dd>
                 <dt className="text-muted-foreground">Total Repayment</dt>
                 <dd className="text-right font-medium text-foreground">
-                  {formatNaira(terms.totalRepayment)}
+                  {formatMoney(terms.totalRepayment, currency)}
                 </dd>
                 <dt className="text-muted-foreground">Monthly Repayment</dt>
                 <dd className="text-right font-medium text-foreground">
-                  {formatNaira(terms.monthlyRepayment)}
+                  {formatMoney(terms.monthlyRepayment, currency)}
                 </dd>
               </dl>
             </div>

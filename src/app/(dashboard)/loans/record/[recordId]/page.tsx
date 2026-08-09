@@ -21,7 +21,7 @@ import {
   generateRepaymentSchedule,
   type RepaymentStatus,
 } from "@/lib/loans-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
@@ -86,16 +86,19 @@ export default function AdminLoanRecordPage({
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Loan Type" value={record.loanType} />
-          <Field label="Loan Amount" value={formatNaira(record.amount)} />
+          <Field
+            label="Loan Amount"
+            value={formatMoney(record.amount, coop.currency)}
+          />
           <Field label="Interest Rate" value={`${record.interestRate}% flat`} />
           <Field label="Duration" value={`${record.durationMonths} months`} />
           <Field
             label="Monthly Repayment"
-            value={formatNaira(record.monthlyRepayment)}
+            value={formatMoney(record.monthlyRepayment, coop.currency)}
           />
           <Field
             label="Total Repayment"
-            value={formatNaira(record.totalRepayment)}
+            value={formatMoney(record.totalRepayment, coop.currency)}
           />
           <Field
             label="Date Applied"
@@ -171,13 +174,13 @@ export default function AdminLoanRecordPage({
                         className="border-b border-border last:border-0"
                       >
                         <td className="px-4 py-3 text-foreground">
-                          {formatNaira(item.amount)}
+                          {formatMoney(item.amount, coop.currency)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
-                          {formatNaira(item.interest)}
+                          {formatMoney(item.interest, coop.currency)}
                         </td>
                         <td className="px-4 py-3 font-medium text-foreground">
-                          {formatNaira(item.totalAmount)}
+                          {formatMoney(item.totalAmount, coop.currency)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {formatDateLong(new Date(item.dueDate))}
@@ -242,7 +245,7 @@ export default function AdminLoanRecordPage({
                             {transaction.transactionId}
                           </td>
                           <td className="px-4 py-3 text-foreground">
-                            {formatNaira(transaction.amount)}
+                            {formatMoney(transaction.amount, coop.currency)}
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">
                             {formatDateLong(new Date(transaction.date))}

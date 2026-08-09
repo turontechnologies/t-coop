@@ -21,7 +21,7 @@ import {
   coopSavingsTotal,
   type Cooperative,
 } from "@/lib/coop-data";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
@@ -154,16 +154,16 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
                       {coop.members.length.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatNaira(earningsOnSavings)}
+                      {formatMoney(earningsOnSavings, coop.currency)}
                     </td>
                     <td className="px-4 py-3 text-foreground">
-                      {formatNaira(totalSavings)}
+                      {formatMoney(totalSavings, coop.currency)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatNaira(earningsOnLoans)}
+                      {formatMoney(earningsOnLoans, coop.currency)}
                     </td>
                     <td className="px-4 py-3 text-foreground">
-                      {formatNaira(totalLoans)}
+                      {formatMoney(totalLoans, coop.currency)}
                     </td>
                     <td
                       className="px-4 py-3"

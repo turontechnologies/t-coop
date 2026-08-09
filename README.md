@@ -225,14 +225,13 @@ contracts a real backend needs to implement, see
 - [x] Real Paystack Transfers (loan disbursement, savings withdrawal payouts), real bank-account verification, live bank list, live cascading Country/State/City — see [payments-and-payouts.md](./documentation/payments-and-payouts.md)
 - [x] Subscriptions (super admin: every co-op's subscription standing, revenue, manual payment upload, per-co-op payment history — see [subscriptions-page.md](./documentation/subscriptions-page.md))
 - [x] Settings (super admin: profile + password, fees & collections account, dual Paystack/Flutterwave integration toggles, platform staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location — see [settings-page.md](./documentation/settings-page.md). admin: profile + personal bank account, savings/loan type catalog management (add/edit/enable/disable), co-operative profile + bank account + currency, shared user/role management — see [admin-settings-page.md](./documentation/admin-settings-page.md))
-- [x] Per-co-op currency with live conversion (admin sets their co-op's currency from ~160 real ISO 4217 options; super admin sees it read-only with a genuinely live rate against NGN, refreshed on a timer, everywhere a co-op shows up — see [currency-conversion.md](./documentation/currency-conversion.md))
+- [x] Per-co-op currency with live conversion (admin sets their co-op's currency from ~160 real ISO 4217 options; super admin sees it read-only with a genuinely live rate against NGN, refreshed on a timer, everywhere a co-op shows up; every displayed savings/loans amount app-wide is formatted in that co-op's own currency, isolated per co-op on the super-admin side, with cross-co-op aggregates genuinely converted and summed — see [currency-conversion.md](./documentation/currency-conversion.md))
 - [x] Light/dark theme
 - [ ] Real backend integration (everything currently mocked in `src/services/*.service.ts`)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client-side callback is trusted for now — see savings-page.md; Transfers, unlike Inline, are already server-initiated)
 - [ ] Admin approval for the member's own "Take a Loan" flow (the legacy personal `LoanRecord` — separate from the co-op loan pipeline the admin Loans page now resolves — stays "Awaiting Approval" indefinitely; see loans-page.md)
 - [ ] OTP confirmation UI for Paystack Transfers that require it (not exercised in test mode — see payments-and-payouts.md)
 - [ ] Settings for the member role (still not built — super admin and admin both have full Settings now)
-- [ ] Displayed amounts elsewhere in the app (savings/loans tables, dashboard, etc.) aren't reformatted into a co-op's chosen currency yet — only the currency label + live conversion rate are wired up so far
 
 ## Known Gotchas
 

@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 
 interface LoanSuccessModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ export function LoanSuccessModal({
   onOpenChange,
   amount,
 }: LoanSuccessModalProps) {
+  const currency = useCurrency();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showClose={false} className="text-center">
@@ -36,8 +38,8 @@ export function LoanSuccessModal({
         </div>
 
         <p className="mt-4 text-sm text-muted-foreground">
-          Your loan application for {formatNaira(amount)} has been submitted
-          successfully and is awaiting approval.
+          Your loan application for {formatMoney(amount, currency)} has been
+          submitted successfully and is awaiting approval.
         </p>
 
         <DialogFooter className="sm:justify-center">

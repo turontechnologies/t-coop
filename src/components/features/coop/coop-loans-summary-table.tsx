@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { coopLoansBySummaryType, type Cooperative } from "@/lib/coop-data";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 
 interface CoopLoansSummaryTableProps {
   coop: Cooperative;
@@ -67,7 +67,7 @@ export function CoopLoansSummaryTable({
                 {type.interestRate}%
               </td>
               <td className="px-4 py-3 font-medium text-foreground">
-                {formatNaira(type.earnings)}
+                {formatMoney(type.earnings, coop.currency)}
               </td>
             </tr>
           ))}

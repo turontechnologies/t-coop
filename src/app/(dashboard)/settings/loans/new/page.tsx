@@ -70,6 +70,7 @@ export default function LoanTypeCreationPage() {
   const [busy, setBusy] = useState(false);
   const nameId = useId();
   const eligibilityId = useId();
+  const maxAmountId = useId();
   const interestAmountId = useId();
   const loanTermsId = useId();
   const guarantorTermsId = useId();
@@ -88,6 +89,7 @@ export default function LoanTypeCreationPage() {
       name: "",
       eligibilityPercent: 100,
       durationMonths: 12,
+      maxAmount: 0,
       repaymentInterval: "Monthly",
       interestType: "Percentage",
       interestAmount: 0,
@@ -104,6 +106,7 @@ export default function LoanTypeCreationPage() {
       name: editingSetting.name,
       eligibilityPercent: editingSetting.eligibilityPercent,
       durationMonths: editingSetting.durationMonths,
+      maxAmount: editingSetting.maxAmount,
       repaymentInterval: editingSetting.repaymentInterval,
       interestType: editingSetting.interestType,
       interestAmount: editingSetting.interestAmount,
@@ -203,6 +206,22 @@ export default function LoanTypeCreationPage() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor={maxAmountId}>Maximum Loan Amount</Label>
+                <Input
+                  id={maxAmountId}
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="Enter amount"
+                  disabled={busy}
+                  aria-invalid={!!errors.maxAmount}
+                  className="h-11"
+                  {...register("maxAmount", { valueAsNumber: true })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
                 <Label>Loan Duration</Label>
                 <Controller
                   control={control}
@@ -229,9 +248,6 @@ export default function LoanTypeCreationPage() {
                   )}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Repayment Interval</Label>
                 <Controller

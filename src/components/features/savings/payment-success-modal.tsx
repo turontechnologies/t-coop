@@ -9,7 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 
 interface PaymentSuccessModalProps {
   open: boolean;
@@ -22,6 +23,7 @@ export function PaymentSuccessModal({
   onOpenChange,
   amount,
 }: PaymentSuccessModalProps) {
+  const currency = useCurrency();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showClose={false} className="text-center">
@@ -36,8 +38,8 @@ export function PaymentSuccessModal({
         </div>
 
         <p className="mt-4 text-sm text-muted-foreground">
-          Savings of {formatNaira(amount)} has been successfully transferred
-          into your savings account.
+          Savings of {formatMoney(amount, currency)} has been successfully
+          transferred into your savings account.
         </p>
 
         <DialogFooter className="sm:justify-center">

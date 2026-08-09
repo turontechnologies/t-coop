@@ -462,7 +462,7 @@ src/
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
 - [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload, per-co-op history)
 - [x] Settings (super admin: profile/password, fees & collections account, dual Paystack/Flutterwave toggles, staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location. admin: profile + personal bank, savings/loan type catalog CRUD, co-op profile + bank account + currency, shared staff management)
-- [x] Per-co-op currency + live conversion rate (admin sets it, super admin sees it live everywhere a co-op shows up)
+- [x] Per-co-op currency + live conversion rate (admin sets it, super admin sees it live everywhere a co-op shows up; every displayed savings/loans amount app-wide formats in that co-op's currency, isolated per co-op on the super-admin side, with cross-co-op aggregates genuinely converted and summed)
 - [x] Light/dark theme
 - [ ] Real backend integration (everything in `src/services/*.service.ts` is mocked)
 - [ ] Server-side Paystack transaction verification for Inline checkout (client callback trusted for now)
@@ -470,7 +470,6 @@ src/
 - [ ] OTP confirmation UI for Paystack Transfers (not exercised in test mode)
 - [ ] Dashboard's real numbers (currently 100% static)
 - [ ] Settings for the member role (still not built — the nav label has no `href` for member)
-- [ ] A co-op's currency isn't yet reflected in displayed amounts app-wide (savings/loans tables, dashboard) — only the currency label + live rate are wired up
 
 ## Known Gotchas
 

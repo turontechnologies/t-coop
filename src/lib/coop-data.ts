@@ -42,6 +42,9 @@ export interface CoopSavingsRecord {
 export type SavingsRequestType = "Deposit" | "Withdrawal";
 export type SavingsRequestStatus = "Pending" | "Approved" | "Declined";
 
+/** Reserved `savingsType` value meaning "spread across all of the member's savings types" rather than one specific type. */
+export const TOTAL_SAVINGS_WITHDRAWAL = "Total Savings";
+
 export interface SavingsRequest {
   id: string;
   memberId: string;
@@ -53,6 +56,14 @@ export interface SavingsRequest {
   status: SavingsRequestStatus;
   requestedAt: string;
   resolvedAt?: string;
+  /**
+   * Withdrawal-only: the combined co-op + platform fee percentage, locked
+   * in at request time (a later settings change shouldn't retroactively
+   * change a pending request's terms), and the resulting fee/net amounts.
+   */
+  feePercent?: number;
+  feeAmount?: number;
+  netAmount?: number;
 }
 
 export type CoopLoanStatus =

@@ -5,6 +5,8 @@ import { Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import type { CoopLoanTypeSetting } from "@/lib/admin-settings-data";
+import { formatMoney } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { cn } from "@/lib/utils";
 
 interface LoanTypeSettingsTableProps {
@@ -17,6 +19,7 @@ export function LoanTypeSettingsTable({
   onToggleStatus,
 }: LoanTypeSettingsTableProps) {
   const router = useRouter();
+  const currency = useCurrency();
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
@@ -33,6 +36,9 @@ export function LoanTypeSettingsTable({
               Duration
             </th>
             <th className="px-4 py-2.5 font-medium text-foreground">
+              Max Amount
+            </th>
+            <th className="px-4 py-2.5 font-medium text-foreground">
               Loan Approver
             </th>
             <th className="px-4 py-2.5 font-medium text-foreground">Status</th>
@@ -45,7 +51,7 @@ export function LoanTypeSettingsTable({
           {settings.length === 0 ? (
             <tr>
               <td
-                colSpan={6}
+                colSpan={7}
                 className="px-4 py-8 text-center text-muted-foreground"
               >
                 No loan types yet.
@@ -70,6 +76,9 @@ export function LoanTypeSettingsTable({
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {setting.durationMonths} Months
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatMoney(setting.maxAmount, currency)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {setting.approver1}

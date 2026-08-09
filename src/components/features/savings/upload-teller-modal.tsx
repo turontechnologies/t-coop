@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { Loader2, Paperclip, X } from "lucide-react";
 import {
   Dialog,
@@ -19,12 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { activeSavingsTypeDefs } from "@/lib/admin-settings-data";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
   MAX_ATTACHMENT_BYTES,
   readFileAsDataUrl,
 } from "@/lib/file-to-data-url";
-import { SAVINGS_TYPES } from "@/lib/savings-data";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
+import { useAdminSettingsStore } from "@/store/admin-settings.store";
 
 export interface UploadTellerPayload {
   memberId: string;
@@ -58,8 +61,16 @@ export function UploadTellerModal({
   const [savingsType, setSavingsType] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
+  const currency = useCurrency();
 
-  const selectedType = SAVINGS_TYPES.find((type) => type.name === savingsType);
+  const savingsTypeSettings = useAdminSettingsStore(
+    (state) => state.savingsTypeSettings,
+  );
+  const savingsTypes = useMemo(
+    () => activeSavingsTypeDefs(savingsTypeSettings),
+    [savingsTypeSettings],
+  );
+  const selectedType = savingsTypes.find((type) => type.name === savingsType);
   const amountNumber = Number(amount);
   const isValid =
     !!memberId &&
@@ -156,7 +167,7 @@ export function UploadTellerModal({
                 <SelectValue placeholder="Select savings type" />
               </SelectTrigger>
               <SelectContent>
-                {SAVINGS_TYPES.map((type) => (
+                {savingsTypes.map((type) => (
                   <SelectItem key={type.name} value={type.name}>
                     {type.name}
                   </SelectItem>
@@ -165,8 +176,8 @@ export function UploadTellerModal({
             </Select>
             {selectedType ? (
               <p className="text-xs text-muted-foreground">
-                Save between ₦{selectedType.min.toLocaleString()} and ₦
-                {selectedType.max.toLocaleString()}
+                Save between {formatMoney(selectedType.min, currency)} and{" "}
+                {formatMoney(selectedType.max, currency)}
               </p>
             ) : null}
           </div>

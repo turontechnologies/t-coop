@@ -11,7 +11,7 @@ import {
   ADMIN_DIRECTORY_COOP_ID,
   getDirectoryCoop,
 } from "@/lib/member-directory";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
 import { useCoopStore } from "@/store/coop.store";
@@ -84,7 +84,7 @@ export default function AdminSavingsTypePage({
                 Total {savingsType}
               </p>
               <p className="text-xl font-semibold text-foreground sm:text-2xl">
-                {formatNaira(total)}
+                {formatMoney(total, coop.currency)}
               </p>
             </div>
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

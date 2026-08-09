@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LOAN_TYPES, type LoanRecord, type LoanStatus } from "@/lib/loans-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function toIsoDate(date: Date): string {
@@ -53,6 +54,7 @@ function statusBadgeVariant(status: LoanStatus) {
 
 export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
   const router = useRouter();
+  const currency = useCurrency();
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
@@ -247,13 +249,13 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
                     {record.loanType}
                   </td>
                   <td className="px-4 py-3 text-foreground">
-                    {formatNaira(record.amount)}
+                    {formatMoney(record.amount, currency)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {record.numberOfRepayments}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {formatNaira(record.monthlyRepayment)}
+                    {formatMoney(record.monthlyRepayment, currency)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDateLong(new Date(record.date))}

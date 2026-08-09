@@ -14,7 +14,8 @@ import {
   computeLoanTerms,
   type LoanRecord,
 } from "@/lib/loans-data";
-import { formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import { useLoansStore } from "@/store/loans.store";
 import { useSavingsStore } from "@/store/savings.store";
@@ -53,6 +54,7 @@ export function MemberLoansView({
   const records = useLoansStore((state) => state.records);
   const addRecord = useLoansStore((state) => state.addRecord);
   const savingsRecords = useSavingsStore((state) => state.records);
+  const currency = useCurrency();
 
   const memberRecords = useMemo(
     () => records.filter((record) => record.memberId === memberId),
@@ -140,7 +142,7 @@ export function MemberLoansView({
               <div className="space-y-1.5">
                 <p className="text-sm text-muted-foreground">Active Loans</p>
                 <p className="text-xl font-semibold text-foreground sm:text-2xl">
-                  {formatNaira(totalActive)}
+                  {formatMoney(totalActive, currency)}
                 </p>
               </div>
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

@@ -20,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCurrency } from "@/components/providers/currency-provider";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function toIsoDate(date: Date): string {
@@ -49,6 +50,7 @@ export function CoopSavingsTypeRecordsTable({
   basePath = `/co-operatives/${coopId}/savings/record`,
 }: CoopSavingsTypeRecordsTableProps) {
   const router = useRouter();
+  const currency = useCurrency();
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
@@ -215,7 +217,7 @@ export function CoopSavingsTypeRecordsTable({
                     {record.memberName}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {formatNaira(record.amount)}
+                    {formatMoney(record.amount, currency)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDateLong(new Date(record.date))}

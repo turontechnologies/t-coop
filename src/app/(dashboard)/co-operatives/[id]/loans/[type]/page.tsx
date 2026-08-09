@@ -8,7 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CoopLoanTypeRecordsTable } from "@/components/features/coop/coop-loan-type-records-table";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { findCooperative } from "@/lib/coop-data";
-import { formatNaira } from "@/lib/format";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopLoanRecord } from "@/lib/coop-data";
 import { useCoopStore } from "@/store/coop.store";
@@ -56,51 +57,57 @@ export default function CoopLoanTypePage({ params }: CoopLoanTypePageProps) {
   }
 
   return (
-    <div className="space-y-4 pt-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.push(`/co-operatives/${coop.id}`)}
-        className="text-muted-foreground"
-      >
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Back
-      </Button>
+    <CurrencyProvider currency={coop.currency}>
+      <div className="space-y-4 pt-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push(`/co-operatives/${coop.id}`)}
+          className="text-muted-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back
+        </Button>
 
-      <div className="space-y-6">
-        <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
+        <div className="space-y-6">
+          <h2 className="text-sm font-semibold text-foreground">
+            Quick Summary
+          </h2>
 
-        <Card className="max-w-xs">
-          <CardContent className="flex items-start justify-between gap-3">
-            <div className="space-y-1.5">
-              <p className="text-sm text-muted-foreground">Total {loanType}</p>
-              <p className="text-xl font-semibold text-foreground sm:text-2xl">
-                {formatNaira(total)}
-              </p>
-            </div>
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Landmark className="size-5" aria-hidden="true" />
-            </span>
-          </CardContent>
-        </Card>
+          <Card className="max-w-xs">
+            <CardContent className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5">
+                <p className="text-sm text-muted-foreground">
+                  Total {loanType}
+                </p>
+                <p className="text-xl font-semibold text-foreground sm:text-2xl">
+                  {formatMoney(total, coop.currency)}
+                </p>
+              </div>
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Landmark className="size-5" aria-hidden="true" />
+              </span>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-foreground">
-                Loan Record
-              </h3>
-              <ExportImportMenu
-                rows={records}
-                columns={EXPORT_COLUMNS}
-                filenamePrefix={`${coop.id}-${loanType}`}
-                exportTitle={`${coop.name} — ${loanType}`}
-              />
-            </div>
-            <CoopLoanTypeRecordsTable coopId={coop.id} records={records} />
-          </CardContent>
-        </Card>
+          <Card>
+            <CardContent>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-foreground">
+                  Loan Record
+                </h3>
+                <ExportImportMenu
+                  rows={records}
+                  columns={EXPORT_COLUMNS}
+                  filenamePrefix={`${coop.id}-${loanType}`}
+                  exportTitle={`${coop.name} — ${loanType}`}
+                />
+              </div>
+              <CoopLoanTypeRecordsTable coopId={coop.id} records={records} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </CurrencyProvider>
   );
 }

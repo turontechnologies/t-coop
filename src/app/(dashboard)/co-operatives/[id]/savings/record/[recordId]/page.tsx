@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { findCooperative } from "@/lib/coop-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
@@ -44,84 +45,89 @@ export default function CoopSavingsRecordPage({
   }
 
   return (
-    <div className="space-y-4 pt-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.back()}
-        className="text-muted-foreground"
-      >
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Back
-      </Button>
+    <CurrencyProvider currency={coop.currency}>
+      <div className="space-y-4 pt-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="text-muted-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back
+        </Button>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Savings Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Savings Type" value={record.savingsType} />
-          <Field label="Savings Amount" value={formatNaira(record.amount)} />
-          <Field label="Method" value={record.method} />
-          <Field
-            label="Date Saved"
-            value={formatDateLong(new Date(record.date))}
-          />
-          <Field
-            label="Member"
-            value={
-              member ? (
-                <Link
-                  href={`/co-operatives/${coop.id}/members/${member.id}`}
-                  className="font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  {record.memberName}
-                </Link>
-              ) : (
-                record.memberName
-              )
-            }
-          />
-          <Field
-            label="Savings Balance"
-            value={formatNaira(record.balanceAfter)}
-          />
-          <Field label="Transaction ID" value={record.transactionId} />
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Status</p>
-            <Badge
-              variant={
-                record.status === "Success"
-                  ? "secondary"
-                  : record.status === "Pending"
-                    ? "outline"
-                    : "destructive"
-              }
-              className={cn(
-                record.status === "Success" && "bg-success/15 text-success",
-              )}
-            >
-              {record.status}
-            </Badge>
-          </div>
-          {record.receiptUrl ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Savings Details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Savings Type" value={record.savingsType} />
             <Field
-              label="Receipt"
+              label="Savings Amount"
+              value={formatMoney(record.amount, coop.currency)}
+            />
+            <Field label="Method" value={record.method} />
+            <Field
+              label="Date Saved"
+              value={formatDateLong(new Date(record.date))}
+            />
+            <Field
+              label="Member"
               value={
-                <a
-                  href={record.receiptUrl}
-                  download={`${record.transactionId}-receipt`}
-                  className="inline-flex items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline"
-                >
-                  <Paperclip className="size-3.5" aria-hidden="true" />
-                  Download receipt
-                </a>
+                member ? (
+                  <Link
+                    href={`/co-operatives/${coop.id}/members/${member.id}`}
+                    className="font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    {record.memberName}
+                  </Link>
+                ) : (
+                  record.memberName
+                )
               }
             />
-          ) : null}
-        </CardContent>
-      </Card>
-    </div>
+            <Field
+              label="Savings Balance"
+              value={formatMoney(record.balanceAfter, coop.currency)}
+            />
+            <Field label="Transaction ID" value={record.transactionId} />
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Status</p>
+              <Badge
+                variant={
+                  record.status === "Success"
+                    ? "secondary"
+                    : record.status === "Pending"
+                      ? "outline"
+                      : "destructive"
+                }
+                className={cn(
+                  record.status === "Success" && "bg-success/15 text-success",
+                )}
+              >
+                {record.status}
+              </Badge>
+            </div>
+            {record.receiptUrl ? (
+              <Field
+                label="Receipt"
+                value={
+                  <a
+                    href={record.receiptUrl}
+                    download={`${record.transactionId}-receipt`}
+                    className="inline-flex items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    <Paperclip className="size-3.5" aria-hidden="true" />
+                    Download receipt
+                  </a>
+                }
+              />
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+    </CurrencyProvider>
   );
 }
 

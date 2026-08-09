@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { useCurrency } from "@/components/providers/currency-provider";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface CoopMemberSavingsTableProps {
@@ -16,6 +17,7 @@ export function CoopMemberSavingsTable({
   records,
 }: CoopMemberSavingsTableProps) {
   const router = useRouter();
+  const currency = useCurrency();
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
@@ -63,7 +65,7 @@ export function CoopMemberSavingsTable({
                   {record.savingsType}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {formatNaira(record.amount)}
+                  {formatMoney(record.amount, currency)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {formatDateLong(new Date(record.date))}

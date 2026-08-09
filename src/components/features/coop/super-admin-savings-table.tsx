@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { coopSavingsTotal, type Cooperative } from "@/lib/coop-data";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { SAVINGS_TYPES } from "@/lib/savings-data";
 import { cn } from "@/lib/utils";
 
@@ -150,7 +150,7 @@ export function SuperAdminSavingsTable({
                     {SAVINGS_TYPES.length}
                   </td>
                   <td className="px-4 py-3 text-foreground">
-                    {formatNaira(total)}
+                    {formatMoney(total, coop.currency)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge

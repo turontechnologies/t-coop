@@ -8,10 +8,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AddSavingsModal } from "@/components/features/savings/add-savings-modal";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { PaymentSuccessModal } from "@/components/features/savings/payment-success-modal";
-import { RequestWithdrawalModal } from "@/components/features/savings/request-withdrawal-modal";
+import {
+  RequestWithdrawalModal,
+  type WithdrawalPayload,
+} from "@/components/features/savings/request-withdrawal-modal";
 import { SavingsRecordsTable } from "@/components/features/savings/savings-records-table";
 import { openPaystackCheckout } from "@/lib/paystack";
-import { formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 import {
   downloadSavingsImportTemplate,
   parseSavingsImportFile,
@@ -65,6 +69,7 @@ export function MemberSavingsView({
   const records = useSavingsStore((state) => state.records);
   const addRecord = useSavingsStore((state) => state.addRecord);
   const addRequest = useSavingsStore((state) => state.addRequest);
+  const currency = useCurrency();
 
   const memberRecords = useMemo(
     () => records.filter((record) => record.memberId === memberId),
@@ -121,11 +126,14 @@ export function MemberSavingsView({
     }
   };
 
-  const handleRequestWithdrawal = async (
-    savingsType: string,
-    amount: number,
-    note: string,
-  ) => {
+  const handleRequestWithdrawal = async ({
+    savingsType,
+    amount,
+    note,
+    feePercent,
+    feeAmount,
+    netAmount,
+  }: WithdrawalPayload) => {
     setWithdrawBusy(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -139,11 +147,14 @@ export function MemberSavingsView({
       note: note || undefined,
       status: "Pending",
       requestedAt: new Date().toISOString(),
+      feePercent,
+      feeAmount,
+      netAmount,
     });
     setWithdrawBusy(false);
     setWithdrawOpen(false);
     toast.success("Withdrawal requested", {
-      description: `Your request for ${formatNaira(amount)} from ${savingsType} is awaiting admin approval.`,
+      description: `Your request for ${formatMoney(amount, currency)} from ${savingsType} is awaiting admin approval — you'll receive ${formatMoney(netAmount, currency)} after fees.`,
     });
   };
 
@@ -192,7 +203,7 @@ export function MemberSavingsView({
               <div className="space-y-1.5">
                 <p className="text-sm text-muted-foreground">My Savings</p>
                 <p className="text-xl font-semibold text-foreground sm:text-2xl">
-                  {formatNaira(total)}
+                  {formatMoney(total, currency)}
                 </p>
               </div>
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

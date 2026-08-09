@@ -5,7 +5,8 @@ import { Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { SAVINGS_TYPES, type SavingsTypeDef } from "@/lib/savings-data";
-import { formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import { useSavingsStore } from "@/store/savings.store";
 
@@ -22,6 +23,7 @@ const EXPORT_COLUMNS: ExportColumn<SavingsTypeTotal>[] = [
 
 export function MembersSavingsOverview() {
   const records = useSavingsStore((state) => state.records);
+  const currency = useCurrency();
 
   const totalsByType = useMemo(
     () =>
@@ -45,7 +47,7 @@ export function MembersSavingsOverview() {
           <div className="space-y-1.5">
             <p className="text-sm text-muted-foreground">Total Savings</p>
             <p className="text-xl font-semibold text-foreground sm:text-2xl">
-              {formatNaira(grandTotal)}
+              {formatMoney(grandTotal, currency)}
             </p>
           </div>
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -96,13 +98,13 @@ export function MembersSavingsOverview() {
                       {type.name}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatNaira(type.min)}
+                      {formatMoney(type.min, currency)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatNaira(type.max)}
+                      {formatMoney(type.max, currency)}
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {formatNaira(type.total)}
+                      {formatMoney(type.total, currency)}
                     </td>
                   </tr>
                 ))}

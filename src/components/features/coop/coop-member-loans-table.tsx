@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { useCurrency } from "@/components/providers/currency-provider";
 import {
   coopLoanStatusBadgeVariant,
   type CoopLoanRecord,
 } from "@/lib/coop-data";
-import { formatDateLong, formatNaira } from "@/lib/format";
+import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface CoopMemberLoansTableProps {
@@ -19,6 +20,7 @@ export function CoopMemberLoansTable({
   records,
 }: CoopMemberLoansTableProps) {
   const router = useRouter();
+  const currency = useCurrency();
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
@@ -61,10 +63,10 @@ export function CoopMemberLoansTable({
                   {record.loanType}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {formatNaira(record.amount)}
+                  {formatMoney(record.amount, currency)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {formatNaira(record.monthlyRepayment)}/mo
+                  {formatMoney(record.monthlyRepayment, currency)}/mo
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {formatDateLong(new Date(record.date))}

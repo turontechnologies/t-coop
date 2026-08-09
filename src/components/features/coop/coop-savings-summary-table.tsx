@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { coopSavingsBySummaryType, type Cooperative } from "@/lib/coop-data";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 
 interface CoopSavingsSummaryTableProps {
   coop: Cooperative;
@@ -52,16 +52,16 @@ export function CoopSavingsSummaryTable({
                 {type.name}
               </td>
               <td className="px-4 py-3 text-muted-foreground">
-                {formatNaira(type.min)}
+                {formatMoney(type.min, coop.currency)}
               </td>
               <td className="px-4 py-3 text-muted-foreground">
-                {formatNaira(type.max)}
+                {formatMoney(type.max, coop.currency)}
               </td>
               <td className="px-4 py-3 text-muted-foreground">
-                {formatNaira(type.earnings)}
+                {formatMoney(type.earnings, coop.currency)}
               </td>
               <td className="px-4 py-3 font-medium text-foreground">
-                {formatNaira(type.total)}
+                {formatMoney(type.total, coop.currency)}
               </td>
             </tr>
           ))}

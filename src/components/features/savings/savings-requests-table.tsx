@@ -23,7 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { SavingsRequest } from "@/lib/coop-data";
-import { formatNaira, formatTimeAgo } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney, formatTimeAgo } from "@/lib/format";
 import { SAVINGS_TYPES } from "@/lib/savings-data";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,7 @@ export function SavingsRequestsTable({
   requests,
   onResolve,
 }: SavingsRequestsTableProps) {
+  const currency = useCurrency();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
 
@@ -160,7 +162,14 @@ export function SavingsRequestsTable({
                       {request.savingsType}
                     </td>
                     <td className="px-4 py-3 text-foreground">
-                      {formatNaira(request.amount)}
+                      {formatMoney(request.amount, currency)}
+                      {request.type === "Withdrawal" &&
+                      request.netAmount != null ? (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {formatMoney(request.netAmount, currency)} net (
+                          {request.feePercent}% fee)
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {formatTimeAgo(request.requestedAt)}
@@ -234,6 +243,7 @@ function ConfirmResolveDialog({
 }) {
   const [open, setOpen] = useState(false);
   const isApprove = status === "Approved";
+  const currency = useCurrency();
 
   const handleConfirm = async () => {
     await onConfirm();
@@ -269,18 +279,26 @@ function ConfirmResolveDialog({
           <AlertDialogDescription>
             {isApprove ? (
               <>
-                This records a real {formatNaira(request.amount)}{" "}
+                This records a real {formatMoney(request.amount, currency)}{" "}
                 {request.type === "Deposit"
                   ? "deposit into"
                   : "withdrawal from"}{" "}
-                {request.memberName}&apos;s {request.savingsType}. This
-                can&apos;t be undone from here.
+                {request.memberName}&apos;s {request.savingsType}.
+                {request.type === "Withdrawal" && request.netAmount != null ? (
+                  <>
+                    {" "}
+                    {request.memberName} receives{" "}
+                    {formatMoney(request.netAmount, currency)} after the{" "}
+                    {request.feePercent}% withdrawal fee.
+                  </>
+                ) : null}{" "}
+                This can&apos;t be undone from here.
               </>
             ) : (
               <>
                 {request.memberName}&apos;s {request.type.toLowerCase()} request
-                for {formatNaira(request.amount)} will be marked declined. No
-                savings record is created.
+                for {formatMoney(request.amount, currency)} will be marked
+                declined. No savings record is created.
               </>
             )}
           </AlertDialogDescription>

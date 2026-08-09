@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -19,7 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SAVINGS_TYPES } from "@/lib/savings-data";
+import { activeSavingsTypeDefs } from "@/lib/admin-settings-data";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
+import { useAdminSettingsStore } from "@/store/admin-settings.store";
 
 interface AddSavingsModalProps {
   open: boolean;
@@ -38,8 +41,16 @@ export function AddSavingsModal({
   const amountId = useId();
   const [savingsType, setSavingsType] = useState("");
   const [amount, setAmount] = useState("");
+  const currency = useCurrency();
 
-  const selectedType = SAVINGS_TYPES.find((type) => type.name === savingsType);
+  const savingsTypeSettings = useAdminSettingsStore(
+    (state) => state.savingsTypeSettings,
+  );
+  const savingsTypes = useMemo(
+    () => activeSavingsTypeDefs(savingsTypeSettings),
+    [savingsTypeSettings],
+  );
+  const selectedType = savingsTypes.find((type) => type.name === savingsType);
   const amountNumber = Number(amount);
   const isValid =
     !!selectedType &&
@@ -74,7 +85,7 @@ export function AddSavingsModal({
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                {SAVINGS_TYPES.map((type) => (
+                {savingsTypes.map((type) => (
                   <SelectItem key={type.name} value={type.name}>
                     {type.name}
                   </SelectItem>
@@ -83,8 +94,8 @@ export function AddSavingsModal({
             </Select>
             {selectedType ? (
               <p className="text-xs text-muted-foreground">
-                Save between ₦{selectedType.min.toLocaleString()} and ₦
-                {selectedType.max.toLocaleString()}
+                Save between {formatMoney(selectedType.min, currency)} and{" "}
+                {formatMoney(selectedType.max, currency)}
               </p>
             ) : null}
           </div>

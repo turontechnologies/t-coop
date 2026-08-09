@@ -1,3 +1,5 @@
+import { findCurrency } from "@/lib/currency-data";
+
 const MONTHS = [
   "January",
   "February",
@@ -26,12 +28,23 @@ export function getInitials(name: string): string {
   return initials.join("");
 }
 
-const NAIRA_FORMATTER = new Intl.NumberFormat("en-NG", {
+const AMOUNT_FORMATTER = new Intl.NumberFormat("en-NG", {
   maximumFractionDigits: 0,
 });
 
+/**
+ * The one money formatter used everywhere — pass the co-operative's own
+ * currency (from `useCurrency()`) so every amount on an admin/member page
+ * reflects what that co-op actually set, not a hardcoded Naira.
+ */
+export function formatMoney(amount: number, currencyCode = "NGN"): string {
+  const symbol = findCurrency(currencyCode)?.symbol ?? `${currencyCode} `;
+  return `${symbol}${AMOUNT_FORMATTER.format(amount)}`;
+}
+
+/** NGN-specific — kept for platform-level figures (e.g. subscription revenue) that are intentionally always in the platform's own currency, not a co-op's. */
 export function formatNaira(amount: number): string {
-  return `₦${NAIRA_FORMATTER.format(amount)}`;
+  return formatMoney(amount, "NGN");
 }
 
 export function formatDateLong(date: Date = new Date()): string {

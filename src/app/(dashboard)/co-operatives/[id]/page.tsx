@@ -16,6 +16,7 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { findCooperative } from "@/lib/coop-data";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { useCoopStore } from "@/store/coop.store";
 
 interface CooperativeDetailsPageProps {
@@ -48,36 +49,38 @@ export default function CooperativeDetailsPage({
   }
 
   return (
-    <div className="space-y-4 pt-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => router.push("/co-operatives")}
-        className="text-muted-foreground"
-      >
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Back
-      </Button>
+    <CurrencyProvider currency={coop.currency}>
+      <div className="space-y-4 pt-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.push("/co-operatives")}
+          className="text-muted-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back
+        </Button>
 
-      <CoopHeaderCard coop={coop} />
+        <CoopHeaderCard coop={coop} />
 
-      <Tabs defaultValue={initialTab}>
-        <TabsList>
-          <TabsTab value="members">Members</TabsTab>
-          <TabsTab value="savings">Savings</TabsTab>
-          <TabsTab value="loans">Loans</TabsTab>
-          <TabsIndicator />
-        </TabsList>
-        <TabsPanel value="members">
-          <CoopMembersTable coop={coop} />
-        </TabsPanel>
-        <TabsPanel value="savings">
-          <CoopSavingsSummaryTable coop={coop} />
-        </TabsPanel>
-        <TabsPanel value="loans">
-          <CoopLoansSummaryTable coop={coop} />
-        </TabsPanel>
-      </Tabs>
-    </div>
+        <Tabs defaultValue={initialTab}>
+          <TabsList>
+            <TabsTab value="members">Members</TabsTab>
+            <TabsTab value="savings">Savings</TabsTab>
+            <TabsTab value="loans">Loans</TabsTab>
+            <TabsIndicator />
+          </TabsList>
+          <TabsPanel value="members">
+            <CoopMembersTable coop={coop} />
+          </TabsPanel>
+          <TabsPanel value="savings">
+            <CoopSavingsSummaryTable coop={coop} />
+          </TabsPanel>
+          <TabsPanel value="loans">
+            <CoopLoansSummaryTable coop={coop} />
+          </TabsPanel>
+        </Tabs>
+      </div>
+    </CurrencyProvider>
   );
 }

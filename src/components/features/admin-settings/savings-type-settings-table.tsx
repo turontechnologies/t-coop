@@ -4,7 +4,8 @@ import { Pencil, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import type { CoopSavingsTypeSetting } from "@/lib/admin-settings-data";
-import { formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface SavingsTypeSettingsTableProps {
@@ -18,6 +19,7 @@ export function SavingsTypeSettingsTable({
   onEdit,
   onToggleStatus,
 }: SavingsTypeSettingsTableProps) {
+  const currency = useCurrency();
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full min-w-[600px] text-left text-sm">
@@ -60,10 +62,10 @@ export function SavingsTypeSettingsTable({
                     {setting.name}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {formatNaira(setting.min)}
+                    {formatMoney(setting.min, currency)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {formatNaira(setting.max)}
+                    {formatMoney(setting.max, currency)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge

@@ -5,6 +5,7 @@ import {
   INITIAL_COOPERATIVE_SETTINGS,
   INITIAL_LOAN_TYPE_SETTINGS,
   INITIAL_SAVINGS_TYPE_SETTINGS,
+  INITIAL_WITHDRAWAL_FEE_PERCENT,
   type CooperativeSettings,
   type CoopBankAccountSettings,
   type CoopLoanTypeSetting,
@@ -18,9 +19,11 @@ interface AdminSettingsState {
   coopBankAccount: CoopBankAccountSettings;
   savingsTypeSettings: CoopSavingsTypeSetting[];
   loanTypeSettings: CoopLoanTypeSetting[];
+  withdrawalFeePercent: number;
 
   updateCooperativeSettings: (values: CooperativeSettings) => void;
   updateCoopBankAccount: (values: CoopBankAccountSettings) => void;
+  updateWithdrawalFeePercent: (percent: number) => void;
 
   addSavingsTypeSetting: (setting: CoopSavingsTypeSetting) => void;
   updateSavingsTypeSetting: (
@@ -43,6 +46,16 @@ export const useAdminSettingsStore = create<AdminSettingsState>()(
     coopBankAccount: INITIAL_COOP_BANK_ACCOUNT,
     savingsTypeSettings: INITIAL_SAVINGS_TYPE_SETTINGS,
     loanTypeSettings: INITIAL_LOAN_TYPE_SETTINGS,
+    withdrawalFeePercent: INITIAL_WITHDRAWAL_FEE_PERCENT,
+
+    updateWithdrawalFeePercent: (percent) => {
+      set({ withdrawalFeePercent: percent });
+      logActivity({
+        module: "Settings",
+        action: "Update",
+        resource: `Withdrawal Fee — ${percent}%`,
+      });
+    },
 
     updateCooperativeSettings: (values) => {
       set({ cooperativeSettings: values });

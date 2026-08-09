@@ -28,7 +28,7 @@ import {
   type CoopSavingsRecord,
 } from "@/lib/coop-data";
 import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
-import { formatNaira } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { initiateTransfer } from "@/lib/paystack-transfer";
 import { getProfileData } from "@/lib/profile-data";
 import type { ExportColumn } from "@/lib/table-export";
@@ -143,7 +143,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     setTellerBusy(false);
     setTellerOpen(false);
     toast.success("Teller upload recorded", {
-      description: `${formatNaira(payload.amount)} added to ${record.memberName}'s ${payload.savingsType}.`,
+      description: `${formatMoney(payload.amount, coop.currency)} added to ${record.memberName}'s ${payload.savingsType}.`,
     });
   };
 
@@ -205,8 +205,8 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
         description:
           status === "Approved"
             ? request.type === "Withdrawal"
-              ? `${formatNaira(request.amount)} paid out to ${request.memberName}.`
-              : `${formatNaira(request.amount)} deposit recorded for ${request.memberName}.`
+              ? `${formatMoney(request.amount, coop.currency)} paid out to ${request.memberName}.`
+              : `${formatMoney(request.amount, coop.currency)} deposit recorded for ${request.memberName}.`
             : `${request.memberName}'s request was declined.`,
       },
     );
@@ -233,8 +233,16 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:max-w-lg">
-        <SummaryCard label="Total Savings" value={coopSavingsTotal(coop)} />
-        <SummaryCard label="My Savings" value={myTotal} />
+        <SummaryCard
+          label="Total Savings"
+          value={coopSavingsTotal(coop)}
+          currency={coop.currency}
+        />
+        <SummaryCard
+          label="My Savings"
+          value={myTotal}
+          currency={coop.currency}
+        />
       </div>
 
       <Card>
@@ -313,14 +321,22 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function SummaryCard({
+  label,
+  value,
+  currency = "NGN",
+}: {
+  label: string;
+  value: number;
+  currency?: string;
+}) {
   return (
     <Card>
       <CardContent className="flex items-start justify-between gap-3">
         <div className="space-y-1.5">
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="text-xl font-semibold text-foreground sm:text-2xl">
-            {formatNaira(value)}
+            {formatMoney(value, currency)}
           </p>
         </div>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">

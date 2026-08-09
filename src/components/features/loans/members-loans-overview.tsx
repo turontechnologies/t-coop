@@ -5,7 +5,8 @@ import { Landmark } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { LOAN_TYPES, type LoanTypeDef } from "@/lib/loans-data";
-import { formatNaira } from "@/lib/format";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import { useLoansStore } from "@/store/loans.store";
 
@@ -24,6 +25,7 @@ const EXPORT_COLUMNS: ExportColumn<LoanTypeTotal>[] = [
 
 export function MembersLoansOverview() {
   const records = useLoansStore((state) => state.records);
+  const currency = useCurrency();
 
   const totalsByType = useMemo(
     () =>
@@ -59,7 +61,7 @@ export function MembersLoansOverview() {
               Total Loans Disbursed
             </p>
             <p className="text-xl font-semibold text-foreground sm:text-2xl">
-              {formatNaira(grandTotal)}
+              {formatMoney(grandTotal, currency)}
             </p>
           </div>
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -116,10 +118,10 @@ export function MembersLoansOverview() {
                       {type.interestRate}%
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatNaira(type.maxAmount)}
+                      {formatMoney(type.maxAmount, currency)}
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {formatNaira(type.totalDisbursed)}
+                      {formatMoney(type.totalDisbursed, currency)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {type.activeCount}
