@@ -418,7 +418,7 @@ export default function LoanTypeCreationPage() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
           <Button
             type="button"
             variant="ghost"

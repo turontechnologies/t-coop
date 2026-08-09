@@ -15,14 +15,16 @@ function Tabs({ className, ...props }: TabsPrimitive.Root.Props) {
 
 function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
   return (
-    <TabsPrimitive.List
-      data-slot="tabs-list"
-      className={cn(
-        "relative flex items-center gap-6 border-b border-border",
-        className,
-      )}
-      {...props}
-    />
+    <div className="relative -mx-px [mask-image:linear-gradient(to_right,transparent,black_12px,black_calc(100%-12px),transparent)] sm:mx-0 sm:[mask-image:none]">
+      <TabsPrimitive.List
+        data-slot="tabs-list"
+        className={cn(
+          "relative flex items-center gap-6 overflow-x-auto border-b border-border px-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          className,
+        )}
+        {...props}
+      />
+    </div>
   );
 }
 
@@ -31,7 +33,7 @@ function TabsTab({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-tab"
       className={cn(
-        "relative py-2.5 text-sm font-medium text-muted-foreground transition-colors data-selected:text-foreground",
+        "relative shrink-0 py-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors data-selected:text-foreground",
         className,
       )}
       {...props}
