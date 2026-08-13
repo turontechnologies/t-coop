@@ -93,6 +93,11 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
     });
   }, [records, search, status, type, dateFrom, dateTo]);
 
+  const filteredTotal = useMemo(
+    () => filtered.reduce((sum, record) => sum + record.amount, 0),
+    [filtered],
+  );
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pageRecords = filtered.slice(
@@ -210,6 +215,15 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
           </PopoverContent>
         </Popover>
       </div>
+
+      {type !== "All types" ? (
+        <div className="flex items-center justify-between rounded-lg bg-accent/60 px-4 py-2.5 text-sm">
+          <span className="text-muted-foreground">Total {type}</span>
+          <span className="font-semibold text-foreground">
+            {formatMoney(filteredTotal, currency)}
+          </span>
+        </div>
+      ) : null}
 
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[760px] text-left text-sm">
