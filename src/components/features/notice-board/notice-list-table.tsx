@@ -34,15 +34,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Cooperative } from "@/lib/coop-data";
+import { formatDateLong } from "@/lib/format";
 import {
   getNoticeStatus,
   noticeExcerpt,
   type Notice,
   type NoticeType,
 } from "@/lib/notice-data";
-import { formatDateLong } from "@/lib/format";
 import { useNoticeStore } from "@/store/notice.store";
 import { cn } from "@/lib/utils";
+
+function resolveTargetLabel(
+  notice: Notice,
+  cooperatives: Cooperative[],
+): string {
+  if (!notice.targetCoopIds || notice.targetCoopIds.length === 0) {
+    return "All co-operatives";
+  }
+  return notice.targetCoopIds
+    .map((id) => cooperatives.find((coop) => coop.id === id)?.name ?? id)
+    .join(", ");
+}
 
 const MONTHS = [
   "January",
@@ -69,9 +82,13 @@ const PAGE_SIZE = 5;
 
 interface NoticeListTableProps {
   notices: Notice[];
+  cooperatives: Cooperative[];
 }
 
-export function NoticeListTable({ notices }: NoticeListTableProps) {
+export function NoticeListTable({
+  notices,
+  cooperatives,
+}: NoticeListTableProps) {
   const router = useRouter();
   const resendNotice = useNoticeStore((state) => state.resendNotice);
   const deleteNotice = useNoticeStore((state) => state.deleteNotice);
@@ -358,6 +375,9 @@ export function NoticeListTable({ notices }: NoticeListTableProps) {
                 Announcement
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
+                Co-operative
+              </th>
+              <th className="px-4 py-2.5 font-medium text-foreground">
                 Status
               </th>
             </tr>
@@ -366,7 +386,7 @@ export function NoticeListTable({ notices }: NoticeListTableProps) {
             {pageNotices.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No notices match your filters.
@@ -403,6 +423,9 @@ export function NoticeListTable({ notices }: NoticeListTableProps) {
                         {" "}
                         — {noticeExcerpt(notice.message)}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {resolveTargetLabel(notice, cooperatives)}
                     </td>
                     <td className="px-4 py-3">
                       <Badge
@@ -452,6 +475,10 @@ export function NoticeListTable({ notices }: NoticeListTableProps) {
                 {
                   label: "Announcement",
                   value: noticeExcerpt(notice.message),
+                },
+                {
+                  label: "Co-operative",
+                  value: resolveTargetLabel(notice, cooperatives),
                 },
               ]}
               actions={

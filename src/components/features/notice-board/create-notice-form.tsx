@@ -7,6 +7,7 @@ import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import {
   CalendarIcon,
+  ChevronDown,
   ClockIcon,
   Loader2,
   Paperclip,
@@ -18,6 +19,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,11 +47,13 @@ import {
   MAX_ATTACHMENT_BYTES,
   readFileAsDataUrl,
 } from "@/lib/file-to-data-url";
+import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
 import type { Notice } from "@/lib/notice-data";
 import {
   createNoticeSchema,
   type CreateNoticeFormValues,
 } from "@/lib/validations/notice.schema";
+import { useCoopStore } from "@/store/coop.store";
 import { useNoticeStore } from "@/store/notice.store";
 import type { AuthenticatedMember } from "@/types/auth";
 
@@ -55,9 +64,12 @@ interface CreateNoticeFormProps {
 export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
   const router = useRouter();
   const addNotice = useNoticeStore((state) => state.addNotice);
+  const cooperatives = useCoopStore((state) => state.cooperatives);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+
+  const isSuperAdmin = member.role === "super_admin";
 
   const titleId = useId();
   const messageId = useId();
@@ -81,6 +93,9 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
       recipient: "All Members",
       medium: "Email",
       schedule: "now",
+      // Admins only ever manage one co-op, so it's picked implicitly and
+      // never shown as a field; super admin must choose explicitly below.
+      targetCoopIds: isSuperAdmin ? [] : [ADMIN_DIRECTORY_COOP_ID],
     },
   });
 
@@ -139,18 +154,25 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
       createdByName: member.name,
       createdByRole: member.role,
       createdAt: new Date().toISOString(),
+      targetCoopIds: values.targetCoopIds,
     };
 
     await new Promise((resolve) => setTimeout(resolve, 900));
 
     addNotice(notice);
+    const coopNames = values.targetCoopIds
+      .map((id) => cooperatives.find((coop) => coop.id === id)?.name ?? id)
+      .join(", ");
+    const audience = isSuperAdmin
+      ? `${values.recipient} at ${coopNames}`
+      : values.recipient;
     toast.success(
       values.schedule === "now" ? "Notice sent" : "Notice scheduled",
       {
         description:
           values.schedule === "now"
-            ? `Delivered to ${values.recipient} via ${values.medium}.`
-            : `Will go out to ${values.recipient} via ${values.medium} on ${formatDateLong(new Date(sendAt))}.`,
+            ? `Delivered to ${audience} via ${values.medium}.`
+            : `Will go out to ${audience} via ${values.medium} on ${formatDateLong(new Date(sendAt))}.`,
       },
     );
     router.push(`/notice-board/${notice.id}`);
@@ -322,6 +344,71 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
           <CardTitle>Message Receiver</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {isSuperAdmin ? (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">
+                Target Co-operative
+              </p>
+              <Controller
+                control={control}
+                name="targetCoopIds"
+                render={({ field }) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <button
+                          type="button"
+                          disabled={isSubmitting}
+                          className="flex h-11 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                        />
+                      }
+                    >
+                      <span
+                        className={
+                          field.value.length === 0
+                            ? "text-muted-foreground"
+                            : undefined
+                        }
+                      >
+                        {field.value.length === 0
+                          ? "Select co-operative(s)"
+                          : field.value.length === cooperatives.length
+                            ? "All co-operatives"
+                            : `${field.value.length} selected`}
+                      </span>
+                      <ChevronDown
+                        className="size-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-(--anchor-width) min-w-56"
+                    >
+                      {cooperatives.map((coop) => (
+                        <DropdownMenuCheckboxItem
+                          key={coop.id}
+                          closeOnClick={false}
+                          checked={field.value.includes(coop.id)}
+                          onCheckedChange={(checked) => {
+                            field.onChange(
+                              checked
+                                ? [...field.value, coop.id]
+                                : field.value.filter((id) => id !== coop.id),
+                            );
+                          }}
+                        >
+                          {coop.name}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              />
+              <FieldError message={errors.targetCoopIds?.message} />
+            </div>
+          ) : null}
+
           <Controller
             control={control}
             name="recipient"

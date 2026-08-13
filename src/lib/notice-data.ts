@@ -26,6 +26,14 @@ export interface Notice {
   createdByName: string;
   createdByRole: UserRole;
   createdAt: string;
+  /**
+   * Which co-operative(s) this notice is addressed to — super admin picks
+   * from the co-operatives they've onboarded; an admin's own notices are
+   * always scoped to just their own co-op. Undefined/empty means it
+   * predates this field and is treated as a platform-wide broadcast, so
+   * existing notices stay visible everywhere rather than disappearing.
+   */
+  targetCoopIds?: string[];
 }
 
 export interface NoticeReply {
@@ -60,6 +68,16 @@ export function isNoticeVisibleToRole(notice: Notice, role: UserRole): boolean {
   return true;
 }
 
+/**
+ * Whether a notice reaches a given co-operative. A notice with no
+ * `targetCoopIds` (or an empty one) predates per-co-op targeting and is
+ * treated as a platform-wide broadcast, so it stays visible everywhere.
+ */
+export function noticeTargetsCoop(notice: Notice, coopId: string): boolean {
+  if (!notice.targetCoopIds || notice.targetCoopIds.length === 0) return true;
+  return notice.targetCoopIds.includes(coopId);
+}
+
 export function noticeExcerpt(message: string, maxLength = 90): string {
   const trimmed = message.trim();
   return trimmed.length > maxLength
@@ -86,6 +104,9 @@ export const INITIAL_NOTICES: Notice[] = [
     createdByName: "Chidinma Eze",
     createdByRole: "admin",
     createdAt: hoursAgo(20),
+    // Admin-created notices are always scoped to their own co-op — COOP-0001,
+    // the admin/member directory co-op (see member-directory.ts).
+    targetCoopIds: ["COOP-0001"],
   },
   {
     id: "notice-2",
@@ -100,6 +121,9 @@ export const INITIAL_NOTICES: Notice[] = [
     createdByName: "Falola Mayowa",
     createdByRole: "super_admin",
     createdAt: hoursAgo(3),
+    // Addressed only to Turon (COOP-0001) — demonstrates a super admin
+    // notice scoped to a single onboarded co-op.
+    targetCoopIds: ["COOP-0001"],
   },
   {
     id: "notice-3",
@@ -113,6 +137,8 @@ export const INITIAL_NOTICES: Notice[] = [
     createdByName: "Falola Mayowa",
     createdByRole: "super_admin",
     createdAt: hoursAgo(48),
+    // Addressed to two onboarded co-ops — demonstrates multi-co-op targeting.
+    targetCoopIds: ["COOP-0001", "COOP-0002"],
   },
   {
     id: "notice-4",

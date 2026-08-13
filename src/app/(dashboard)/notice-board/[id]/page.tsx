@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReplyThread } from "@/components/features/notice-board/reply-thread";
 import { getNoticeStatus } from "@/lib/notice-data";
 import { formatDateLong } from "@/lib/format";
+import { useCoopStore } from "@/store/coop.store";
 import { NOTICE_STORE_NAME, useNoticeStore } from "@/store/notice.store";
 import { useCrossTabSync } from "@/hooks/use-cross-tab-sync";
 import { useAuthStore } from "@/store/auth.store";
@@ -36,6 +37,7 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
   const router = useRouter();
   const member = useAuthStore((state) => state.member);
   const notices = useNoticeStore((state) => state.notices);
+  const cooperatives = useCoopStore((state) => state.cooperatives);
   const resendNotice = useNoticeStore((state) => state.resendNotice);
   const deleteNotice = useNoticeStore((state) => state.deleteNotice);
   const markRead = useNoticeStore((state) => state.markRead);
@@ -191,6 +193,20 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
           <div className="grid grid-cols-1 gap-x-8 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-3">
             <Field label="Sent To" value={notice.recipient} />
             <Field label="Medium" value={notice.medium} />
+            <Field
+              label="Co-operative"
+              value={
+                !notice.targetCoopIds || notice.targetCoopIds.length === 0
+                  ? "All co-operatives"
+                  : notice.targetCoopIds
+                      .map(
+                        (id) =>
+                          cooperatives.find((coop) => coop.id === id)?.name ??
+                          id,
+                      )
+                      .join(", ")
+              }
+            />
             {notice.meetingDate ? (
               <Field
                 label="Meeting Date"

@@ -7,6 +7,9 @@ export const createNoticeSchema = z
     message: z.string().trim().min(1, "Enter an announcement message"),
     recipient: z.enum(["All Members", "All Admins", "All Members & Admins"]),
     medium: z.enum(["Email", "SMS", "Email & SMS"]),
+    targetCoopIds: z
+      .array(z.string())
+      .min(1, "Select at least one co-operative"),
     meetingDate: z.string().optional(),
     schedule: z.enum(["now", "later"]),
     scheduleDate: z.string().optional(),
