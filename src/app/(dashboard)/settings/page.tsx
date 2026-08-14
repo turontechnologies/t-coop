@@ -21,8 +21,27 @@ import { useAuthStore } from "@/store/auth.store";
 
 export default function SettingsPage() {
   const member = useAuthStore((state) => state.member);
-  if (!member || (member.role !== "super_admin" && member.role !== "admin")) {
-    return null;
+  if (!member) return null;
+
+  if (member.role === "member") {
+    return (
+      <div className="pt-6">
+        <Card>
+          <CardContent>
+            <Tabs defaultValue="profile">
+              <TabsList>
+                <TabsTab value="profile">Profile</TabsTab>
+                <TabsIndicator />
+              </TabsList>
+
+              <TabsPanel value="profile">
+                <AdminSettingsProfileTab member={member} />
+              </TabsPanel>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
