@@ -623,6 +623,17 @@ export function coopLoansTotal(coop: Cooperative): number {
   return coop.loans.reduce((sum, record) => sum + record.amount, 0);
 }
 
+export function allCoopsLoansTotal(cooperatives: Cooperative[]): number {
+  return cooperatives.reduce((sum, coop) => sum + coopLoansTotal(coop), 0);
+}
+
+/** Illustrative platform revenue figure (0.25% of loan volume), not a real fee ledger. */
+const PLATFORM_LOANS_FEE_RATE = 0.0025;
+
+export function platformLoansFeesTotal(cooperatives: Cooperative[]): number {
+  return allCoopsLoansTotal(cooperatives) * PLATFORM_LOANS_FEE_RATE;
+}
+
 export function coopLoanStatusBadgeVariant(
   status: CoopLoanStatus,
 ): "secondary" | "outline" | "destructive" {

@@ -31,7 +31,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Co-operatives", href: "/co-operatives", icon: Building2 },
     { label: "Notice Board", href: "/notice-board", icon: Megaphone },
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
-    { label: "Loans", icon: Landmark },
+    { label: "Loans", href: "/loans", icon: Landmark },
     { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
     { label: "Support", icon: LifeBuoy },
     { label: "Settings", href: "/settings", icon: Settings },
