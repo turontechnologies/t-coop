@@ -7,6 +7,7 @@ import { DashboardTopbar } from "@/components/layouts/dashboard-topbar";
 import { DashboardBreadcrumb } from "@/components/layouts/dashboard-breadcrumb";
 import { RouteTransition } from "@/components/brand/route-transition";
 import { getRoleLabel } from "@/config/dashboard-nav";
+import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
 import type { AuthenticatedMember } from "@/types/auth";
 
@@ -36,6 +37,7 @@ export function DashboardShell({
       <RouteTransition
         messages={["Signing you out", "Redirecting to login"]}
         onComplete={() => {
+          void authService.logout();
           logout();
           router.push("/login");
         }}

@@ -35,6 +35,7 @@ export function LoginForm() {
   const router = useRouter();
   const setKeepLoggedIn = useAuthStore((state) => state.setKeepLoggedIn);
   const setMember = useAuthStore((state) => state.setMember);
+  const setToken = useAuthStore((state) => state.setToken);
   const clearResetSession = usePasswordResetStore((state) => state.clear);
   const login = useLogin();
 
@@ -64,6 +65,7 @@ export function LoginForm() {
       const response = await login.mutateAsync(values);
       setKeepLoggedIn(values.keepLoggedIn);
       setMember(response.member);
+      setToken(response.token);
       logActivity({
         module: "Authentication",
         action: "Login",

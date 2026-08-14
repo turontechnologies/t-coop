@@ -16,7 +16,7 @@ export interface AuthenticatedMember {
 
 export interface LoginResponse {
   member: AuthenticatedMember;
-  requiresOtp: boolean;
+  token: string;
 }
 
 export interface PasswordResetRequest {

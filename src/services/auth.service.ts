@@ -9,7 +9,7 @@ import type {
 
 export const authService = {
   async login(payload: LoginRequest): Promise<LoginResponse> {
-    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true") {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_LOGIN === "true") {
       return mockLogin(payload);
     }
 
@@ -20,10 +20,30 @@ export const authService = {
     return data;
   },
 
+  async logout(): Promise<void> {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_LOGIN === "true") {
+      return;
+    }
+
+    // JWTs are stateless server-side, so this call has nothing to "undo" —
+    // it exists so logout is audit-logged on the backend. If it fails (e.g.
+    // tunnel down), the caller still clears local state; we don't block
+    // logout on network calls succeeding.
+    try {
+      await apiClient.post("/auth/logout");
+    } catch {
+      // Intentionally swallowed — see comment above.
+    }
+  },
+
   async requestPasswordReset(
     payload: PasswordResetRequest,
   ): Promise<PasswordResetResponse> {
-    if (process.env.NEXT_PUBLIC_USE_MOCK_AUTH === "true") {
+    // The real backend doesn't implement forgot-password yet (see
+    // documentation/api-contracts.md §1) — mocked independently of login,
+    // which does hit the real backend, so this flag stays "true" even
+    // after login goes live.
+    if (process.env.NEXT_PUBLIC_USE_MOCK_PASSWORD_RESET === "true") {
       return mockRequestPasswordReset(payload);
     }
 
@@ -35,9 +55,8 @@ export const authService = {
   },
 };
 
-// No backend is wired up yet — this mock keeps the login flow demoable
-// against the three hardcoded role accounts in src/lib/mock-users.ts.
-// Remove once NEXT_PUBLIC_API_URL points at a real auth endpoint.
+// Kept for local demoing without a backend running at all — flip
+// NEXT_PUBLIC_USE_MOCK_LOGIN back to "true" to use this instead.
 async function mockLogin({
   membershipId,
   password,
@@ -56,7 +75,7 @@ async function mockLogin({
 
   return {
     member: match.member,
-    requiresOtp: false,
+    token: "mock-token",
   };
 }
 
