@@ -567,7 +567,56 @@ Currently only used for avatars — should also replace the base64 storage used 
 ]
 ```
 
-**Built.** Latest 200 entries platform-wide, newest first; 403s for any non-`super_admin` caller. `module`/`action` values are validated against `src/lib/audit-log-data.ts`'s fixed `AuditModule`/`AuditAction` enums server-side — an unrecognized value has no icon mapping here and used to crash the whole Logs tab (fixed by adding `getModuleIcon`/`getActionIcon`/`getStatusStyle` fallbacks in `src/lib/audit-log-ui.ts`, plus a migration to correct historical rows). Only logins/logouts and profile updates are wired to this so far — Co-operatives/Members/Savings/Loans/Subscriptions/Notices actions are still mock-only and won't appear here until those features are cut over too.
+**Built.** Latest 200 entries platform-wide, newest first; 403s for any non-`super_admin` caller. `module`/`action` values are validated against `src/lib/audit-log-data.ts`'s fixed `AuditModule`/`AuditAction` enums server-side — an unrecognized value has no icon mapping here and used to crash the whole Logs tab (fixed by adding `getModuleIcon`/`getActionIcon`/`getStatusStyle` fallbacks in `src/lib/audit-log-ui.ts`, plus a migration to correct historical rows). Only logins/logouts, profile updates, and now platform-settings updates are wired to this so far — Co-operatives/Members/Savings/Loans/Subscriptions/Notices actions are still mock-only and won't appear here until those features are cut over too.
+
+---
+
+## 13. Platform settings (super admin only)
+
+Backs three Settings tabs: **Fees & Charges**, **Payment Settings → Account
+Details**, and **Integrations**.
+
+### `GET` / `PATCH /settings/fees`
+
+```json
+{
+  "savingsChargeType": "Fixed|Percentage",
+  "savingsChargeAmount": 0.25,
+  "loansChargeType": "Fixed|Percentage",
+  "loansChargeAmount": 1,
+  "withdrawalFeePercent": 1
+}
+```
+
+### `GET` / `PATCH /settings/collection-account`
+
+```json
+{ "bankCode": "string", "accountNumber": "string", "accountName": "string?" }
+```
+
+### `GET` / `PATCH /settings/integrations`
+
+```json
+{
+  "paystackEnabled": true,
+  "paystackPublicKey": "string?",
+  "paystackSecretKey": "string?",
+  "paystackWebhookSecret": "string?",
+  "flutterwaveEnabled": false,
+  "flutterwavePublicKey": "string?",
+  "flutterwaveSecretKey": "string?",
+  "flutterwaveEncryptionKey": "string?"
+}
+```
+
+**Built.** Used by `fees-charges-form.tsx`, `collection-account-form.tsx`,
+and `settings-integrations-tab.tsx` via `platform-settings.service.ts` and
+the `use-fee-settings`/`use-collection-account`/`use-integration-settings`
+hooks. Integration credentials are stored for reference only — the real
+Paystack checkout/payout route handlers always read from the server's own
+`PAYSTACK_SECRET_KEY` environment variable, never from values saved here.
+`NEXT_PUBLIC_USE_MOCK_SETTINGS=true` falls back to the old
+`useSettingsStore` mock.
 
 ---
 

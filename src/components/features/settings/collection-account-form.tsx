@@ -15,24 +15,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { useBankList } from "@/hooks/use-bank-list";
+import {
+  useCollectionAccount,
+  useUpdateCollectionAccount,
+} from "@/hooks/use-collection-account";
 import { resolveBankAccount } from "@/lib/bank-lookup";
 import {
   collectionAccountSchema,
   type CollectionAccountFormValues,
 } from "@/lib/validations/settings.schema";
-import { useSettingsStore } from "@/store/settings.store";
 
 export function CollectionAccountForm() {
-  const collectionAccount = useSettingsStore(
-    (state) => state.collectionAccount,
+  const {
+    data: collectionAccount,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useCollectionAccount();
+
+  return (
+    <QueryBoundary
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      isRetrying={isFetching}
+      errorTitle="Couldn't load account details"
+    >
+      {collectionAccount ? (
+        <CollectionAccountFormBody collectionAccount={collectionAccount} />
+      ) : null}
+    </QueryBoundary>
   );
-  const updateCollectionAccount = useSettingsStore(
-    (state) => state.updateCollectionAccount,
-  );
+}
+
+function CollectionAccountFormBody({
+  collectionAccount,
+}: {
+  collectionAccount: CollectionAccountFormValues;
+}) {
+  const updateCollectionAccount = useUpdateCollectionAccount();
   const { banks, loading: banksLoading } = useBankList();
-  const [saving, setSaving] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const bankId = useId();
   const accountNumberId = useId();
 
@@ -57,6 +84,8 @@ export function CollectionAccountForm() {
     if (accountName) setValue("accountName", "", { shouldDirty: true });
   };
 
+  const [verifying, setVerifying] = useState(false);
+
   const handleVerify = async () => {
     setVerifying(true);
     try {
@@ -73,18 +102,22 @@ export function CollectionAccountForm() {
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    updateCollectionAccount({
-      ...values,
-      accountName: values.accountName ?? "",
-    });
-    setSaving(false);
-    reset(values);
-    toast.success("Account details saved");
+    try {
+      await updateCollectionAccount.mutateAsync({
+        ...values,
+        accountName: values.accountName ?? "",
+      });
+      reset(values);
+      toast.success("Account details saved");
+    } catch (error) {
+      toast.error("Couldn't save account details", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
 
-  const busy = saving || verifying;
+  const busy = updateCollectionAccount.isPending || verifying;
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-xl space-y-6">
@@ -184,7 +217,7 @@ export function CollectionAccountForm() {
           Reset
         </Button>
         <Button type="submit" disabled={busy || !isDirty}>
-          {saving ? (
+          {updateCollectionAccount.isPending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               Saving…

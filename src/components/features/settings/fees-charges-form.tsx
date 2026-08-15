@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { Loader2, TriangleAlert } from "lucide-react";
@@ -15,20 +15,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import { useFeeSettings, useUpdateFeeSettings } from "@/hooks/use-fee-settings";
 import {
   feeChargesSchema,
   type FeeChargesFormValues,
 } from "@/lib/validations/settings.schema";
-import { useSettingsStore } from "@/store/settings.store";
 
 const CHARGE_TYPES = ["Fixed", "Percentage"] as const;
 
 export function FeesChargesForm() {
-  const feeSettings = useSettingsStore((state) => state.feeSettings);
-  const updateFeeSettings = useSettingsStore(
-    (state) => state.updateFeeSettings,
+  const {
+    data: feeSettings,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useFeeSettings();
+
+  return (
+    <QueryBoundary
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      isRetrying={isFetching}
+      errorTitle="Couldn't load fees & charges"
+    >
+      {feeSettings ? <FeesChargesFormBody feeSettings={feeSettings} /> : null}
+    </QueryBoundary>
   );
-  const [saving, setSaving] = useState(false);
+}
+
+function FeesChargesFormBody({
+  feeSettings,
+}: {
+  feeSettings: FeeChargesFormValues;
+}) {
+  const updateFeeSettings = useUpdateFeeSettings();
   const savingsTypeId = useId();
   const loansTypeId = useId();
   const withdrawalFeeId = useId();
@@ -45,13 +70,19 @@ export function FeesChargesForm() {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    updateFeeSettings(values);
-    setSaving(false);
-    reset(values);
-    toast.success("Fees & charges saved");
+    try {
+      await updateFeeSettings.mutateAsync(values);
+      reset(values);
+      toast.success("Fees & charges saved");
+    } catch (error) {
+      toast.error("Couldn't save fees & charges", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
+
+  const saving = updateFeeSettings.isPending;
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">

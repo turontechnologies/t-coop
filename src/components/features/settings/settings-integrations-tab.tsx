@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Controller,
@@ -15,18 +15,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Switch } from "@/components/ui/switch";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import {
+  useIntegrationSettings,
+  useUpdateIntegrationSettings,
+} from "@/hooks/use-integration-settings";
 import {
   integrationsSchema,
   type IntegrationsFormValues,
 } from "@/lib/validations/settings.schema";
-import { useSettingsStore } from "@/store/settings.store";
 
 export function SettingsIntegrationsTab() {
-  const integrations = useSettingsStore((state) => state.integrations);
-  const updateIntegrations = useSettingsStore(
-    (state) => state.updateIntegrations,
+  const {
+    data: integrations,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useIntegrationSettings();
+
+  return (
+    <QueryBoundary
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={() => refetch()}
+      isRetrying={isFetching}
+      errorTitle="Couldn't load integrations"
+    >
+      {integrations ? (
+        <SettingsIntegrationsForm integrations={integrations} />
+      ) : null}
+    </QueryBoundary>
   );
-  const [saving, setSaving] = useState(false);
+}
+
+function SettingsIntegrationsForm({
+  integrations,
+}: {
+  integrations: IntegrationsFormValues;
+}) {
+  const updateIntegrations = useUpdateIntegrationSettings();
 
   const {
     control,
@@ -44,22 +74,28 @@ export function SettingsIntegrationsTab() {
   const flutterwaveEnabled = watch("flutterwaveEnabled");
 
   const onSubmit = handleSubmit(async (values) => {
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    updateIntegrations({
-      paystackEnabled: values.paystackEnabled,
-      paystackPublicKey: values.paystackPublicKey ?? "",
-      paystackSecretKey: values.paystackSecretKey ?? "",
-      paystackWebhookSecret: values.paystackWebhookSecret ?? "",
-      flutterwaveEnabled: values.flutterwaveEnabled,
-      flutterwavePublicKey: values.flutterwavePublicKey ?? "",
-      flutterwaveSecretKey: values.flutterwaveSecretKey ?? "",
-      flutterwaveEncryptionKey: values.flutterwaveEncryptionKey ?? "",
-    });
-    setSaving(false);
-    reset(values);
-    toast.success("Integrations saved");
+    try {
+      await updateIntegrations.mutateAsync({
+        paystackEnabled: values.paystackEnabled,
+        paystackPublicKey: values.paystackPublicKey ?? "",
+        paystackSecretKey: values.paystackSecretKey ?? "",
+        paystackWebhookSecret: values.paystackWebhookSecret ?? "",
+        flutterwaveEnabled: values.flutterwaveEnabled,
+        flutterwavePublicKey: values.flutterwavePublicKey ?? "",
+        flutterwaveSecretKey: values.flutterwaveSecretKey ?? "",
+        flutterwaveEncryptionKey: values.flutterwaveEncryptionKey ?? "",
+      });
+      reset(values);
+      toast.success("Integrations saved");
+    } catch (error) {
+      toast.error("Couldn't save integrations", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
+
+  const saving = updateIntegrations.isPending;
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">

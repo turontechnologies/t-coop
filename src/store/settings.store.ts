@@ -21,9 +21,6 @@ interface SettingsState {
   integrations: IntegrationSettings;
   platformUsers: PlatformUser[];
   platformRoles: PlatformRole[];
-  updateFeeSettings: (values: FeeSettings) => void;
-  updateCollectionAccount: (values: CollectionAccountSettings) => void;
-  updateIntegrations: (values: IntegrationSettings) => void;
   inviteUser: (user: PlatformUser) => void;
   updatePlatformUserRole: (userId: string, role: string) => void;
   setPlatformUserStatus: (userId: string, status: PlatformUserStatus) => void;
@@ -43,31 +40,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   integrations: INITIAL_INTEGRATIONS,
   platformUsers: INITIAL_PLATFORM_USERS,
   platformRoles: INITIAL_PLATFORM_ROLES,
-
-  updateFeeSettings: (values) => {
-    set({ feeSettings: values });
-    logActivity({
-      module: "Settings",
-      action: "Update",
-      resource: "Fees & Charges",
-    });
-  },
-  updateCollectionAccount: (values) => {
-    set({ collectionAccount: values });
-    logActivity({
-      module: "Settings",
-      action: "Update",
-      resource: "Collections Account",
-    });
-  },
-  updateIntegrations: (values) => {
-    set({ integrations: values });
-    logActivity({
-      module: "Settings",
-      action: "Update",
-      resource: "Integrations",
-    });
-  },
 
   inviteUser: (user) => {
     set((state) => ({ platformUsers: [user, ...state.platformUsers] }));
