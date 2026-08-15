@@ -4,10 +4,18 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoopListTable } from "@/components/features/coop/coop-list-table";
-import { useCoopStore } from "@/store/coop.store";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import { useCooperatives } from "@/hooks/use-cooperatives";
 
 export default function CooperativesPage() {
-  const cooperatives = useCoopStore((state) => state.cooperatives);
+  const {
+    data: cooperatives,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useCooperatives();
 
   return (
     <div className="space-y-6 pt-6">
@@ -22,7 +30,16 @@ export default function CooperativesPage() {
         </Button>
       </div>
 
-      <CoopListTable cooperatives={cooperatives} />
+      <QueryBoundary
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={() => refetch()}
+        isRetrying={isFetching}
+        errorTitle="Couldn't load co-operatives"
+      >
+        <CoopListTable cooperatives={cooperatives ?? []} />
+      </QueryBoundary>
     </div>
   );
 }

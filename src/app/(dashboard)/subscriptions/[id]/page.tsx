@@ -13,7 +13,7 @@ import {
   TabsPanel,
   TabsTab,
 } from "@/components/ui/tabs";
-import { CoopHeaderCard } from "@/components/features/coop/coop-header-card";
+import { SubscriptionCoopHeaderCard } from "@/components/features/coop/subscription-coop-header-card";
 import { ManualSubscriptionPaymentModal } from "@/components/features/coop/manual-subscription-payment-modal";
 import { SubscriptionHistoryTable } from "@/components/features/coop/subscription-history-table";
 import { findCooperative, type CoopSubscriptionPayment } from "@/lib/coop-data";
@@ -86,7 +86,7 @@ export default function SubscriptionDetailsPage({
         Back
       </Button>
 
-      <CoopHeaderCard coop={coop} />
+      <SubscriptionCoopHeaderCard coop={coop} />
 
       <Card>
         <CardContent>

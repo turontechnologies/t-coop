@@ -19,6 +19,22 @@ export const addCooperativeSchema = z.object({
 
 export type AddCooperativeFormValues = z.infer<typeof addCooperativeSchema>;
 
+export const editCooperativeSchema = z.object({
+  name: z.string().trim().min(1, "Enter the co-operative name"),
+  contactEmail: z.email("Enter a valid email address"),
+  contactPhone: z
+    .string()
+    .trim()
+    .min(7, "Enter a valid phone number")
+    .regex(/^[\d+\s-]+$/, "Enter a valid phone number"),
+  address: z.string().trim().min(1, "Enter the co-operative's address"),
+  country: z.string().min(1, "Select a country"),
+  state: z.string().trim().min(1, "Select a state"),
+  city: z.string().trim().min(1, "Select a city"),
+});
+
+export type EditCooperativeFormValues = z.infer<typeof editCooperativeSchema>;
+
 export const editMemberSchema = z.object({
   firstName: z.string().trim().min(1, "Enter a first name"),
   lastName: z.string().trim().min(1, "Enter a last name"),

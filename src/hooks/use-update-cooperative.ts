@@ -1,0 +1,15 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { cooperativeService } from "@/services/cooperative.service";
+import type { EditCooperativeFormValues } from "@/lib/validations/coop.schema";
+
+export function useUpdateCooperative(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (values: EditCooperativeFormValues) =>
+      cooperativeService.updateCooperative(id, values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cooperatives"] });
+      queryClient.invalidateQueries({ queryKey: ["cooperatives", id] });
+    },
+  });
+}

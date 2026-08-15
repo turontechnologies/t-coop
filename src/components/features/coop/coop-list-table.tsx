@@ -11,20 +11,20 @@ import {
 } from "@/components/ui/mobile-record-card";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { CoopCurrencyDisplay } from "@/components/features/coop/coop-currency-display";
-import {
-  coopLoansBySummaryType,
-  coopLoansTotal,
-  coopSavingsBySummaryType,
-  coopSavingsTotal,
-  type Cooperative,
-} from "@/lib/coop-data";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { CooperativeSummary } from "@/types/cooperative";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
+// The "earnings" columns have no real fee ledger behind them yet (same gap
+// documented on the Savings/Subscriptions super-admin pages) — shown as an
+// illustrative 0.25% of volume, computed here rather than on the backend
+// since it's purely a display concern, not a real number anyone is billed.
+const ILLUSTRATIVE_FEE_RATE = 0.0025;
+
 interface CoopListTableProps {
-  cooperatives: Cooperative[];
+  cooperatives: CooperativeSummary[];
 }
 
 export function CoopListTable({ cooperatives }: CoopListTableProps) {
@@ -33,33 +33,15 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
 
-  const rows = useMemo(
-    () =>
-      cooperatives.map((coop) => ({
-        coop,
-        earningsOnSavings: coopSavingsBySummaryType(coop).reduce(
-          (sum, type) => sum + type.earnings,
-          0,
-        ),
-        totalSavings: coopSavingsTotal(coop),
-        earningsOnLoans: coopLoansBySummaryType(coop).reduce(
-          (sum, type) => sum + type.earnings,
-          0,
-        ),
-        totalLoans: coopLoansTotal(coop),
-      })),
-    [cooperatives],
-  );
-
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter(
-      ({ coop }) =>
+    if (!query) return cooperatives;
+    return cooperatives.filter(
+      (coop) =>
         coop.name.toLowerCase().includes(query) ||
         coop.id.toLowerCase().includes(query),
     );
-  }, [rows, search]);
+  }, [cooperatives, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -130,60 +112,58 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
                 </td>
               </tr>
             ) : (
-              pageRows.map(
-                ({
-                  coop,
-                  earningsOnSavings,
-                  totalSavings,
-                  earningsOnLoans,
-                  totalLoans,
-                }) => (
-                  <tr
-                    key={coop.id}
-                    onClick={() => router.push(`/co-operatives/${coop.id}`)}
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
+              pageRows.map((coop) => (
+                <tr
+                  key={coop.id}
+                  onClick={() => router.push(`/co-operatives/${coop.id}`)}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
+                >
+                  <td className="px-4 py-3 font-medium text-foreground">
+                    {coop.id}
+                  </td>
+                  <td className="px-4 py-3 text-foreground">{coop.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {coop.memberCount.toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatMoney(
+                      coop.totalSavings * ILLUSTRATIVE_FEE_RATE,
+                      coop.currency,
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-foreground">
+                    {formatMoney(coop.totalSavings, coop.currency)}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatMoney(
+                      coop.totalLoans * ILLUSTRATIVE_FEE_RATE,
+                      coop.currency,
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-foreground">
+                    {formatMoney(coop.totalLoans, coop.currency)}
+                  </td>
+                  <td
+                    className="px-4 py-3"
+                    onClick={(event) => event.stopPropagation()}
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      {coop.id}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{coop.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {coop.members.length.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatMoney(earningsOnSavings, coop.currency)}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">
-                      {formatMoney(totalSavings, coop.currency)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatMoney(earningsOnLoans, coop.currency)}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">
-                      {formatMoney(totalLoans, coop.currency)}
-                    </td>
-                    <td
-                      className="px-4 py-3"
-                      onClick={(event) => event.stopPropagation()}
+                    <CoopCurrencyDisplay currency={coop.currency} />
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge
+                      variant={
+                        coop.status === "Active" ? "secondary" : "destructive"
+                      }
+                      className={cn(
+                        coop.status === "Active" &&
+                          "bg-success/15 text-success",
+                      )}
                     >
-                      <CoopCurrencyDisplay currency={coop.currency} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={
-                          coop.status === "Active" ? "secondary" : "destructive"
-                        }
-                        className={cn(
-                          coop.status === "Active" &&
-                            "bg-success/15 text-success",
-                        )}
-                      >
-                        {coop.status}
-                      </Badge>
-                    </td>
-                  </tr>
-                ),
-              )
+                      {coop.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -193,60 +173,56 @@ export function CoopListTable({ cooperatives }: CoopListTableProps) {
         isEmpty={pageRows.length === 0}
         emptyMessage="No co-operatives match your search."
       >
-        {pageRows.map(
-          ({
-            coop,
-            earningsOnSavings,
-            totalSavings,
-            earningsOnLoans,
-            totalLoans,
-          }) => (
-            <MobileRecordCard
-              key={coop.id}
-              onClick={() => router.push(`/co-operatives/${coop.id}`)}
-              title={coop.name}
-              badge={
-                <Badge
-                  variant={
-                    coop.status === "Active" ? "secondary" : "destructive"
-                  }
-                  className={cn(
-                    coop.status === "Active" && "bg-success/15 text-success",
-                  )}
-                >
-                  {coop.status}
-                </Badge>
-              }
-              fields={[
-                { label: "Co-op ID", value: coop.id },
-                {
-                  label: "No of members",
-                  value: coop.members.length.toLocaleString(),
-                },
-                {
-                  label: "Earnings on Savings",
-                  value: formatMoney(earningsOnSavings, coop.currency),
-                },
-                {
-                  label: "Total Savings",
-                  value: formatMoney(totalSavings, coop.currency),
-                },
-                {
-                  label: "Earnings on Loans",
-                  value: formatMoney(earningsOnLoans, coop.currency),
-                },
-                {
-                  label: "Total Loans",
-                  value: formatMoney(totalLoans, coop.currency),
-                },
-                {
-                  label: "Currency",
-                  value: <CoopCurrencyDisplay currency={coop.currency} />,
-                },
-              ]}
-            />
-          ),
-        )}
+        {pageRows.map((coop) => (
+          <MobileRecordCard
+            key={coop.id}
+            onClick={() => router.push(`/co-operatives/${coop.id}`)}
+            title={coop.name}
+            badge={
+              <Badge
+                variant={coop.status === "Active" ? "secondary" : "destructive"}
+                className={cn(
+                  coop.status === "Active" && "bg-success/15 text-success",
+                )}
+              >
+                {coop.status}
+              </Badge>
+            }
+            fields={[
+              { label: "Co-op ID", value: coop.id },
+              {
+                label: "No of members",
+                value: coop.memberCount.toLocaleString(),
+              },
+              {
+                label: "Earnings on Savings",
+                value: formatMoney(
+                  coop.totalSavings * ILLUSTRATIVE_FEE_RATE,
+                  coop.currency,
+                ),
+              },
+              {
+                label: "Total Savings",
+                value: formatMoney(coop.totalSavings, coop.currency),
+              },
+              {
+                label: "Earnings on Loans",
+                value: formatMoney(
+                  coop.totalLoans * ILLUSTRATIVE_FEE_RATE,
+                  coop.currency,
+                ),
+              },
+              {
+                label: "Total Loans",
+                value: formatMoney(coop.totalLoans, coop.currency),
+              },
+              {
+                label: "Currency",
+                value: <CoopCurrencyDisplay currency={coop.currency} />,
+              },
+            ]}
+          />
+        ))}
       </MobileRecordList>
 
       {filtered.length > 0 ? (

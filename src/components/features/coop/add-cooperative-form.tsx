@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -13,18 +13,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LocationFields } from "@/components/features/shared/location-fields";
-import type { Cooperative } from "@/lib/coop-data";
+import { useCreateCooperative } from "@/hooks/use-create-cooperative";
 import {
   addCooperativeSchema,
   type AddCooperativeFormValues,
 } from "@/lib/validations/coop.schema";
-import { useCoopStore } from "@/store/coop.store";
 
 export function AddCooperativeForm() {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const addCooperative = useCoopStore((state) => state.addCooperative);
+  const createCooperative = useCreateCooperative();
 
   const coopIdId = useId();
   const coopNameId = useId();
@@ -58,46 +55,33 @@ export function AddCooperativeForm() {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    const isTaken = cooperatives.some(
-      (coop) => coop.id.toLowerCase() === values.coopId.trim().toLowerCase(),
-    );
-    if (isTaken) {
-      setError("coopId", {
-        message: "That co-op ID is already in use. Please choose another.",
+    try {
+      const coop = await createCooperative.mutateAsync({
+        ...values,
+        coopId: values.coopId.trim(),
+        coopName: values.coopName.trim(),
+        contactEmail: values.contactEmail.trim(),
+        contactPhone: values.contactPhone.trim(),
+        address: values.address.trim(),
+        state: values.state.trim(),
       });
-      return;
+      toast.success("Co-operative created", {
+        description: `${coop.name} has been added — its admin's login details were emailed to ${coop.contactEmail}.`,
+      });
+      router.push(`/co-operatives/${coop.id}`);
+    } catch (error) {
+      if (error instanceof Error && /co-op id/i.test(error.message)) {
+        setError("coopId", { message: error.message });
+        return;
+      }
+      toast.error("Couldn't create co-operative", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     }
-
-    setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 900));
-
-    const coop: Cooperative = {
-      id: values.coopId.trim(),
-      name: values.coopName.trim(),
-      adminName: `${values.adminFirstName.trim()} ${values.adminLastName.trim()}`,
-      contactEmail: values.contactEmail.trim(),
-      contactPhone: values.contactPhone.trim(),
-      address: values.address.trim(),
-      country: values.country,
-      state: values.state.trim(),
-      city: values.city.trim(),
-      status: "Active",
-      members: [],
-      savings: [],
-      loans: [],
-      savingsRequests: [],
-      subscriptionFee: 150_000,
-      subscriptionPayments: [],
-      currency: "NGN",
-    };
-
-    addCooperative(coop);
-    setBusy(false);
-    toast.success("Co-operative created", {
-      description: `${coop.name} has been added.`,
-    });
-    router.push(`/co-operatives/${coop.id}`);
   });
+
+  const busy = createCooperative.isPending;
 
   return (
     <motion.form
