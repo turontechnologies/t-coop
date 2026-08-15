@@ -99,7 +99,13 @@ export function DashboardTopbar({
               <p className="text-xs text-muted-foreground">{member.email}</p>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push("/profile")}>
+            <DropdownMenuItem
+              onClick={() =>
+                router.push(
+                  member.role === "super_admin" ? "/settings" : "/profile",
+                )
+              }
+            >
               <User className="size-4" aria-hidden="true" />
               My Profile
             </DropdownMenuItem>

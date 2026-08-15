@@ -24,3 +24,52 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Guards against firing the redirect below more than once when several
+// requests in flight all come back 401 at the same time.
+let redirectingToLogin = false;
+
+// Every backend error response is { "error": "human-readable message" }
+// (api-conventions.md). Without this, call sites see axios's generic
+// "Request failed with status code 400" instead of the real message —
+// this interceptor unwraps it so every existing `error.message` /
+// `error instanceof Error` call site across the app shows the right text
+// with no further changes needed.
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const requestUrl: string = error?.config?.url ?? "";
+
+    // A 401 from anywhere except the login attempt itself means the
+    // session is gone (expired token, member disabled, etc.) — clear it
+    // and send the user back to sign in. Excluding /auth/login specifically
+    // so a wrong-password attempt on the login page doesn't bounce the user
+    // in a loop; that 401 is handled by the login form itself.
+    if (
+      status === 401 &&
+      !requestUrl.includes("/auth/login") &&
+      typeof window !== "undefined"
+    ) {
+      if (!redirectingToLogin) {
+        redirectingToLogin = true;
+        useAuthStore.getState().logout();
+        window.location.href = "/login";
+      }
+      return Promise.reject(
+        new Error("Your session has expired. Please sign in again."),
+      );
+    }
+
+    const backendMessage = error?.response?.data?.error;
+    if (typeof backendMessage === "string" && backendMessage.trim()) {
+      return Promise.reject(new Error(backendMessage));
+    }
+    if (error?.code === "ECONNABORTED" || error?.message === "Network Error") {
+      return Promise.reject(
+        new Error("Can't reach the server right now. Please try again."),
+      );
+    }
+    return Promise.reject(error);
+  },
+);

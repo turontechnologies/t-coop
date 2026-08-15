@@ -47,19 +47,20 @@ has no working password-reset endpoint yet (see Auth above).
 
 ## What's Real vs. Mocked
 
-| Integration                                                             | Status                                                       | Where                                                         |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
-| Paystack Inline (savings deposit checkout)                              | **Real** — needs a test-mode public key                      | `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`                             |
-| Paystack bank-account verification                                      | **Real** — needs a test-mode secret key                      | `PAYSTACK_SECRET_KEY`, `src/app/api/paystack/resolve-account` |
-| Paystack live bank list                                                 | **Real**                                                     | `src/app/api/paystack/banks`                                  |
-| Paystack Transfers (loan disbursement, savings withdrawal payout)       | **Real**                                                     | `src/app/api/paystack/transfer`, `/transfer/finalize`         |
-| Cloudinary profile-photo upload                                         | **Real** — needs `CLOUDINARY_*` env vars                     | `src/app/api/upload`                                          |
-| Country/State/City cascade                                              | **Real** — free public API, called directly from the browser | `src/lib/geo-lookup.ts` (countriesnow.space)                  |
-| IP geolocation for the audit log                                        | **Real** — free public API, called directly from the browser | `src/lib/ip-location.ts` (ipwho.is)                           |
-| Live currency conversion rates                                          | **Real** — free public API, polled every 5 min               | `src/lib/exchange-rate.ts` (open.er-api.com)                  |
-| Login / `/auth/me` / logout                                             | **Real** — calls `t-coop-backend`, JWT bearer auth           | `src/services/auth.service.ts`, `src/lib/axios.ts`            |
-| Dashboard cards + Recent Activities                                     | **Real** aggregates; chart/dividends still illustrative      | `src/services/dashboard.service.ts`                           |
-| Everything else (members, savings/loan records, notices, subscriptions) | **Mocked** — in-memory only, resets on reload                | `src/lib/*-data.ts`, `src/store/*.store.ts`                   |
+| Integration                                                               | Status                                                          | Where                                                         |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------- |
+| Paystack Inline (savings deposit checkout)                                | **Real** — needs a test-mode public key                         | `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`                             |
+| Paystack bank-account verification                                        | **Real** — needs a test-mode secret key                         | `PAYSTACK_SECRET_KEY`, `src/app/api/paystack/resolve-account` |
+| Paystack live bank list                                                   | **Real**                                                        | `src/app/api/paystack/banks`                                  |
+| Paystack Transfers (loan disbursement, savings withdrawal payout)         | **Real**                                                        | `src/app/api/paystack/transfer`, `/transfer/finalize`         |
+| Cloudinary profile-photo upload                                           | **Real** — needs `CLOUDINARY_*` env vars                        | `src/app/api/upload`                                          |
+| Country/State/City cascade                                                | **Real** — free public API, called directly from the browser    | `src/lib/geo-lookup.ts` (countriesnow.space)                  |
+| IP geolocation for the audit log                                          | **Real** — free public API, called directly from the browser    | `src/lib/ip-location.ts` (ipwho.is)                           |
+| Live currency conversion rates                                            | **Real** — free public API, polled every 5 min                  | `src/lib/exchange-rate.ts` (open.er-api.com)                  |
+| Login / `/auth/me` / logout                                               | **Real** — calls `t-coop-backend`, JWT bearer auth              | `src/services/auth.service.ts`, `src/lib/axios.ts`            |
+| Dashboard cards + Recent Activities                                       | **Real** aggregates; chart/dividends still illustrative         | `src/services/dashboard.service.ts`                           |
+| Profile (view/edit, all roles) — `/profile` and `/settings` → Profile tab | **Real** — `GET`/`PATCH /profile`; password change still mocked | `src/services/profile.service.ts`                             |
+| Everything else (members, savings/loan records, notices, subscriptions)   | **Mocked** — in-memory only, resets on reload                   | `src/lib/*-data.ts`, `src/store/*.store.ts`                   |
 
 Two known real-world constraints discovered while building the payout
 integration (not app bugs): Paystack's test mode caps real-bank-account
@@ -87,6 +88,16 @@ implement forgot-password yet — OTP is currently just handed back to the
 client, a real backend must email it instead and never return it. OTP is
 **not** part of primary login — only the reset flow.
 
+**Any 401 from any backend call (except a failed login attempt itself)
+auto-redirects to `/login`** — handled once, centrally, in `src/lib/axios.ts`'s
+response interceptor: clears the Zustand auth store and hard-redirects, so
+an expired/invalid token on any page recovers cleanly instead of leaving a
+broken page with silently-failing requests. The same interceptor also
+unwraps the backend's `{"error": "..."}` shape into a real `Error`, so every
+existing `error.message` / `toast.error(...)` call site across the app
+already shows the actual backend message — this is also what makes the
+duplicate-email message on Profile (see below) show up correctly.
+
 ### Dashboard (`/dashboard`)
 
 One route, one layout, shared by all three roles — content (quick-summary
@@ -102,13 +113,30 @@ them from the real totals rather than inventing them outright — see
 illustrative. Falls back to the old static mock if
 `NEXT_PUBLIC_USE_MOCK_DASHBOARD=true`.
 
-### Profile (`/profile`, all roles)
+### Profile (`/profile` for admin/member; super admin's own profile lives at `/settings` → Profile tab instead)
 
-Read-only by default, "Edit" toggles a form. Real Cloudinary photo upload.
-Bank Account section (bank picker + account number + "Verify" button that
-calls real Paystack resolve, shows the resolved account holder name) —
-this replaced an earlier BVN field entirely. Country/State/City via the
-live cascading dropdown.
+Read-only by default, "Edit" toggles a form. **Backed by the real backend**
+(`GET`/`PATCH /profile`) — fetched via `useProfile`, saved via
+`useUpdateProfile`, with a loading skeleton and a retry-able error state if
+the fetch fails. Falls back to the old mock if
+`NEXT_PUBLIC_USE_MOCK_PROFILE=true`. Real Cloudinary photo upload. Bank
+Account section (bank picker + account number + "Verify" button that calls
+real Paystack resolve, shows the resolved account holder name) — this
+replaced an earlier BVN field entirely. Country/State/City via the live
+cascading dropdown. The backend rejects a duplicate email with a real,
+specific message ("That email address is already in use by another
+account", 409) instead of a generic 500 — checked proactively before the
+save, with a `DataIntegrityViolationException` handler as a defense-in-depth
+fallback for the same unique constraint.
+
+The topbar's "My Profile" menu item is role-aware
+(`dashboard-topbar.tsx`): super admin goes to `/settings` (its Profile tab
+is the primary place super admin manages their own details, alongside
+password change), admin/member go to the standalone `/profile` page. Both
+destinations read/write the same backend record — `/settings`' Profile tab
+only edits a subset of fields (name/email/address/phone/country) and
+merges those onto the full fetched record before saving, so it can never
+wipe out fields it doesn't show (NIN, bank account, gender, state/city).
 
 ### Savings & Contributions (`/savings`)
 
@@ -195,10 +223,12 @@ Paystack flow) — see [subscriptions-page.md](./subscriptions-page.md).
 
 ### Settings (`/settings`, super admin + admin — role-branched)
 
-**Super admin** gets five tabs: **Profile** (avatar, name/email/address/phone/country, and
-an optional inline password change — all backed by the same
-`ProfileRecord`/mock-password functions `/profile` and password recovery
-already use, so it can't drift out of sync). **Payment Settings** →
+**Super admin** gets five tabs — this is where super admin manages their
+own profile day-to-day (the topbar's "My Profile" link brings them here
+directly): **Profile** (avatar, name/email/address/phone/country — **real**,
+fetched/saved via `GET`/`PATCH /profile`, same backend record `/profile`
+itself reads; an optional inline password change is still mocked, no real
+change-password endpoint exists yet). **Payment Settings** →
 Fees & Charges (savings/loan charge type + amount) and Account Details
 (the platform's own collections bank account, same real Paystack
 "Verify" flow as everywhere else). **Integrations** — Paystack and

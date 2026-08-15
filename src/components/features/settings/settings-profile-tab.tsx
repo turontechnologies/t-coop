@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { Camera, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,13 +18,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCountries } from "@/hooks/use-countries";
+import { useProfile } from "@/hooks/use-profile";
+import { useUpdateProfile } from "@/hooks/use-update-profile";
 import { logActivity } from "@/lib/audit-log";
 import { getInitials } from "@/lib/format";
 import {
   updateMockUserPassword,
   verifyMockUserPassword,
 } from "@/lib/mock-users";
-import { getProfileData, updateProfileData } from "@/lib/profile-data";
+import type { ProfileRecord } from "@/lib/profile-data";
 import {
   settingsProfileSchema,
   type SettingsProfileFormValues,
@@ -39,13 +42,70 @@ interface SettingsProfileTabProps {
 }
 
 export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
+  const {
+    data: profile,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useProfile(member.id);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-24 w-24 animate-pulse rounded-xl bg-muted" />
+        <div className="h-64 animate-pulse rounded-xl bg-muted" />
+      </div>
+    );
+  }
+
+  if (isError || !profile) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <TriangleAlert
+            className="size-6 text-destructive"
+            aria-hidden="true"
+          />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              Couldn&apos;t load your profile
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error
+                ? error.message
+                : "Please check your connection and try again."}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            {isFetching ? "Retrying…" : "Try again"}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <SettingsProfileForm member={member} profile={profile} />;
+}
+
+interface SettingsProfileFormProps {
+  member: AuthenticatedMember;
+  profile: ProfileRecord;
+}
+
+function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
   const setAvatarUrl = useAuthStore((state) => state.setAvatarUrl);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const updateProfile = useUpdateProfile();
   const { countries, loading: countriesLoading } = useCountries();
 
-  const profile = getProfileData(member.id);
   const membershipIdFieldId = useId();
   const currentPasswordId = useId();
   const newPasswordId = useId();
@@ -177,33 +237,47 @@ export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
       }
     }
 
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-
-    updateProfileData(member.id, {
-      ...profile,
-      firstName: values.firstName,
-      lastName: values.lastName,
-      email: values.email,
-      homeAddress: values.address,
-      phone: values.phone,
-      country: values.country,
-    });
-    logActivity({ module: "Settings", action: "Update", resource: "Profile" });
-
-    if (anyPasswordFilled) {
-      updateMockUserPassword(member.id, passwordFields.newPassword);
+    // This tab only edits a subset of the full profile record (name/email/
+    // address/phone/country) — merge onto the fetched record rather than
+    // the update endpoint's other required fields (NIN, bank account,
+    // gender, state/city) would fail validation or get wiped out.
+    try {
+      await updateProfile.mutateAsync({
+        memberId: member.id,
+        values: {
+          ...profile,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+          homeAddress: values.address,
+          phone: values.phone,
+          country: values.country,
+        },
+      });
       logActivity({
         module: "Settings",
         action: "Update",
-        resource: "Password",
-        status: "Info",
+        resource: "Profile",
+      });
+
+      if (anyPasswordFilled) {
+        updateMockUserPassword(member.id, passwordFields.newPassword);
+        logActivity({
+          module: "Settings",
+          action: "Update",
+          resource: "Password",
+          status: "Info",
+        });
+      }
+
+      clearPasswordFields();
+      toast.success("Settings saved");
+    } catch (error) {
+      toast.error("Couldn't save your settings", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     }
-
-    setSaving(false);
-    clearPasswordFields();
-    toast.success("Settings saved");
   });
 
   const handleReset = () => {
@@ -211,7 +285,7 @@ export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
     clearPasswordFields();
   };
 
-  const busy = saving || uploading;
+  const busy = updateProfile.isPending || uploading;
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
@@ -432,7 +506,7 @@ export function SettingsProfileTab({ member }: SettingsProfileTabProps) {
           type="submit"
           disabled={busy || (!isDirty && !passwordFields.currentPassword)}
         >
-          {saving ? (
+          {updateProfile.isPending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               Saving…
