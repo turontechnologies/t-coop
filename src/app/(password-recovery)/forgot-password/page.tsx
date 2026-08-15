@@ -12,25 +12,25 @@ import type { AuthenticatedMember } from "@/types/auth";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const setResetSession = usePasswordResetStore(
-    (state) => state.setResetSession,
-  );
+  const setEmail = usePasswordResetStore((state) => state.setEmail);
   const [sent, setSent] = useState<{
     email: string;
-    otp: string;
-    member: AuthenticatedMember;
+    otp?: string;
+    member?: AuthenticatedMember;
   } | null>(null);
 
   const handleSent = (
     email: string,
-    otp: string,
-    member: AuthenticatedMember,
+    otp?: string,
+    member?: AuthenticatedMember,
   ) => {
-    setResetSession(email, otp, member);
+    setEmail(email);
     setSent({ email, otp, member });
   };
 
   if (sent) {
+    const isMockPreview = Boolean(sent.otp && sent.member);
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -46,13 +46,31 @@ export default function ForgotPasswordPage() {
             Check your email
           </h2>
           <p className="text-sm text-muted-foreground">
-            Demo preview — here&apos;s a simulated look at the email we just
-            sent to{" "}
-            <span className="font-medium text-foreground">{sent.email}</span>.
+            {isMockPreview ? (
+              <>
+                Demo preview — here&apos;s a simulated look at the email we just
+                sent to{" "}
+                <span className="font-medium text-foreground">
+                  {sent.email}
+                </span>
+                .
+              </>
+            ) : (
+              <>
+                We&apos;ve sent a 6-digit code to{" "}
+                <span className="font-medium text-foreground">
+                  {sent.email}
+                </span>
+                . It expires in 10 minutes — check your spam folder if it
+                doesn&apos;t show up in a minute or two.
+              </>
+            )}
           </p>
         </div>
 
-        <OtpEmailPreview name={sent.member.name} otp={sent.otp} />
+        {isMockPreview && sent.member && sent.otp ? (
+          <OtpEmailPreview name={sent.member.name} otp={sent.otp} />
+        ) : null}
 
         <div className="space-y-2">
           <Button

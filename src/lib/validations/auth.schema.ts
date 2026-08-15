@@ -29,7 +29,6 @@ export type VerifyOtpFormValues = z.infer<typeof verifyOtpSchema>;
 
 export const createNewPasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Enter your current password"),
     newPassword: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(1, "Confirm your new password"),
   })

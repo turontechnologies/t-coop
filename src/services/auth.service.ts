@@ -1,10 +1,15 @@
 import { apiClient } from "@/lib/axios";
-import { MOCK_USERS } from "@/lib/mock-users";
+import { MOCK_USERS, updateMockUserPassword } from "@/lib/mock-users";
 import type {
+  AuthenticatedMember,
   LoginRequest,
   LoginResponse,
   PasswordResetRequest,
   PasswordResetResponse,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
+  VerifyOtpRequest,
+  VerifyOtpResponse,
 } from "@/types/auth";
 
 export const authService = {
@@ -39,16 +44,38 @@ export const authService = {
   async requestPasswordReset(
     payload: PasswordResetRequest,
   ): Promise<PasswordResetResponse> {
-    // The real backend doesn't implement forgot-password yet (see
-    // documentation/api-contracts.md §1) — mocked independently of login,
-    // which does hit the real backend, so this flag stays "true" even
-    // after login goes live.
     if (process.env.NEXT_PUBLIC_USE_MOCK_PASSWORD_RESET === "true") {
       return mockRequestPasswordReset(payload);
     }
 
     const { data } = await apiClient.post<PasswordResetResponse>(
       "/auth/forgot-password",
+      payload,
+    );
+    return data;
+  },
+
+  async verifyOtp(payload: VerifyOtpRequest): Promise<VerifyOtpResponse> {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_PASSWORD_RESET === "true") {
+      return mockVerifyOtp(payload);
+    }
+
+    const { data } = await apiClient.post<VerifyOtpResponse>(
+      "/auth/verify-otp",
+      payload,
+    );
+    return data;
+  },
+
+  async resetPassword(
+    payload: ResetPasswordRequest,
+  ): Promise<ResetPasswordResponse> {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_PASSWORD_RESET === "true") {
+      return mockResetPassword(payload);
+    }
+
+    const { data } = await apiClient.post<ResetPasswordResponse>(
+      "/auth/reset-password",
       payload,
     );
     return data;
@@ -79,6 +106,18 @@ async function mockLogin({
   };
 }
 
+// Kept for local demoing without a backend running at all — flip
+// NEXT_PUBLIC_USE_MOCK_PASSWORD_RESET back to "true" to use these instead.
+// Since there's no real email being sent in mock mode, the OTP/member are
+// returned directly in the response so the UI can show a "here's what the
+// email would say" preview (see forgot-password/page.tsx).
+interface MockResetSession {
+  otp: string;
+  member: AuthenticatedMember;
+  resetToken?: string;
+}
+const mockResetSessions = new Map<string, MockResetSession>();
+
 async function mockRequestPasswordReset({
   email,
 }: PasswordResetRequest): Promise<PasswordResetResponse> {
@@ -89,15 +128,48 @@ async function mockRequestPasswordReset({
   );
 
   if (!match) {
-    throw new Error(
-      "We couldn't find an account with that email address. Please enter a valid registered email.",
-    );
+    throw new Error("We couldn't find an account with that email address");
   }
 
   const otp = String(Math.floor(100000 + Math.random() * 900000));
-
-  return {
-    member: match.member,
+  mockResetSessions.set(email.trim().toLowerCase(), {
     otp,
-  };
+    member: match.member,
+  });
+
+  return { message: "OTP sent", otp, member: match.member };
+}
+
+async function mockVerifyOtp({
+  email,
+  otp,
+}: VerifyOtpRequest): Promise<VerifyOtpResponse> {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  const key = email.trim().toLowerCase();
+  const session = mockResetSessions.get(key);
+  if (!session || session.otp !== otp.trim()) {
+    throw new Error("Incorrect OTP. Please try again.");
+  }
+
+  const resetToken = `mock-${key}-${Date.now()}`;
+  session.resetToken = resetToken;
+  return { resetToken };
+}
+
+async function mockResetPassword({
+  resetToken,
+  newPassword,
+}: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
+  const session = [...mockResetSessions.values()].find(
+    (entry) => entry.resetToken === resetToken,
+  );
+  if (!session) {
+    throw new Error("This reset link has expired. Please request a new OTP.");
+  }
+
+  updateMockUserPassword(session.member.id, newPassword);
+  return { message: "Password updated" };
 }

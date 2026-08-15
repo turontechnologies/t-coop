@@ -6,17 +6,14 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
-import { Eye, EyeOff, LockKeyhole, TriangleAlert } from "lucide-react";
+import { LockKeyhole, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { RouteTransition } from "@/components/brand/route-transition";
+import { useResetPassword } from "@/hooks/use-reset-password";
 import { usePasswordResetStore } from "@/store/password-reset.store";
-import {
-  updateMockUserPassword,
-  verifyMockUserPassword,
-} from "@/lib/mock-users";
 import { fieldVariants } from "@/lib/animations";
 import {
   createNewPasswordSchema,
@@ -25,19 +22,14 @@ import {
 
 export function CreateNewPasswordForm() {
   const router = useRouter();
-  const currentPasswordId = useId();
   const newPasswordId = useId();
   const confirmPasswordId = useId();
 
-  const [reveal, setReveal] = useState({
-    current: false,
-    next: false,
-    confirm: false,
-  });
   const [redirecting, setRedirecting] = useState(false);
 
-  const member = usePasswordResetStore((state) => state.member);
+  const resetToken = usePasswordResetStore((state) => state.resetToken);
   const clearResetSession = usePasswordResetStore((state) => state.clear);
+  const resetPassword = useResetPassword();
 
   const {
     register,
@@ -47,36 +39,48 @@ export function CreateNewPasswordForm() {
   } = useForm<CreateNewPasswordFormValues>({
     resolver: zodResolver(createNewPasswordSchema),
     defaultValues: {
-      currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
   });
 
-  const onSubmit = handleSubmit((values) => {
-    if (!member) return;
-
-    if (!verifyMockUserPassword(member.id, values.currentPassword)) {
-      setError("currentPassword", {
-        message: "Current password is incorrect",
+  const onSubmit = handleSubmit(async (values) => {
+    if (!resetToken) {
+      setError("newPassword", {
+        message: "Your session expired — please request a new OTP.",
       });
       return;
     }
 
-    updateMockUserPassword(member.id, values.newPassword);
-    setRedirecting(true);
+    try {
+      await resetPassword.mutateAsync({
+        resetToken,
+        newPassword: values.newPassword,
+      });
+      setRedirecting(true);
+    } catch (error) {
+      setError("newPassword", {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Couldn't reset your password. Please try again.",
+      });
+    }
   });
 
   if (redirecting) {
     return (
       <RouteTransition
         messages={["Updating your password", "Taking you back to login"]}
-        onComplete={() => router.push("/login")}
+        onComplete={() => {
+          clearResetSession();
+          router.push("/login");
+        }}
       />
     );
   }
 
-  const busy = isSubmitting;
+  const busy = isSubmitting || resetPassword.isPending;
 
   return (
     <div className="space-y-6">
@@ -102,18 +106,24 @@ export function CreateNewPasswordForm() {
           initial="hidden"
           animate="visible"
           variants={fieldVariants}
+          className="space-y-2"
         >
-          <PasswordField
-            id={currentPasswordId}
-            label="Current Password"
-            revealed={reveal.current}
-            onToggleReveal={() =>
-              setReveal((state) => ({ ...state, current: !state.current }))
-            }
+          <Label htmlFor={newPasswordId}>New Password</Label>
+          <PasswordInput
+            id={newPasswordId}
+            placeholder="Enter password"
+            autoComplete="new-password"
             disabled={busy}
-            error={errors.currentPassword?.message}
-            registration={register("currentPassword")}
-            autoComplete="current-password"
+            aria-invalid={!!errors.newPassword}
+            aria-describedby={
+              errors.newPassword ? `${newPasswordId}-error` : undefined
+            }
+            className="h-11"
+            {...register("newPassword")}
+          />
+          <FieldError
+            id={`${newPasswordId}-error`}
+            message={errors.newPassword?.message}
           />
         </motion.div>
 
@@ -122,43 +132,29 @@ export function CreateNewPasswordForm() {
           initial="hidden"
           animate="visible"
           variants={fieldVariants}
+          className="space-y-2"
         >
-          <PasswordField
-            id={newPasswordId}
-            label="New Password"
-            revealed={reveal.next}
-            onToggleReveal={() =>
-              setReveal((state) => ({ ...state, next: !state.next }))
-            }
-            disabled={busy}
-            error={errors.newPassword?.message}
-            registration={register("newPassword")}
+          <Label htmlFor={confirmPasswordId}>Confirm Password</Label>
+          <PasswordInput
+            id={confirmPasswordId}
+            placeholder="Enter password"
             autoComplete="new-password"
+            disabled={busy}
+            aria-invalid={!!errors.confirmPassword}
+            aria-describedby={
+              errors.confirmPassword ? `${confirmPasswordId}-error` : undefined
+            }
+            className="h-11"
+            {...register("confirmPassword")}
+          />
+          <FieldError
+            id={`${confirmPasswordId}-error`}
+            message={errors.confirmPassword?.message}
           />
         </motion.div>
 
         <motion.div
           custom={3}
-          initial="hidden"
-          animate="visible"
-          variants={fieldVariants}
-        >
-          <PasswordField
-            id={confirmPasswordId}
-            label="Confirm Password"
-            revealed={reveal.confirm}
-            onToggleReveal={() =>
-              setReveal((state) => ({ ...state, confirm: !state.confirm }))
-            }
-            disabled={busy}
-            error={errors.confirmPassword?.message}
-            registration={register("confirmPassword")}
-            autoComplete="new-password"
-          />
-        </motion.div>
-
-        <motion.div
-          custom={4}
           initial="hidden"
           animate="visible"
           variants={fieldVariants}
@@ -169,13 +165,13 @@ export function CreateNewPasswordForm() {
             size="lg"
             disabled={busy}
           >
-            Login
+            {busy ? "Saving…" : "Save New Password"}
           </Button>
         </motion.div>
       </form>
 
       <motion.div
-        custom={5}
+        custom={4}
         initial="hidden"
         animate="visible"
         variants={fieldVariants}
@@ -193,75 +189,23 @@ export function CreateNewPasswordForm() {
   );
 }
 
-interface PasswordFieldProps {
-  id: string;
-  label: string;
-  revealed: boolean;
-  onToggleReveal: () => void;
-  disabled: boolean;
-  error?: string;
-  autoComplete: string;
-  registration: ReturnType<
-    ReturnType<typeof useForm<CreateNewPasswordFormValues>>["register"]
-  >;
-}
-
-function PasswordField({
-  id,
-  label,
-  revealed,
-  onToggleReveal,
-  disabled,
-  error,
-  autoComplete,
-  registration,
-}: PasswordFieldProps) {
+function FieldError({ id, message }: { id: string; message?: string }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        <Input
+    <AnimatePresence initial={false}>
+      {message ? (
+        <motion.p
           id={id}
-          type={revealed ? "text" : "password"}
-          placeholder="Enter password"
-          autoComplete={autoComplete}
-          disabled={disabled}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className="h-11 pr-10"
-          {...registration}
-        />
-        <button
-          type="button"
-          onClick={onToggleReveal}
-          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
-          aria-label={revealed ? "Hide password" : "Show password"}
-          aria-pressed={revealed}
-          tabIndex={-1}
+          role="alert"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.2 }}
+          className="flex items-center gap-1.5 text-sm text-destructive"
         >
-          {revealed ? (
-            <EyeOff className="size-4" aria-hidden="true" />
-          ) : (
-            <Eye className="size-4" aria-hidden="true" />
-          )}
-        </button>
-      </div>
-      <AnimatePresence initial={false}>
-        {error ? (
-          <motion.p
-            id={`${id}-error`}
-            role="alert"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center gap-1.5 text-sm text-destructive"
-          >
-            <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-            {error}
-          </motion.p>
-        ) : null}
-      </AnimatePresence>
-    </div>
+          <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+          {message}
+        </motion.p>
+      ) : null}
+    </AnimatePresence>
   );
 }

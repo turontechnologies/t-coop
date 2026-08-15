@@ -7,15 +7,15 @@ import { usePasswordResetStore } from "@/store/password-reset.store";
 
 export default function CreateNewPasswordPage() {
   const router = useRouter();
-  const member = usePasswordResetStore((state) => state.member);
+  const resetToken = usePasswordResetStore((state) => state.resetToken);
 
   useEffect(() => {
-    if (!member) {
+    if (!resetToken) {
       router.replace("/forgot-password");
     }
-  }, [member, router]);
+  }, [resetToken, router]);
 
-  if (!member) return null;
+  if (!resetToken) return null;
 
   return <CreateNewPasswordForm />;
 }

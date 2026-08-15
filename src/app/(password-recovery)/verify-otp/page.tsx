@@ -7,15 +7,15 @@ import { usePasswordResetStore } from "@/store/password-reset.store";
 
 export default function VerifyOtpPage() {
   const router = useRouter();
-  const otp = usePasswordResetStore((state) => state.otp);
+  const email = usePasswordResetStore((state) => state.email);
 
   useEffect(() => {
-    if (!otp) {
+    if (!email) {
       router.replace("/forgot-password");
     }
-  }, [otp, router]);
+  }, [email, router]);
 
-  if (!otp) return null;
+  if (!email) return null;
 
   return <VerifyOtpForm />;
 }

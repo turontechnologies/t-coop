@@ -19,7 +19,7 @@ import {
 import type { AuthenticatedMember } from "@/types/auth";
 
 interface ForgotPasswordFormProps {
-  onSent: (email: string, otp: string, member: AuthenticatedMember) => void;
+  onSent: (email: string, otp?: string, member?: AuthenticatedMember) => void;
 }
 
 export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {

@@ -1,26 +1,18 @@
 import { create } from "zustand";
-import type { AuthenticatedMember } from "@/types/auth";
 
 interface PasswordResetState {
   email: string | null;
-  otp: string | null;
-  member: AuthenticatedMember | null;
-  setResetSession: (
-    email: string,
-    otp: string,
-    member: AuthenticatedMember,
-  ) => void;
-  verifyOtp: (code: string) => boolean;
+  /** Issued by /auth/verify-otp once the code checks out — required to actually reset the password. */
+  resetToken: string | null;
+  setEmail: (email: string) => void;
+  setResetToken: (resetToken: string) => void;
   clear: () => void;
 }
 
-export const usePasswordResetStore = create<PasswordResetState>()(
-  (set, get) => ({
-    email: null,
-    otp: null,
-    member: null,
-    setResetSession: (email, otp, member) => set({ email, otp, member }),
-    verifyOtp: (code) => code.trim() === get().otp,
-    clear: () => set({ email: null, otp: null, member: null }),
-  }),
-);
+export const usePasswordResetStore = create<PasswordResetState>()((set) => ({
+  email: null,
+  resetToken: null,
+  setEmail: (email) => set({ email, resetToken: null }),
+  setResetToken: (resetToken) => set({ resetToken }),
+  clear: () => set({ email: null, resetToken: null }),
+}));

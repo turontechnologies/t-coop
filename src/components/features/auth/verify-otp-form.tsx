@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RouteTransition } from "@/components/brand/route-transition";
 import { useForgotPassword } from "@/hooks/use-forgot-password";
+import { useVerifyOtp } from "@/hooks/use-verify-otp";
 import { usePasswordResetStore } from "@/store/password-reset.store";
 import { fieldVariants } from "@/lib/animations";
 import {
@@ -28,11 +29,9 @@ export function VerifyOtpForm() {
   const [verified, setVerified] = useState(false);
 
   const email = usePasswordResetStore((state) => state.email);
-  const verifyOtp = usePasswordResetStore((state) => state.verifyOtp);
-  const setResetSession = usePasswordResetStore(
-    (state) => state.setResetSession,
-  );
+  const setResetToken = usePasswordResetStore((state) => state.setResetToken);
   const clearResetSession = usePasswordResetStore((state) => state.clear);
+  const verifyOtp = useVerifyOtp();
   const forgotPassword = useForgotPassword();
 
   const {
@@ -45,24 +44,31 @@ export function VerifyOtpForm() {
     defaultValues: { otp: "" },
   });
 
-  const onSubmit = handleSubmit((values) => {
-    if (!verifyOtp(values.otp)) {
-      setShakeKey((key) => key + 1);
-      setError("otp", { message: "Incorrect OTP. Please try again." });
-      return;
-    }
+  const onSubmit = handleSubmit(async (values) => {
+    if (!email) return;
 
-    toast.success("Identity verified");
-    setVerified(true);
+    try {
+      const response = await verifyOtp.mutateAsync({ email, otp: values.otp });
+      setResetToken(response.resetToken);
+      toast.success("Identity verified");
+      setVerified(true);
+    } catch (error) {
+      setShakeKey((key) => key + 1);
+      setError("otp", {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Incorrect OTP. Please try again.",
+      });
+    }
   });
 
   const handleResend = async () => {
     if (!email) return;
     try {
-      const response = await forgotPassword.mutateAsync({ email });
-      setResetSession(email, response.otp, response.member);
+      await forgotPassword.mutateAsync({ email });
       toast.success("A new OTP has been sent", {
-        description: `Check the email preview sent to ${email}.`,
+        description: `Check your inbox for ${email}.`,
       });
     } catch (error) {
       toast.error("Couldn't resend OTP", {
@@ -71,7 +77,7 @@ export function VerifyOtpForm() {
     }
   };
 
-  const busy = isSubmitting;
+  const busy = isSubmitting || verifyOtp.isPending;
 
   if (verified) {
     return (

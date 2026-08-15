@@ -24,6 +24,26 @@ export interface PasswordResetRequest {
 }
 
 export interface PasswordResetResponse {
-  member: AuthenticatedMember;
+  message: string;
+  /** Only populated by the mock path — no real backend ever returns these. */
+  otp?: string;
+  member?: AuthenticatedMember;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
   otp: string;
+}
+
+export interface VerifyOtpResponse {
+  resetToken: string;
+}
+
+export interface ResetPasswordRequest {
+  resetToken: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
 }
