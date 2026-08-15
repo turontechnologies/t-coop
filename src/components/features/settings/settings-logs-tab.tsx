@@ -1,21 +1,34 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MoreHorizontal, Search } from "lucide-react";
+import { MoreHorizontal, Search, TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ActivityDetailsPanel } from "@/components/features/settings/activity-details-panel";
 import {
   MobileRecordCard,
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
-import { ACTION_ICONS, MODULE_ICONS, STATUS_STYLES } from "@/lib/audit-log-ui";
+import { useAuditLog } from "@/hooks/use-audit-log";
+import {
+  getActionIcon,
+  getModuleIcon,
+  getStatusStyle,
+} from "@/lib/audit-log-ui";
 import { formatTimeAgo, getInitials } from "@/lib/format";
 import type { AuditLogEntry } from "@/lib/audit-log-data";
 import { cn } from "@/lib/utils";
-import { useAuditLogStore } from "@/store/audit-log.store";
 
 export function SettingsLogsTab() {
-  const entries = useAuditLogStore((state) => state.entries);
+  const {
+    data: entries,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useAuditLog();
   const [search, setSearch] = useState("");
   const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(
     null,
@@ -23,6 +36,7 @@ export function SettingsLogsTab() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
+    if (!entries) return [];
     if (!query) return entries;
     return entries.filter(
       (entry) =>
@@ -35,6 +49,47 @@ export function SettingsLogsTab() {
         entry.ipAddress.toLowerCase().includes(query),
     );
   }, [entries, search]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-12 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+          <TriangleAlert
+            className="size-6 text-destructive"
+            aria-hidden="true"
+          />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              Couldn&apos;t load the audit log
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error
+                ? error.message
+                : "Please check your connection and try again."}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            {isFetching ? "Retrying…" : "Try again"}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -97,9 +152,9 @@ export function SettingsLogsTab() {
               </tr>
             ) : (
               filtered.map((entry) => {
-                const ModuleIcon = MODULE_ICONS[entry.module];
-                const ActionIcon = ACTION_ICONS[entry.action];
-                const statusStyle = STATUS_STYLES[entry.status];
+                const ModuleIcon = getModuleIcon(entry.module);
+                const ActionIcon = getActionIcon(entry.action);
+                const statusStyle = getStatusStyle(entry.status);
                 const StatusIcon = statusStyle.icon;
                 return (
                   <tr
@@ -181,9 +236,9 @@ export function SettingsLogsTab() {
         emptyMessage="No activity matches your search."
       >
         {filtered.map((entry) => {
-          const ModuleIcon = MODULE_ICONS[entry.module];
-          const ActionIcon = ACTION_ICONS[entry.action];
-          const statusStyle = STATUS_STYLES[entry.status];
+          const ModuleIcon = getModuleIcon(entry.module);
+          const ActionIcon = getActionIcon(entry.action);
+          const statusStyle = getStatusStyle(entry.status);
           const StatusIcon = statusStyle.icon;
           return (
             <MobileRecordCard

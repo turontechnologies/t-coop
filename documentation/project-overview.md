@@ -47,20 +47,21 @@ has no working password-reset endpoint yet (see Auth above).
 
 ## What's Real vs. Mocked
 
-| Integration                                                               | Status                                                          | Where                                                         |
-| ------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------- |
-| Paystack Inline (savings deposit checkout)                                | **Real** — needs a test-mode public key                         | `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`                             |
-| Paystack bank-account verification                                        | **Real** — needs a test-mode secret key                         | `PAYSTACK_SECRET_KEY`, `src/app/api/paystack/resolve-account` |
-| Paystack live bank list                                                   | **Real**                                                        | `src/app/api/paystack/banks`                                  |
-| Paystack Transfers (loan disbursement, savings withdrawal payout)         | **Real**                                                        | `src/app/api/paystack/transfer`, `/transfer/finalize`         |
-| Cloudinary profile-photo upload                                           | **Real** — needs `CLOUDINARY_*` env vars                        | `src/app/api/upload`                                          |
-| Country/State/City cascade                                                | **Real** — free public API, called directly from the browser    | `src/lib/geo-lookup.ts` (countriesnow.space)                  |
-| IP geolocation for the audit log                                          | **Real** — free public API, called directly from the browser    | `src/lib/ip-location.ts` (ipwho.is)                           |
-| Live currency conversion rates                                            | **Real** — free public API, polled every 5 min                  | `src/lib/exchange-rate.ts` (open.er-api.com)                  |
-| Login / `/auth/me` / logout                                               | **Real** — calls `t-coop-backend`, JWT bearer auth              | `src/services/auth.service.ts`, `src/lib/axios.ts`            |
-| Dashboard cards + Recent Activities                                       | **Real** aggregates; chart/dividends still illustrative         | `src/services/dashboard.service.ts`                           |
-| Profile (view/edit, all roles) — `/profile` and `/settings` → Profile tab | **Real** — `GET`/`PATCH /profile`; password change still mocked | `src/services/profile.service.ts`                             |
-| Everything else (members, savings/loan records, notices, subscriptions)   | **Mocked** — in-memory only, resets on reload                   | `src/lib/*-data.ts`, `src/store/*.store.ts`                   |
+| Integration                                                               | Status                                                                  | Where                                                         |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Paystack Inline (savings deposit checkout)                                | **Real** — needs a test-mode public key                                 | `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`                             |
+| Paystack bank-account verification                                        | **Real** — needs a test-mode secret key                                 | `PAYSTACK_SECRET_KEY`, `src/app/api/paystack/resolve-account` |
+| Paystack live bank list                                                   | **Real**                                                                | `src/app/api/paystack/banks`                                  |
+| Paystack Transfers (loan disbursement, savings withdrawal payout)         | **Real**                                                                | `src/app/api/paystack/transfer`, `/transfer/finalize`         |
+| Cloudinary profile-photo upload                                           | **Real** — needs `CLOUDINARY_*` env vars                                | `src/app/api/upload`                                          |
+| Country/State/City cascade                                                | **Real** — free public API, called directly from the browser            | `src/lib/geo-lookup.ts` (countriesnow.space)                  |
+| IP geolocation for the audit log                                          | **Real** — free public API, called directly from the browser            | `src/lib/ip-location.ts` (ipwho.is)                           |
+| Live currency conversion rates                                            | **Real** — free public API, polled every 5 min                          | `src/lib/exchange-rate.ts` (open.er-api.com)                  |
+| Login / `/auth/me` / logout                                               | **Real** — calls `t-coop-backend`, JWT bearer auth                      | `src/services/auth.service.ts`, `src/lib/axios.ts`            |
+| Dashboard cards + Recent Activities                                       | **Real** aggregates; chart/dividends still illustrative                 | `src/services/dashboard.service.ts`                           |
+| Profile (view/edit, all roles) — `/profile` and `/settings` → Profile tab | **Real** — `GET`/`PATCH /profile`; password change still mocked         | `src/services/profile.service.ts`                             |
+| Audit log — Settings' Logs tab (super admin)                              | **Real** — `GET /audit-log`; only logins/logouts/profile updates so far | `src/services/audit-log.service.ts`                           |
+| Everything else (members, savings/loan records, notices, subscriptions)   | **Mocked** — in-memory only, resets on reload                           | `src/lib/*-data.ts`, `src/store/*.store.ts`                   |
 
 Two known real-world constraints discovered while building the payout
 integration (not app bugs): Paystack's test mode caps real-bank-account
@@ -240,12 +241,22 @@ environment; Flutterwave has no live route handler behind it yet).
 co-operative members), each row fully actionable: edit (role for
 users, name/permissions for roles), disable/activate, remove (role
 removal is blocked while a user is still assigned to it). **Logs** — a
-real, searchable, app-wide audit trail: every mutating action across
-the whole app (login, co-op/member/savings/loan/subscription/notice/
-settings actions) writes an entry via a `logActivity()` utility
-callable from any store, each patched in place with an approximate
-IP-resolved location once it's looked up, viewable in full via a
-slide-in Activity Details panel. See [settings-page.md](./settings-page.md).
+searchable, platform-wide audit trail. **Now backed by the real backend**
+(`GET /audit-log`, super-admin-only, 403s for anyone else — enforced
+server-side, not just hidden in the UI) via `useAuditLog()`, with a loading
+skeleton and retry-able error state, viewable in full via a slide-in
+Activity Details panel. Only real actions show up here now: logins/logouts
+and profile updates. Co-operatives/Members/Savings/Loans/Subscriptions/
+Notices actions are still mock-only (still write to the local
+`logActivity()`/`useAuditLogStore` used before this cutover) and won't
+appear in this real log until those features get their own backend
+cutover. `MODULE_ICONS`/`ACTION_ICONS`/`STATUS_STYLES` are indexed via
+`getModuleIcon`/`getActionIcon`/`getStatusStyle` (`src/lib/audit-log-ui.ts`)
+rather than direct object lookups — a `module`/`action`/`status` value the
+frontend doesn't recognize (a real bug that happened once, from historical
+rows written before the backend's naming was fixed to match) now falls
+back to a neutral icon instead of crashing the whole tab. See
+[settings-page.md](./settings-page.md).
 
 **Admin** gets a different five tabs, reflecting one co-operative's
 day-to-day operations rather than the whole platform: **Profile** (User
@@ -318,9 +329,10 @@ flowchart LR
     style Local stroke-dasharray: 5 5
 ```
 
-Only auth (login/me/logout) and the dashboard summary are cut over so far
-— everything else in the table above (members, savings, loans, notices,
-subscriptions) still reads/writes the in-memory Zustand stores. Each
+Auth (login/me/logout), the dashboard summary, profile, and the audit log
+are cut over so far — everything else in the table above (members,
+savings, loans, notices, subscriptions) still reads/writes the in-memory
+Zustand stores. Each
 feature's cutover follows the same one-step pattern: point its
 `*.service.ts` at the real endpoint, gate it behind its own
 `NEXT_PUBLIC_USE_MOCK_*` flag so it can still be demoed without the
@@ -561,15 +573,19 @@ src/
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
 - [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload, per-co-op history)
-- [x] Settings (super admin: profile/password, fees & collections account, dual Paystack/Flutterwave toggles, staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location. admin: profile + personal bank, savings/loan type catalog CRUD, co-op profile + bank account + currency, shared staff management)
+- [x] Settings (super admin: profile/password backed by the real backend, fees & collections account, dual Paystack/Flutterwave toggles, staff users/roles with full edit/disable/remove actions, real backend-backed audit log with server-resolved IP location — currently covers logins/logouts/profile updates only, other modules still mock. admin: profile + personal bank, savings/loan type catalog CRUD, co-op profile + bank account + currency, shared staff management)
 - [x] Per-co-op currency + live conversion rate (admin sets it, super admin sees it live everywhere a co-op shows up; every displayed savings/loans amount app-wide formats in that co-op's currency, isolated per co-op on the super-admin side, with cross-co-op aggregates genuinely converted and summed)
 - [x] Light/dark theme
-- [x] Real backend integration — login/me/logout and the dashboard summary
-      call the real `t-coop-backend` (see [Backend Integration](#backend-integration));
+- [x] Real backend integration — login/me/logout, the dashboard summary,
+      profile view/edit, and the audit log all call the real
+      `t-coop-backend` (see [Backend Integration](#backend-integration));
       the rest of `src/services/*.service.ts` is still mocked
 - [x] Dashboard's real numbers — cards + Recent Activities are real
       aggregates; the hourly chart and Dividends figure are still
       illustrative (no dedicated ledger exists yet)
+- [x] Any 401 from the backend (except a failed login attempt) auto-clears
+      the session and redirects to `/login` — handled once, centrally, in
+      `src/lib/axios.ts`
 - [ ] Server-side Paystack transaction verification for Inline checkout (client callback trusted for now)
 - [ ] Admin approval path for the member's own simple "Take a Loan" flow (stays "Awaiting Approval" forever — separate from the co-op guarantor pipeline)
 - [ ] OTP confirmation UI for Paystack Transfers (not exercised in test mode)
@@ -594,6 +610,8 @@ NEXT_PUBLIC_API_URL=https://<tunnel-or-real-url>/api/v1  # t-coop-backend
 NEXT_PUBLIC_USE_MOCK_LOGIN=false                # false = hit the real backend
 NEXT_PUBLIC_USE_MOCK_PASSWORD_RESET=true        # backend has no reset endpoint yet
 NEXT_PUBLIC_USE_MOCK_DASHBOARD=false            # false = hit the real backend
+NEXT_PUBLIC_USE_MOCK_PROFILE=false              # false = hit the real backend
+NEXT_PUBLIC_USE_MOCK_AUDIT_LOG=false            # false = hit the real backend
 NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_...     # savings deposit checkout
 PAYSTACK_SECRET_KEY=sk_test_...                 # bank verification + real payouts
 CLOUDINARY_CLOUD_NAME=...

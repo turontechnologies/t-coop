@@ -13,6 +13,7 @@ export type AuditModule = (typeof AUDIT_MODULES)[number];
 
 export const AUDIT_ACTIONS = [
   "Login",
+  "Logout",
   "Create",
   "Update",
   "Delete",

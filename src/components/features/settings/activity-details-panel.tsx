@@ -10,10 +10,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
-  ACTION_ICONS,
-  MODULE_ICONS,
-  STATUS_MESSAGE,
-  STATUS_STYLES,
+  getActionIcon,
+  getModuleIcon,
+  getStatusMessage,
+  getStatusStyle,
 } from "@/lib/audit-log-ui";
 import { formatDateTime, getInitials } from "@/lib/format";
 import type { AuditLogEntry } from "@/lib/audit-log-data";
@@ -32,10 +32,10 @@ export function ActivityDetailsPanel({
 
   if (!entry) return null;
 
-  const statusStyle = STATUS_STYLES[entry.status];
+  const statusStyle = getStatusStyle(entry.status);
   const StatusIcon = statusStyle.icon;
-  const ModuleIcon = MODULE_ICONS[entry.module];
-  const ActionIcon = ACTION_ICONS[entry.action];
+  const ModuleIcon = getModuleIcon(entry.module);
+  const ActionIcon = getActionIcon(entry.action);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(entry.id).then(() => {
@@ -76,7 +76,9 @@ export function ActivityDetailsPanel({
                     ? "Flagged Operation"
                     : "Informational"}
             </p>
-            <p className="text-xs opacity-90">{STATUS_MESSAGE[entry.status]}</p>
+            <p className="text-xs opacity-90">
+              {getStatusMessage(entry.status)}
+            </p>
           </div>
         </div>
 

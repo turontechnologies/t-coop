@@ -535,6 +535,31 @@ Currently only used for avatars — should also replace the base64 storage used 
 
 ---
 
+## 12. Audit log (super admin only)
+
+### `GET /audit-log`
+
+```json
+[
+  {
+    "id": "string",
+    "date": "iso-datetime",
+    "activityBy": "string",
+    "role": "Super Administrator|Administrator|Member",
+    "module": "Authentication|Co-operatives|Members|Savings|Loans|Subscriptions|Notices|Settings|Users",
+    "action": "Login|Logout|Create|Update|Delete|Approve|Decline|Payment",
+    "resource": "string",
+    "status": "Success|Info|Warning|Failed",
+    "location": "string",
+    "ipAddress": "string"
+  }
+]
+```
+
+**Built.** Latest 200 entries platform-wide, newest first; 403s for any non-`super_admin` caller. `module`/`action` values are validated against `src/lib/audit-log-data.ts`'s fixed `AuditModule`/`AuditAction` enums server-side — an unrecognized value has no icon mapping here and used to crash the whole Logs tab (fixed by adding `getModuleIcon`/`getActionIcon`/`getStatusStyle` fallbacks in `src/lib/audit-log-ui.ts`, plus a migration to correct historical rows). Only logins/logouts and profile updates are wired to this so far — Co-operatives/Members/Savings/Loans/Subscriptions/Notices actions are still mock-only and won't appear here until those features are cut over too.
+
+---
+
 ## Not in scope
 
 - **Country/State/City dropdowns** — called directly from the browser against `countriesnow.space` (free, public, keyless). No backend work needed unless you want to bring it in-house later.
