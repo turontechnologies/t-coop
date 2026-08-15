@@ -228,8 +228,14 @@ Paystack flow) — see [subscriptions-page.md](./subscriptions-page.md).
 own profile day-to-day (the topbar's "My Profile" link brings them here
 directly): **Profile** (avatar, name/email/address/phone/country — **real**,
 fetched/saved via `GET`/`PATCH /profile`, same backend record `/profile`
-itself reads; an optional inline password change is still mocked, no real
-change-password endpoint exists yet). **Payment Settings** →
+itself reads; the optional inline password change is **real** too —
+`POST /profile/password` via `useChangePassword`, verifies the current
+password server-side, saved as a separate call right after the profile
+fields so a wrong-current-password failure never loses profile edits that
+already succeeded — password fields here, and every other password/secret
+field in the app (login, password reset, integration API secrets), use the
+shared `PasswordInput` component (`src/components/ui/password-input.tsx`)
+for its show/hide eye-icon toggle). **Payment Settings** →
 Fees & Charges (savings/loan charge type + amount) and Account Details
 (the platform's own collections bank account, same real Paystack
 "Verify" flow as everywhere else). **Integrations** — Paystack and

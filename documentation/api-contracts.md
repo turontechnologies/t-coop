@@ -207,6 +207,17 @@ Same shape as one list item, plus `savingsByType` and `loansByType` breakdowns:
 
 Same shape as request body (minus `membershipId`, which is fixed). Returns the updated record.
 
+### `POST /profile/password`
+
+```json
+// Request
+{ "currentPassword": "string", "newPassword": "string" }
+// Response
+{ "message": "Password updated" }
+```
+
+**Built.** 400 `"Current password is incorrect"` if `currentPassword` doesn't match; `newPassword` must be at least 6 characters. Used by Settings' Profile tab (`useChangePassword` / `change-password.service.ts`) — the profile fields save first, then the password change, so if only the password step fails the profile edits aren't lost (the form shows "Profile details saved" plus an inline error on the password field, not a generic failure toast).
+
 ---
 
 ## 5. Savings

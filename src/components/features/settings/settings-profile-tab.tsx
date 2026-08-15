@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   Select,
   SelectContent,
@@ -17,15 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useChangePassword } from "@/hooks/use-change-password";
 import { useCountries } from "@/hooks/use-countries";
 import { useProfile } from "@/hooks/use-profile";
 import { useUpdateProfile } from "@/hooks/use-update-profile";
 import { logActivity } from "@/lib/audit-log";
 import { getInitials } from "@/lib/format";
-import {
-  updateMockUserPassword,
-  verifyMockUserPassword,
-} from "@/lib/mock-users";
 import type { ProfileRecord } from "@/lib/profile-data";
 import {
   settingsProfileSchema,
@@ -104,6 +102,7 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const updateProfile = useUpdateProfile();
+  const changePassword = useChangePassword();
   const { countries, loading: countriesLoading } = useCountries();
 
   const membershipIdFieldId = useId();
@@ -220,10 +219,6 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
         setPasswordError("currentPassword", "Enter your current password");
         return;
       }
-      if (!verifyMockUserPassword(member.id, passwordFields.currentPassword)) {
-        setPasswordError("currentPassword", "Current password is incorrect");
-        return;
-      }
       if (passwordFields.newPassword.length < 6) {
         setPasswordError(
           "newPassword",
@@ -254,20 +249,28 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
           country: values.country,
         },
       });
-      logActivity({
-        module: "Settings",
-        action: "Update",
-        resource: "Profile",
-      });
 
       if (anyPasswordFilled) {
-        updateMockUserPassword(member.id, passwordFields.newPassword);
-        logActivity({
-          module: "Settings",
-          action: "Update",
-          resource: "Password",
-          status: "Info",
-        });
+        try {
+          await changePassword.mutateAsync({
+            memberId: member.id,
+            currentPassword: passwordFields.currentPassword,
+            newPassword: passwordFields.newPassword,
+          });
+        } catch (error) {
+          // Profile fields already saved successfully above — only the
+          // password change failed, so keep that feedback scoped to the
+          // password fields instead of a generic toast implying nothing
+          // was saved.
+          setPasswordError(
+            "currentPassword",
+            error instanceof Error
+              ? error.message
+              : "Couldn't update your password",
+          );
+          toast.success("Profile details saved");
+          return;
+        }
       }
 
       clearPasswordFields();
@@ -285,7 +288,7 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
     clearPasswordFields();
   };
 
-  const busy = updateProfile.isPending || uploading;
+  const busy = updateProfile.isPending || changePassword.isPending || uploading;
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
@@ -506,7 +509,7 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
           type="submit"
           disabled={busy || (!isDirty && !passwordFields.currentPassword)}
         >
-          {updateProfile.isPending ? (
+          {updateProfile.isPending || changePassword.isPending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               Saving…
@@ -577,9 +580,8 @@ function PasswordField({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input
+      <PasswordInput
         id={id}
-        type="password"
         placeholder="Enter password"
         value={value}
         onChange={(event) => onChange(event.target.value)}

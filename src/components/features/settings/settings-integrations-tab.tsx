@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Switch } from "@/components/ui/switch";
 import {
   integrationsSchema,
@@ -230,12 +231,12 @@ function GatewayField({
   registration,
 }: GatewayField & { disabled: boolean }) {
   const id = useId();
+  const InputComponent = type === "password" ? PasswordInput : Input;
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input
+      <InputComponent
         id={id}
-        type={type}
         placeholder={label}
         disabled={disabled}
         className="h-11"
