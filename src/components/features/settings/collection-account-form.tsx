@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
@@ -85,21 +85,51 @@ function CollectionAccountFormBody({
   };
 
   const [verifying, setVerifying] = useState(false);
+  // Already-saved, already-verified accounts shouldn't re-hit Paystack on
+  // every page load — seed this as "already attempted" for whatever came
+  // back from the backend already carrying a resolved account name.
+  const lastAttemptRef = useRef<string | null>(
+    collectionAccount.accountName
+      ? `${collectionAccount.bankCode}:${collectionAccount.accountNumber}`
+      : null,
+  );
 
-  const handleVerify = async () => {
-    setVerifying(true);
-    try {
-      const resolvedName = await resolveBankAccount(accountNumber, bankCode);
-      setValue("accountName", resolvedName, { shouldDirty: true });
-      toast.success("Account verified", { description: resolvedName });
-    } catch (error) {
-      toast.error("Couldn't verify that account", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setVerifying(false);
+  // Auto-verifies the moment a bank is picked and the account number hits
+  // 10 digits — no manual "Verify" click needed. Re-fires automatically if
+  // either value changes afterward (invalidateAccountName clears the old
+  // result first), but never twice for the same bank+number pair.
+  useEffect(() => {
+    if (!bankCode || accountNumber?.length !== 10) {
+      lastAttemptRef.current = null;
+      return;
     }
-  };
+
+    const attemptKey = `${bankCode}:${accountNumber}`;
+    if (lastAttemptRef.current === attemptKey) return;
+    lastAttemptRef.current = attemptKey;
+
+    let cancelled = false;
+    setVerifying(true);
+    resolveBankAccount(accountNumber, bankCode)
+      .then((resolvedName) => {
+        if (cancelled) return;
+        setValue("accountName", resolvedName, { shouldDirty: true });
+        toast.success("Account verified", { description: resolvedName });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        toast.error("Couldn't verify that account", {
+          description: error instanceof Error ? error.message : undefined,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setVerifying(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bankCode, accountNumber, setValue]);
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -121,7 +151,7 @@ function CollectionAccountFormBody({
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-xl space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_auto]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={bankId}>Bank</Label>
           <Controller
@@ -170,25 +200,6 @@ function CollectionAccountFormBody({
           />
           <FieldError message={errors.accountNumber?.message} />
         </div>
-
-        <div className="space-y-2 sm:pt-7">
-          <Button
-            type="button"
-            onClick={handleVerify}
-            disabled={
-              busy || !bankCode || accountNumber?.length !== 10 || !!accountName
-            }
-            className="h-11 w-full sm:w-auto"
-          >
-            {verifying ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : accountName ? (
-              "Verified"
-            ) : (
-              "Verify"
-            )}
-          </Button>
-        </div>
       </div>
 
       <div className="space-y-2">
@@ -196,10 +207,15 @@ function CollectionAccountFormBody({
         <Input
           value={accountName ?? ""}
           disabled
-          placeholder="Auto displays"
+          placeholder={verifying ? "Verifying…" : "Auto displays"}
           className="h-11"
         />
-        {accountName ? (
+        {verifying ? (
+          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            Verifying with the bank…
+          </p>
+        ) : accountName ? (
           <p className="flex items-center gap-1 text-xs font-medium text-success">
             <BadgeCheck className="size-3.5" aria-hidden="true" />
             Verified with the bank
@@ -216,7 +232,7 @@ function CollectionAccountFormBody({
         >
           Reset
         </Button>
-        <Button type="submit" disabled={busy || !isDirty}>
+        <Button type="submit" disabled={busy || !isDirty || !accountName}>
           {updateCollectionAccount.isPending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />

@@ -239,8 +239,11 @@ shared `PasswordInput` component (`src/components/ui/password-input.tsx`)
 for its show/hide eye-icon toggle). **Payment Settings** — **real**,
 `GET`/`PATCH /settings/fees` and `/settings/collection-account` — Fees &
 Charges (savings/loan charge type + amount) and Account Details (the
-platform's own collections bank account, same real Paystack "Verify" flow
-as everywhere else). **Integrations** — also **real**,
+platform's own collections bank account, real Paystack resolve — but
+auto-triggered the moment a bank is picked and the account number hits 10
+digits, no manual "Verify" click; Save Changes stays disabled until that
+resolves successfully, so there's no way to save an unverified account).
+**Integrations** — also **real**,
 `GET`/`PATCH /settings/integrations` — Paystack and Flutterwave as two
 fully independent toggles (either, both, or neither), each with its own
 credential fields (now with the show/hide eye toggle too), persisted
