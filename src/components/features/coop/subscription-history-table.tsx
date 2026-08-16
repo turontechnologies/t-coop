@@ -9,12 +9,12 @@ import {
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
 import { TablePagination } from "@/components/ui/table-pagination";
-import type { CoopSubscriptionPayment } from "@/lib/coop-data";
+import type { SubscriptionPayment } from "@/types/subscription";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface SubscriptionHistoryTableProps {
-  payments: CoopSubscriptionPayment[];
+  payments: SubscriptionPayment[];
 }
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
@@ -32,7 +32,8 @@ export function SubscriptionHistoryTable({
     return payments.filter(
       (payment) =>
         payment.paymentRef.toLowerCase().includes(query) ||
-        payment.narration.toLowerCase().includes(query),
+        payment.type.toLowerCase().includes(query) ||
+        payment.cycle.toLowerCase().includes(query),
     );
   }, [payments, search]);
 
@@ -62,7 +63,7 @@ export function SubscriptionHistoryTable({
       </div>
 
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[820px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
               <th className="px-4 py-2.5 font-medium text-foreground">
@@ -72,14 +73,10 @@ export function SubscriptionHistoryTable({
                 Amount Paid
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
-                Payment Method
-              </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
                 Payment Date
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
-                Narration
-              </th>
+              <th className="px-4 py-2.5 font-medium text-foreground">Type</th>
+              <th className="px-4 py-2.5 font-medium text-foreground">Cycle</th>
               <th className="px-4 py-2.5 font-medium text-foreground">
                 Status
               </th>
@@ -108,13 +105,13 @@ export function SubscriptionHistoryTable({
                     {formatNaira(payment.amountPaid)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {payment.method}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
                     {formatDateLong(new Date(payment.date))}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {payment.narration}
+                    {payment.type}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {payment.cycle}
                   </td>
                   <td className="px-4 py-3">
                     <Badge
@@ -160,12 +157,12 @@ export function SubscriptionHistoryTable({
             }
             fields={[
               { label: "Amount Paid", value: formatNaira(payment.amountPaid) },
-              { label: "Payment Method", value: payment.method },
               {
                 label: "Payment Date",
                 value: formatDateLong(new Date(payment.date)),
               },
-              { label: "Narration", value: payment.narration },
+              { label: "Type", value: payment.type },
+              { label: "Cycle", value: payment.cycle },
             ]}
           />
         ))}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import {
@@ -9,9 +10,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { NotificationDetailDialog } from "@/components/features/notice-board/notification-detail-dialog";
 import { useCrossTabSync } from "@/hooks/use-cross-tab-sync";
 import { formatTimeAgo } from "@/lib/format";
-import { isNoticeVisibleToRole, noticeExcerpt } from "@/lib/notice-data";
+import {
+  isNoticeVisibleToRole,
+  noticeExcerpt,
+  noticeTargetsCoop,
+  type Notice,
+} from "@/lib/notice-data";
+import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
 import { NOTICE_STORE_NAME, useNoticeStore } from "@/store/notice.store";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
@@ -24,13 +32,24 @@ export function NotificationMenu() {
   const notices = useNoticeStore((state) => state.notices);
   const readMarkers = useNoticeStore((state) => state.readMarkers);
   const markRead = useNoticeStore((state) => state.markRead);
+  const [openNoticeItem, setOpenNoticeItem] = useState<Notice | null>(null);
 
   useCrossTabSync(NOTICE_STORE_NAME, () => useNoticeStore.persist.rehydrate());
 
   if (!member) return null;
 
+  // A super admin oversees every co-op, so they see every notice. An admin/member belongs to
+  // exactly one co-op and must only ever see notices addressed to it — without this, someone
+  // in Co-op B's bell would see Co-op A's internal notices leak through just because both
+  // happen to be "All Members" broadcasts. Mirrors the same scoping /notice-board's own list
+  // page already applies.
   const visibleNotices = notices
-    .filter((notice) => isNoticeVisibleToRole(notice, member.role))
+    .filter(
+      (notice) =>
+        isNoticeVisibleToRole(notice, member.role) &&
+        (member.role === "super_admin" ||
+          noticeTargetsCoop(notice, ADMIN_DIRECTORY_COOP_ID)),
+    )
     .sort((a, b) => b.sendAt.localeCompare(a.sendAt));
   const unreadCount = visibleNotices.filter(
     (notice) => !readMarkers[`${member.id}:${notice.id}`],
@@ -40,9 +59,9 @@ export function NotificationMenu() {
     visibleNotices.forEach((notice) => markRead(member.id, notice.id));
   };
 
-  const openNotice = (noticeId: string) => {
-    markRead(member.id, noticeId);
-    router.push(`/notice-board/${noticeId}`);
+  const openNotice = (notice: Notice) => {
+    markRead(member.id, notice.id);
+    setOpenNoticeItem(notice);
   };
 
   return (
@@ -90,7 +109,7 @@ export function NotificationMenu() {
                 <li key={notice.id}>
                   <button
                     type="button"
-                    onClick={() => openNotice(notice.id)}
+                    onClick={() => openNotice(notice)}
                     className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted"
                   >
                     <span
@@ -126,6 +145,10 @@ export function NotificationMenu() {
           View all notices
         </button>
       </DropdownMenuContent>
+      <NotificationDetailDialog
+        notice={openNoticeItem}
+        onOpenChange={(open) => !open && setOpenNoticeItem(null)}
+      />
     </DropdownMenu>
   );
 }

@@ -22,6 +22,8 @@ function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
   );
 }
 
+/** Same "glass prism" treatment as DialogBackdrop (src/components/ui/dialog.tsx) — kept
+ * consistent across both dialog primitives even though AlertDialog is a separate component. */
 function AlertDialogOverlay({
   className,
   ...props
@@ -30,7 +32,7 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-gradient-to-br from-white/10 via-primary/10 to-black/40 backdrop-blur-md duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 dark:from-white/5 dark:via-primary/15 dark:to-black/60",
         className,
       )}
       {...props}

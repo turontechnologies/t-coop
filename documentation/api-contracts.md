@@ -457,30 +457,39 @@ Single record detail.
 
 ---
 
-## 8. Subscriptions (super_admin only)
+## 8. Subscriptions
+
+**No co-op can act on the platform (any non-GET request, anywhere) without an active
+subscription** — a co-op that has never paid is treated identically to one that lapsed, enforced
+once centrally by the backend's `SubscriptionGateFilter`.
 
 ```ts
-// CoopSubscriptionPayment shape
+// SubscriptionPayment shape
 {
   "id": "string", "paymentRef": "string", "amountPaid": 300000,
-  "method": "Manual|Paystack", "date": "iso-date", "narration": "string",
-  "status": "Active|Overdue" // the co-op's subscription standing as of this payment
+  "method": "Manual|Paystack|Flutterwave", "date": "iso-date",
+  "type": "New Subscription|Renewal", // auto-detected server-side — never client-supplied
+  "cycle": "Weekly|Monthly|Quarterly|Yearly",
+  "status": "Active|Overdue",
+  "resultingExpiresAt": "iso-date" // what THIS payment extended the subscription to, for accurate historical receipts
 }
 ```
 
-### `GET /subscriptions`
+### Super admin — manual recording (`super_admin` only)
 
-List every co-op's subscription standing. Supports `?status=&search=&from=&to=` (date range filters on last-payment date).
+### `GET /subscriptions`
 
 ```json
 [
   {
     "coopId": "string",
     "coopName": "string",
-    "revenueEarned": 900000, // sum of all payments for this co-op
-    "subscriptionFee": 300000, // recurring fee amount
-    "lastPaymentDate": "iso-date",
-    "status": "Active|Overdue" // most recent payment's status
+    "revenueEarned": 900000,
+    "subscriptionFee": 300000,
+    "subscriptionCycle": "Weekly|Monthly|Quarterly|Yearly|null",
+    "lastPaymentDate": "iso-date|null",
+    "subscriptionExpiresAt": "iso-date|null",
+    "status": "Active|Overdue"
   }
 ]
 ```
@@ -491,21 +500,76 @@ List every co-op's subscription standing. Supports `?status=&search=&from=&to=` 
 { "mgtFeesReceived": 1200000 }
 ```
 
-Sum of `revenueEarned` across every co-op.
-
 ### `GET /cooperatives/:id/subscriptions`
 
-Full payment history for one co-op, newest first — array of `CoopSubscriptionPayment`.
+Full payment history for one co-op, newest first — array of `SubscriptionPayment`.
 
 ### `POST /cooperatives/:id/subscriptions`
 
+A manual record of money already received (bank transfer, cheque, etc.) — not a gateway call.
+
 ```json
 // Request
-{ "amountPaid": 75000, "narration": "string" }
-// Response: the created CoopSubscriptionPayment (paymentRef and date generated server-side, status "Active")
+{ "amountPaid": 75000, "cycle": "Weekly|Monthly|Quarterly|Yearly" }
+// Response: { "payment": SubscriptionPayment, "nextRenewalDate": "iso-date" }
 ```
 
-This is a manual record of money already received (bank transfer, cheque, etc.) — not a payment gateway call. If a real online-collection flow is added later, `method` already supports `"Paystack"` alongside `"Manual"`.
+### Self-service (`admin`, the caller's own co-op only) — powers `/support`
+
+The one path exempted from the platform-wide subscription lock. Real checkout via whichever
+gateway(s) the super admin enabled and entered real keys for in Settings → Integrations.
+
+#### `GET /subscriptions/me`
+
+```json
+{
+  "coopId": "string",
+  "coopName": "string",
+  "adminName": "string",
+  "status": "Active|Overdue",
+  "subscriptionCycle": "Weekly|Monthly|Quarterly|Yearly|null",
+  "subscriptionExpiresAt": "iso-date|null",
+  "yearlyFee": 300000,
+  "cyclePricing": {
+    "weekly": 5769.23,
+    "monthly": 25000,
+    "quarterly": 75000,
+    "yearly": 300000
+  },
+  "availableGateways": [
+    { "gateway": "Paystack|Flutterwave", "publicKey": "string" }
+  ]
+}
+```
+
+#### `GET /subscriptions/me/history`
+
+Same shape as `GET /cooperatives/:id/subscriptions`, scoped to the caller's own co-op.
+
+#### `POST /subscriptions/me/initialize`
+
+```json
+// Request
+{ "cycle": "Weekly|Monthly|Quarterly|Yearly", "gateway": "Paystack|Flutterwave" }
+// Response
+{ "reference": "string", "amount": 25000, "gateway": "Paystack", "publicKey": "string" }
+```
+
+`amount` is computed server-side from the co-op's `yearlyFee` — never client-supplied. Open
+Paystack/Flutterwave's Inline checkout with the returned `reference`/`amount`/`publicKey`.
+
+#### `POST /subscriptions/me/confirm`
+
+```json
+// Request
+{ "reference": "string" }
+// Response: SubscriptionReceipt — { coopId, coopName, adminName, paymentRef, amountPaid, method,
+//   date, type, cycle, status, nextRenewalDate }
+```
+
+Call this from the gateway's client-side success callback. `402` if the backend's own
+server-side verification against the real gateway API fails or the amount is short; `409` if
+that reference was already confirmed.
 
 ---
 

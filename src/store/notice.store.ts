@@ -87,6 +87,15 @@ export const useNoticeStore = create<NoticeState>()(
     {
       name: NOTICE_STORE_NAME,
       storage: createJSONStorage(() => localStorage),
+      // Bumped once to wipe every already-persisted browser's demo notices/replies/read-state
+      // back to the now-empty INITIAL_NOTICES — a real localStorage reset, not just a change to
+      // the seed data (which alone would only affect browsers that had never touched this store).
+      version: 1,
+      migrate: () => ({
+        notices: INITIAL_NOTICES,
+        replies: INITIAL_NOTICE_REPLIES,
+        readMarkers: {},
+      }),
     },
   ),
 );

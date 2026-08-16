@@ -8,6 +8,7 @@ import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { useMinimumDuration } from "@/hooks/use-minimum-duration";
 import { hasAppIntroShown } from "@/lib/app-intro";
 import { getDirectoryCoop } from "@/lib/member-directory";
+import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
 import { useCoopStore } from "@/store/coop.store";
 
@@ -24,6 +25,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/notice-board/new": "Create Notice",
   "/subscriptions": "Subscriptions",
   "/settings": "Settings",
+  "/support": "Support",
 };
 
 function getPageTitle(pathname: string): string {
@@ -89,6 +91,43 @@ export default function DashboardRouteLayout({
       router.replace("/login");
     }
   }, [hasHydrated, member, router]);
+
+  // The persisted session only carries what login returned — if a super
+  // admin renews/disables this admin's co-op after they signed in, their
+  // cached `subscriptionActive` would otherwise stay stale until their next
+  // login. One re-fetch per dashboard visit keeps the renewal banner (and
+  // whatever a super admin just changed) honest without needing a fresh
+  // login. Deliberately scoped to "admin" — the only role that has a
+  // subscription banner to show.
+  const memberId = member?.id;
+  const memberRole = member?.role;
+  useEffect(() => {
+    if (memberRole !== "admin" || !memberId) return;
+    authService
+      .me()
+      .then((fresh) => {
+        if (fresh) useAuthStore.getState().setMember(fresh);
+      })
+      .catch(() => {
+        // Best-effort refresh — a failed request here shouldn't block the
+        // page; the enforcement filter is the real source of truth anyway.
+      });
+  }, [memberId, memberRole, pathname]);
+
+  // A dormant admin (subscription expired/never paid) can only reach /support — that's the
+  // one page that still works while everything else is locked (SubscriptionGateFilter blocks
+  // the writes; this redirect keeps them from even landing on a read-only page that can't do
+  // anything useful for them). Renewing there flips subscriptionActive back on the very next
+  // authService.me() refresh above, which naturally stops this redirect from firing again.
+  useEffect(() => {
+    if (
+      member?.role === "admin" &&
+      member.subscriptionActive === false &&
+      pathname !== "/support"
+    ) {
+      router.replace("/support");
+    }
+  }, [member, pathname, router]);
 
   if (!showDashboard || !member) {
     return (

@@ -619,7 +619,15 @@ src/
 - [x] Members Directory (admin: list, add w/ bank verification, bulk import, export, edit, disable/activate)
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
-- [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload, per-co-op history)
+- [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload with
+      billing cycle, per-co-op history — all real backend now) — plus the platform-wide gate:
+      no co-op can do anything until its subscription is paid, enforced server-side
+- [x] Support (`/support`, admin only) — the co-op's own self-service subscription payment via
+      real Paystack (Flutterwave selectable once the super admin enables it and enters real
+      keys, but unverified — no sandbox credentials available to test against yet), a branded
+      downloadable PDF receipt on every payment, and full transaction history with
+      re-downloadable receipts. This is the one page a dormant admin can still reach — every
+      other route redirects here until they renew
 - [x] Settings (super admin: profile/password, fees & collections account, and
       Paystack/Flutterwave integration toggles — all backed by the real
       backend now; staff users/roles with full edit/disable/remove actions

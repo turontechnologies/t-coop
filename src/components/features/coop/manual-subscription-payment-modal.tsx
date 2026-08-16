@@ -19,20 +19,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Cooperative } from "@/lib/coop-data";
+import type { BillingCycle } from "@/types/subscription";
+
+const BILLING_CYCLES: BillingCycle[] = [
+  "Weekly",
+  "Monthly",
+  "Quarterly",
+  "Yearly",
+];
 
 export interface ManualSubscriptionPaymentPayload {
   coopId: string;
   amountPaid: number;
-  narration: string;
+  cycle: BillingCycle;
+}
+
+interface CooperativeOption {
+  id: string;
+  name: string;
 }
 
 interface ManualSubscriptionPaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Omit to show a co-op picker (top-level page); pass to lock it (detail page). */
-  coop?: Cooperative;
-  cooperatives?: Cooperative[];
+  /** Omit to show a co-op picker (list page); pass to lock it (detail page). */
+  coop?: CooperativeOption;
+  cooperatives?: CooperativeOption[];
   busy: boolean;
   onUpload: (payload: ManualSubscriptionPaymentPayload) => void;
 }
@@ -47,11 +59,11 @@ export function ManualSubscriptionPaymentModal({
 }: ManualSubscriptionPaymentModalProps) {
   const coopId_ = useId();
   const amountId = useId();
-  const narrationId = useId();
+  const cycleId = useId();
 
   const [coopId, setCoopId] = useState(coop?.id ?? "");
   const [amount, setAmount] = useState("");
-  const [narration, setNarration] = useState("Renewal");
+  const [cycle, setCycle] = useState<BillingCycle>("Yearly");
 
   const amountNumber = Number(amount);
   const isValid = !!coopId && amountNumber > 0;
@@ -59,7 +71,7 @@ export function ManualSubscriptionPaymentModal({
   const reset = () => {
     setCoopId(coop?.id ?? "");
     setAmount("");
-    setNarration("Renewal");
+    setCycle("Yearly");
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -68,7 +80,7 @@ export function ManualSubscriptionPaymentModal({
   };
 
   const handleUpload = () => {
-    onUpload({ coopId, amountPaid: amountNumber, narration });
+    onUpload({ coopId, amountPaid: amountNumber, cycle });
   };
 
   return (
@@ -116,15 +128,29 @@ export function ManualSubscriptionPaymentModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={narrationId}>Narration</Label>
-            <Input
-              id={narrationId}
-              placeholder="e.g. Renewal"
-              value={narration}
-              onChange={(event) => setNarration(event.target.value)}
+            <Label htmlFor={cycleId}>Billing Cycle</Label>
+            <Select
+              value={cycle}
+              onValueChange={(value) =>
+                setCycle((value ?? "Yearly") as BillingCycle)
+              }
               disabled={busy}
-              className="h-11"
-            />
+            >
+              <SelectTrigger id={cycleId} className="h-11 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BILLING_CYCLES.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Whether this counts as a new subscription or a renewal is worked
+              out automatically from the co-op&apos;s payment history.
+            </p>
           </div>
         </div>
 

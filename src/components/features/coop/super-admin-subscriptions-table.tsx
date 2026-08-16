@@ -25,28 +25,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
-import {
-  coopLastSubscriptionPaymentDate,
-  coopSubscriptionRevenue,
-  coopSubscriptionStatus,
-  type Cooperative,
-} from "@/lib/coop-data";
 import { formatDateLong, formatNaira } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { SubscriptionSummary } from "@/types/subscription";
 
 function toIsoDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 interface SuperAdminSubscriptionsTableProps {
-  cooperatives: Cooperative[];
+  subscriptions: SubscriptionSummary[];
 }
 
 const STATUS_OPTIONS = ["All statuses", "Active", "Overdue"] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
 export function SuperAdminSubscriptionsTable({
-  cooperatives,
+  subscriptions,
 }: SuperAdminSubscriptionsTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -59,31 +54,19 @@ export function SuperAdminSubscriptionsTable({
   const dateFrom = dateRange?.from ? toIsoDate(dateRange.from) : "";
   const dateTo = dateRange?.to ? toIsoDate(dateRange.to) : "";
 
-  const rows = useMemo(
-    () =>
-      cooperatives.map((coop) => ({
-        coop,
-        revenue: coopSubscriptionRevenue(coop),
-        lastPaymentDate: coopLastSubscriptionPaymentDate(coop),
-        subscriptionStatus: coopSubscriptionStatus(coop),
-      })),
-    [cooperatives],
-  );
-
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return rows.filter((row) => {
+    return subscriptions.filter((row) => {
       const matchesSearch =
         !query ||
-        row.coop.name.toLowerCase().includes(query) ||
-        row.coop.id.toLowerCase().includes(query);
-      const matchesStatus =
-        status === "All statuses" || row.subscriptionStatus === status;
+        row.coopName.toLowerCase().includes(query) ||
+        row.coopId.toLowerCase().includes(query);
+      const matchesStatus = status === "All statuses" || row.status === status;
       const matchesFrom = !dateFrom || (row.lastPaymentDate ?? "") >= dateFrom;
       const matchesTo = !dateTo || (row.lastPaymentDate ?? "") <= dateTo;
       return matchesSearch && matchesStatus && matchesFrom && matchesTo;
     });
-  }, [rows, search, status, dateFrom, dateTo]);
+  }, [subscriptions, search, status, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -185,7 +168,7 @@ export function SuperAdminSubscriptionsTable({
       </div>
 
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
-        <table className="w-full min-w-[820px] text-left text-sm">
+        <table className="w-full min-w-[900px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
               <th className="px-4 py-2.5 font-medium text-foreground">
@@ -201,6 +184,9 @@ export function SuperAdminSubscriptionsTable({
                 Subscription Fee
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
+                Billing Cycle
+              </th>
+              <th className="px-4 py-2.5 font-medium text-foreground">
                 Date of last payment
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
@@ -212,53 +198,51 @@ export function SuperAdminSubscriptionsTable({
             {pageRows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No co-operatives match your filters.
                 </td>
               </tr>
             ) : (
-              pageRows.map(
-                ({ coop, revenue, lastPaymentDate, subscriptionStatus }) => (
-                  <tr
-                    key={coop.id}
-                    onClick={() => router.push(`/subscriptions/${coop.id}`)}
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
-                  >
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      {coop.id}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{coop.name}</td>
-                    <td className="px-4 py-3 text-foreground">
-                      {formatNaira(revenue)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatNaira(coop.subscriptionFee)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {lastPaymentDate
-                        ? formatDateLong(new Date(lastPaymentDate))
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={
-                          subscriptionStatus === "Active"
-                            ? "secondary"
-                            : "destructive"
-                        }
-                        className={cn(
-                          subscriptionStatus === "Active" &&
-                            "bg-success/15 text-success",
-                        )}
-                      >
-                        {subscriptionStatus}
-                      </Badge>
-                    </td>
-                  </tr>
-                ),
-              )
+              pageRows.map((row) => (
+                <tr
+                  key={row.coopId}
+                  onClick={() => router.push(`/subscriptions/${row.coopId}`)}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
+                >
+                  <td className="px-4 py-3 font-medium text-foreground">
+                    {row.coopId}
+                  </td>
+                  <td className="px-4 py-3 text-foreground">{row.coopName}</td>
+                  <td className="px-4 py-3 text-foreground">
+                    {formatNaira(row.revenueEarned)}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatNaira(row.subscriptionFee)}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {row.subscriptionCycle ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {row.lastPaymentDate
+                      ? formatDateLong(new Date(row.lastPaymentDate))
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge
+                      variant={
+                        row.status === "Active" ? "secondary" : "destructive"
+                      }
+                      className={cn(
+                        row.status === "Active" && "bg-success/15 text-success",
+                      )}
+                    >
+                      {row.status}
+                    </Badge>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -268,44 +252,41 @@ export function SuperAdminSubscriptionsTable({
         isEmpty={pageRows.length === 0}
         emptyMessage="No co-operatives match your filters."
       >
-        {pageRows.map(
-          ({ coop, revenue, lastPaymentDate, subscriptionStatus }) => (
-            <MobileRecordCard
-              key={coop.id}
-              onClick={() => router.push(`/subscriptions/${coop.id}`)}
-              title={coop.name}
-              badge={
-                <Badge
-                  variant={
-                    subscriptionStatus === "Active"
-                      ? "secondary"
-                      : "destructive"
-                  }
-                  className={cn(
-                    subscriptionStatus === "Active" &&
-                      "bg-success/15 text-success",
-                  )}
-                >
-                  {subscriptionStatus}
-                </Badge>
-              }
-              fields={[
-                { label: "Co-op ID", value: coop.id },
-                { label: "Revenue Earned", value: formatNaira(revenue) },
-                {
-                  label: "Subscription Fee",
-                  value: formatNaira(coop.subscriptionFee),
-                },
-                {
-                  label: "Date of last payment",
-                  value: lastPaymentDate
-                    ? formatDateLong(new Date(lastPaymentDate))
-                    : "—",
-                },
-              ]}
-            />
-          ),
-        )}
+        {pageRows.map((row) => (
+          <MobileRecordCard
+            key={row.coopId}
+            onClick={() => router.push(`/subscriptions/${row.coopId}`)}
+            title={row.coopName}
+            badge={
+              <Badge
+                variant={row.status === "Active" ? "secondary" : "destructive"}
+                className={cn(
+                  row.status === "Active" && "bg-success/15 text-success",
+                )}
+              >
+                {row.status}
+              </Badge>
+            }
+            fields={[
+              { label: "Co-op ID", value: row.coopId },
+              {
+                label: "Revenue Earned",
+                value: formatNaira(row.revenueEarned),
+              },
+              {
+                label: "Subscription Fee",
+                value: formatNaira(row.subscriptionFee),
+              },
+              { label: "Billing Cycle", value: row.subscriptionCycle ?? "—" },
+              {
+                label: "Date of last payment",
+                value: row.lastPaymentDate
+                  ? formatDateLong(new Date(row.lastPaymentDate))
+                  : "—",
+              },
+            ]}
+          />
+        ))}
       </MobileRecordList>
 
       {filtered.length > 0 ? (

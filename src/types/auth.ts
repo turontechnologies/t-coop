@@ -12,6 +12,9 @@ export interface AuthenticatedMember {
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  /** Only ever set for role "admin" — null for super_admin/member. */
+  subscriptionActive?: boolean | null;
+  subscriptionExpiresAt?: string | null;
 }
 
 export interface LoginResponse {

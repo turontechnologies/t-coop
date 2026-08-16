@@ -22,6 +22,12 @@ function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
+/**
+ * The "glass prism" look used behind every dialog in the app (this is the one shared
+ * component every Dialog/AlertDialog goes through, so fixing it here keeps it consistent
+ * everywhere): frosted glass via backdrop-blur, with a faint brand-green refraction rather
+ * than a flat dark scrim.
+ */
 function DialogBackdrop({
   className,
   ...props
@@ -30,7 +36,7 @@ function DialogBackdrop({
     <DialogPrimitive.Backdrop
       data-slot="dialog-backdrop"
       className={cn(
-        "fixed inset-0 z-50 bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-gradient-to-br from-white/10 via-primary/10 to-black/40 backdrop-blur-md data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 dark:from-white/5 dark:via-primary/15 dark:to-black/60",
         className,
       )}
       {...props}

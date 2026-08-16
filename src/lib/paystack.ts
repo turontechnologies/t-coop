@@ -49,6 +49,10 @@ export interface PaystackCheckoutOptions {
   reference: string;
   onSuccess: (reference: string) => void;
   onClose: () => void;
+  /** Defaults to NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY — pass the platform's own key (e.g. from
+   * Settings > Integrations, via GET /subscriptions/me) when checking out for something the
+   * super admin configured their own gateway credentials for, like a subscription payment. */
+  publicKey?: string;
 }
 
 export async function openPaystackCheckout({
@@ -57,8 +61,9 @@ export async function openPaystackCheckout({
   reference,
   onSuccess,
   onClose,
+  publicKey,
 }: PaystackCheckoutOptions): Promise<void> {
-  const key = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
+  const key = publicKey ?? process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
   if (!key) {
     throw new Error(
       "Paystack isn't configured yet. Add NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY to .env.local.",

@@ -25,6 +25,20 @@ export const authService = {
     return data;
   },
 
+  /**
+   * Re-fetches the signed-in member — used to pick up subscription status
+   * changes made by a super admin (renewal, disable) without requiring a
+   * fresh login. Mock mode has no real session to refresh, so it's a no-op.
+   */
+  async me(): Promise<AuthenticatedMember | null> {
+    if (process.env.NEXT_PUBLIC_USE_MOCK_LOGIN === "true") {
+      return null;
+    }
+
+    const { data } = await apiClient.get<AuthenticatedMember>("/auth/me");
+    return data;
+  },
+
   async logout(): Promise<void> {
     if (process.env.NEXT_PUBLIC_USE_MOCK_LOGIN === "true") {
       return;

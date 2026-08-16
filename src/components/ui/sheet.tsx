@@ -18,12 +18,14 @@ function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
 }
 
+/** Same "glass prism" treatment as DialogBackdrop (src/components/ui/dialog.tsx) — kept
+ * consistent across every dialog/sheet-style overlay in the app. */
 function SheetBackdrop({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   return (
     <SheetPrimitive.Backdrop
       data-slot="sheet-backdrop"
       className={cn(
-        "fixed inset-0 z-50 bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-gradient-to-br from-white/10 via-primary/10 to-black/40 backdrop-blur-md data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 dark:from-white/5 dark:via-primary/15 dark:to-black/60",
         className,
       )}
       {...props}

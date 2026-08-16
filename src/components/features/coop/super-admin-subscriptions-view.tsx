@@ -12,49 +12,54 @@ import {
   TabsPanel,
   TabsTab,
 } from "@/components/ui/tabs";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { ManualSubscriptionPaymentModal } from "@/components/features/coop/manual-subscription-payment-modal";
 import { SuperAdminSubscriptionsTable } from "@/components/features/coop/super-admin-subscriptions-table";
-import {
-  allCoopsSubscriptionRevenue,
-  findCooperative,
-  type CoopSubscriptionPayment,
-} from "@/lib/coop-data";
+import { useCooperatives } from "@/hooks/use-cooperatives";
+import { useSubscriptions } from "@/hooks/use-subscriptions";
+import { useSubscriptionsSummary } from "@/hooks/use-subscriptions-summary";
+import { subscriptionService } from "@/services/subscription.service";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatNaira } from "@/lib/format";
-import { useCoopStore } from "@/store/coop.store";
+import type { BillingCycle } from "@/types/subscription";
 
 export function SuperAdminSubscriptionsView() {
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const addSubscriptionPayment = useCoopStore(
-    (state) => state.addSubscriptionPayment,
-  );
+  const subscriptionsQuery = useSubscriptions();
+  const summaryQuery = useSubscriptionsSummary();
+  const cooperativesQuery = useCooperatives();
+  const queryClient = useQueryClient();
+
   const [uploadOpen, setUploadOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-
-  const mgtFeesReceived = allCoopsSubscriptionRevenue(cooperatives);
 
   const handleUpload = async (payload: {
     coopId: string;
     amountPaid: number;
-    narration: string;
+    cycle: BillingCycle;
   }) => {
     setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const coop = findCooperative(cooperatives, payload.coopId);
-    const payment: CoopSubscriptionPayment = {
-      id: `coop-sub-${Date.now()}`,
-      paymentRef: `${Date.now()}`,
-      amountPaid: payload.amountPaid,
-      method: "Manual",
-      date: new Date().toISOString().slice(0, 10),
-      narration: payload.narration,
-      status: "Active",
-    };
-    addSubscriptionPayment(payload.coopId, payment);
-    setBusy(false);
-    setUploadOpen(false);
-    toast.success("Payment recorded", {
-      description: `${formatNaira(payload.amountPaid)} recorded for ${coop?.name ?? payload.coopId}.`,
-    });
+    try {
+      const result = await subscriptionService.recordSubscriptionPayment(
+        payload.coopId,
+        { amountPaid: payload.amountPaid, cycle: payload.cycle },
+      );
+      await queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      await queryClient.invalidateQueries({ queryKey: ["cooperatives"] });
+      setUploadOpen(false);
+      const coopName =
+        cooperativesQuery.data?.find((c) => c.id === payload.coopId)?.name ??
+        payload.coopId;
+      toast.success("Payment recorded", {
+        description: `${formatNaira(payload.amountPaid)} recorded for ${coopName} (${result.payment.type.toLowerCase()}) — next renewal ${result.nextRenewalDate}.`,
+      });
+    } catch (error) {
+      toast.error("Couldn't record payment", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -67,7 +72,7 @@ export function SuperAdminSubscriptionsView() {
             <div className="space-y-1.5">
               <p className="text-sm text-muted-foreground">Mgt Fees Received</p>
               <p className="text-xl font-semibold text-foreground sm:text-2xl">
-                {formatNaira(mgtFeesReceived)}
+                {formatNaira(summaryQuery.data?.mgtFeesReceived ?? 0)}
               </p>
             </div>
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -89,7 +94,17 @@ export function SuperAdminSubscriptionsView() {
             </div>
 
             <TabsPanel value="subscriptions">
-              <SuperAdminSubscriptionsTable cooperatives={cooperatives} />
+              <QueryBoundary
+                isLoading={subscriptionsQuery.isLoading}
+                isError={subscriptionsQuery.isError}
+                error={subscriptionsQuery.error}
+                onRetry={() => subscriptionsQuery.refetch()}
+                isRetrying={subscriptionsQuery.isFetching}
+              >
+                <SuperAdminSubscriptionsTable
+                  subscriptions={subscriptionsQuery.data ?? []}
+                />
+              </QueryBoundary>
             </TabsPanel>
           </Tabs>
         </CardContent>
@@ -98,7 +113,7 @@ export function SuperAdminSubscriptionsView() {
       <ManualSubscriptionPaymentModal
         open={uploadOpen}
         onOpenChange={setUploadOpen}
-        cooperatives={cooperatives}
+        cooperatives={cooperativesQuery.data ?? []}
         busy={busy}
         onUpload={handleUpload}
       />
