@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { subscriptionService } from "@/services/subscription.service";
-import type { BillingCycle, PaymentGateway } from "@/types/subscription";
+import type { PaymentGateway } from "@/types/subscription";
 
 /** The two server round-trips either side of the actual gateway checkout — see the Support page
  * for how they sandwich openPaystackCheckout/openFlutterwaveCheckout. */
@@ -9,12 +9,12 @@ export function useSubscriptionCheckout() {
 
   const initialize = useMutation({
     mutationFn: ({
-      cycle,
+      planId,
       gateway,
     }: {
-      cycle: BillingCycle;
+      planId: string;
       gateway: PaymentGateway;
-    }) => subscriptionService.initializePayment(cycle, gateway),
+    }) => subscriptionService.initializePayment(planId, gateway),
   });
 
   const confirm = useMutation({

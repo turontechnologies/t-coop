@@ -21,7 +21,6 @@ import { useSubscriptionsSummary } from "@/hooks/use-subscriptions-summary";
 import { subscriptionService } from "@/services/subscription.service";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatNaira } from "@/lib/format";
-import type { BillingCycle } from "@/types/subscription";
 
 export function SuperAdminSubscriptionsView() {
   const subscriptionsQuery = useSubscriptions();
@@ -35,13 +34,13 @@ export function SuperAdminSubscriptionsView() {
   const handleUpload = async (payload: {
     coopId: string;
     amountPaid: number;
-    cycle: BillingCycle;
+    planId: string;
   }) => {
     setBusy(true);
     try {
       const result = await subscriptionService.recordSubscriptionPayment(
         payload.coopId,
-        { amountPaid: payload.amountPaid, cycle: payload.cycle },
+        { amountPaid: payload.amountPaid, planId: payload.planId },
       );
       await queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       await queryClient.invalidateQueries({ queryKey: ["cooperatives"] });

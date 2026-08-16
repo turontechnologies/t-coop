@@ -10,7 +10,6 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { useCoopStore } from "@/store/coop.store";
 import type {
-  BillingCycle,
   InitializePaymentResult,
   MySubscription,
   PaymentGateway,
@@ -77,13 +76,13 @@ export const subscriptionService = {
   },
 
   async initializePayment(
-    cycle: BillingCycle,
+    planId: string,
     gateway: PaymentGateway,
   ): Promise<InitializePaymentResult> {
-    if (USE_MOCK()) return mockInitializePayment(cycle, gateway);
+    if (USE_MOCK()) return mockInitializePayment(planId, gateway);
     const { data } = await apiClient.post<InitializePaymentResult>(
       "/subscriptions/me/initialize",
-      { cycle, gateway },
+      { planId, gateway },
     );
     return data;
   },
@@ -147,7 +146,7 @@ async function mockGetSubscriptionHistory(
       coop.subscriptionPayments.at(-1) === payment
         ? "New Subscription"
         : "Renewal",
-    cycle: "Yearly" as const,
+    cycle: "Yearly",
     status: payment.status,
     resultingExpiresAt: null,
   }));
@@ -181,7 +180,10 @@ async function mockRecordSubscriptionPayment(
     resource: coop.name,
   });
 
-  const nextRenewalDate = addCycleDays(today, payload.cycle);
+  // Mock mode has no real plan catalog behind it (see mockPlanLookup) — always treats the
+  // manual/self-service payload as a Yearly plan, which is the only case the offline demo
+  // needs to support.
+  const nextRenewalDate = addDays(today, 365);
   return {
     payment: {
       id: payment.id,
@@ -190,7 +192,7 @@ async function mockRecordSubscriptionPayment(
       method: payment.method,
       date: payment.date,
       type,
-      cycle: payload.cycle,
+      cycle: "Yearly",
       status: payment.status,
       resultingExpiresAt: nextRenewalDate,
     },
@@ -208,6 +210,25 @@ function mockMyCoop() {
   return coop;
 }
 
+// A tiny stand-in for the real Subscription Plans catalog (see subscription-plan.service.ts) —
+// offline demo mode doesn't share state with that service, so it needs its own fixed options.
+const MOCK_PLANS = [
+  { id: "mock-plan-weekly", label: "Weekly", durationInDays: 7, divisor: 52 },
+  {
+    id: "mock-plan-monthly",
+    label: "Monthly",
+    durationInDays: 30,
+    divisor: 12,
+  },
+  {
+    id: "mock-plan-quarterly",
+    label: "Quarterly",
+    durationInDays: 90,
+    divisor: 4,
+  },
+  { id: "mock-plan-yearly", label: "Yearly", durationInDays: 365, divisor: 1 },
+] as const;
+
 async function mockGetMySubscription(): Promise<MySubscription> {
   await new Promise((resolve) => setTimeout(resolve, 400));
   const coop = mockMyCoop();
@@ -219,13 +240,17 @@ async function mockGetMySubscription(): Promise<MySubscription> {
     status: coopSubscriptionStatus(coop),
     subscriptionCycle: "Yearly",
     subscriptionExpiresAt: null,
-    yearlyFee: yearly,
-    cyclePricing: {
-      weekly: Math.round((yearly / 52) * 100) / 100,
-      monthly: Math.round((yearly / 12) * 100) / 100,
-      quarterly: Math.round((yearly / 4) * 100) / 100,
-      yearly,
-    },
+    availablePlans: MOCK_PLANS.map((plan) => ({
+      id: plan.id,
+      type:
+        coopSubscriptionStatus(coop) === "Active"
+          ? "Renewal"
+          : "New Subscription",
+      label: plan.label,
+      durationInDays: plan.durationInDays,
+      amount: Math.round((yearly / plan.divisor) * 100) / 100,
+      status: "Active",
+    })),
     availableGateways: [
       {
         gateway: "Paystack",
@@ -240,23 +265,17 @@ async function mockGetMyHistory(): Promise<SubscriptionPayment[]> {
 }
 
 async function mockInitializePayment(
-  cycle: BillingCycle,
+  planId: string,
   gateway: PaymentGateway,
 ): Promise<InitializePaymentResult> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   const coop = mockMyCoop();
-  const yearly = coop.subscriptionFee;
-  const amount =
-    cycle === "Weekly"
-      ? yearly / 52
-      : cycle === "Monthly"
-        ? yearly / 12
-        : cycle === "Quarterly"
-          ? yearly / 4
-          : yearly;
+  const plan =
+    MOCK_PLANS.find((option) => option.id === planId) ?? MOCK_PLANS[3];
+  const amount = Math.round((coop.subscriptionFee / plan.divisor) * 100) / 100;
   return {
     reference: `MOCK-SUB-${Date.now()}`,
-    amount: Math.round(amount * 100) / 100,
+    amount,
     gateway,
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "",
   };
@@ -266,10 +285,9 @@ async function mockConfirmPayment(
   reference: string,
 ): Promise<SubscriptionReceipt> {
   const coop = mockMyCoop();
-  const cycle: BillingCycle = "Yearly";
   const result = await mockRecordSubscriptionPayment(coop.id, {
     amountPaid: coop.subscriptionFee,
-    cycle,
+    planId: "mock-plan-yearly",
   });
   return {
     coopId: coop.id,
@@ -286,24 +304,8 @@ async function mockConfirmPayment(
   };
 }
 
-function addCycleDays(
-  isoDate: string,
-  cycle: RecordSubscriptionPaymentPayload["cycle"],
-): string {
+function addDays(isoDate: string, days: number): string {
   const date = new Date(isoDate);
-  switch (cycle) {
-    case "Weekly":
-      date.setDate(date.getDate() + 7);
-      break;
-    case "Monthly":
-      date.setMonth(date.getMonth() + 1);
-      break;
-    case "Quarterly":
-      date.setMonth(date.getMonth() + 3);
-      break;
-    case "Yearly":
-      date.setFullYear(date.getFullYear() + 1);
-      break;
-  }
+  date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
 }

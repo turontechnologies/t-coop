@@ -463,17 +463,47 @@ Single record detail.
 subscription** — a co-op that has never paid is treated identically to one that lapsed, enforced
 once centrally by the backend's `SubscriptionGateFilter`.
 
+Pricing is a super-admin-managed catalog (**Subscription Plans**, §8a) — every duration
+(Weekly/Monthly/custom) and price is something the super admin added, not a fixed formula, and
+New Subscription / Renewal are priced independently.
+
 ```ts
 // SubscriptionPayment shape
 {
   "id": "string", "paymentRef": "string", "amountPaid": 300000,
   "method": "Manual|Paystack|Flutterwave", "date": "iso-date",
   "type": "New Subscription|Renewal", // auto-detected server-side — never client-supplied
-  "cycle": "Weekly|Monthly|Quarterly|Yearly",
+  "cycle": "string", // snapshot of the plan's label at the time — free text, not an enum
   "status": "Active|Overdue",
   "resultingExpiresAt": "iso-date" // what THIS payment extended the subscription to, for accurate historical receipts
 }
 ```
+
+### 8a. Subscription Plans (`super_admin` only) — Settings → Payment Settings → Subscription Plans
+
+The editable price list everything else in this section reads from. Freely
+addable/editable/deletable — `durationInDays` is the flexible unit (not a fixed enum), so a plan
+can be any length ("Weekly", "6 Months", "18 Months", whatever). Deleting a plan never corrupts
+payment history — `SubscriptionPayment.cycle` is a label snapshot, not a foreign key.
+
+```ts
+// SubscriptionPlan shape
+{
+  "id": "uuid", "type": "New Subscription|Renewal", "label": "string",
+  "durationInDays": 30, "amount": 12500, "status": "Active|Inactive"
+}
+```
+
+- `GET /settings/subscription-plans` — list all.
+- `POST /settings/subscription-plans` — `{ type, label, durationInDays, amount }` → creates
+  (`status` always starts `"Active"`).
+- `PATCH /settings/subscription-plans/:id` — `{ label, durationInDays, amount, status }`. `type`
+  is never editable — delete and re-add to move a plan between New Subscription and Renewal.
+- `DELETE /settings/subscription-plans/:id` — hard delete.
+
+An `Inactive` plan stays visible in past payment history but can no longer be picked for a new
+payment (filtered out of both `GET /subscriptions/me` and the super admin's manual-recording
+picker).
 
 ### Super admin — manual recording (`super_admin` only)
 
@@ -486,13 +516,16 @@ once centrally by the backend's `SubscriptionGateFilter`.
     "coopName": "string",
     "revenueEarned": 900000,
     "subscriptionFee": 300000,
-    "subscriptionCycle": "Weekly|Monthly|Quarterly|Yearly|null",
+    "subscriptionCycle": "string|null",
     "lastPaymentDate": "iso-date|null",
     "subscriptionExpiresAt": "iso-date|null",
     "status": "Active|Overdue"
   }
 ]
 ```
+
+`subscriptionFee` is the co-op's own onboarding-time figure — informational only. It's not what
+self-service/manual pricing is computed from; that's entirely the Subscription Plans catalog.
 
 ### `GET /subscriptions/summary`
 
@@ -507,10 +540,13 @@ Full payment history for one co-op, newest first — array of `SubscriptionPayme
 ### `POST /cooperatives/:id/subscriptions`
 
 A manual record of money already received (bank transfer, cheque, etc.) — not a gateway call.
+`planId` picks the label/duration from the Subscription Plans catalog; `amountPaid` stays
+free-typed since a real external payment can legitimately differ from the catalog's listed
+price.
 
 ```json
 // Request
-{ "amountPaid": 75000, "cycle": "Weekly|Monthly|Quarterly|Yearly" }
+{ "amountPaid": 75000, "planId": "uuid" }
 // Response: { "payment": SubscriptionPayment, "nextRenewalDate": "iso-date" }
 ```
 
@@ -527,20 +563,17 @@ gateway(s) the super admin enabled and entered real keys for in Settings → Int
   "coopName": "string",
   "adminName": "string",
   "status": "Active|Overdue",
-  "subscriptionCycle": "Weekly|Monthly|Quarterly|Yearly|null",
+  "subscriptionCycle": "string|null",
   "subscriptionExpiresAt": "iso-date|null",
-  "yearlyFee": 300000,
-  "cyclePricing": {
-    "weekly": 5769.23,
-    "monthly": 25000,
-    "quarterly": 75000,
-    "yearly": 300000
-  },
+  "availablePlans": [SubscriptionPlan, ...],
   "availableGateways": [
     { "gateway": "Paystack|Flutterwave", "publicKey": "string" }
   ]
 }
 ```
+
+`availablePlans` is auto-scoped: `New Subscription` plans if never subscribed, `Renewal` plans
+otherwise — matching what a payment against this co-op would actually be classified as.
 
 #### `GET /subscriptions/me/history`
 
@@ -550,13 +583,14 @@ Same shape as `GET /cooperatives/:id/subscriptions`, scoped to the caller's own 
 
 ```json
 // Request
-{ "cycle": "Weekly|Monthly|Quarterly|Yearly", "gateway": "Paystack|Flutterwave" }
+{ "planId": "uuid", "gateway": "Paystack|Flutterwave" }
 // Response
 { "reference": "string", "amount": 25000, "gateway": "Paystack", "publicKey": "string" }
 ```
 
-`amount` is computed server-side from the co-op's `yearlyFee` — never client-supplied. Open
-Paystack/Flutterwave's Inline checkout with the returned `reference`/`amount`/`publicKey`.
+`amount` comes straight from the plan — never client-supplied. `409` if the plan's type doesn't
+match what this co-op can currently buy. Open Paystack/Flutterwave's Inline checkout with the
+returned `reference`/`amount`/`publicKey`.
 
 #### `POST /subscriptions/me/confirm`
 

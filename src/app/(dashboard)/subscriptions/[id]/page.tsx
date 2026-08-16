@@ -22,7 +22,6 @@ import { useSubscriptions } from "@/hooks/use-subscriptions";
 import { useSubscriptionHistory } from "@/hooks/use-subscription-history";
 import { useRecordSubscriptionPayment } from "@/hooks/use-record-subscription-payment";
 import { formatNaira } from "@/lib/format";
-import type { BillingCycle } from "@/types/subscription";
 
 interface SubscriptionDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -47,12 +46,12 @@ export default function SubscriptionDetailsPage({
   const handleUpload = async (payload: {
     coopId: string;
     amountPaid: number;
-    cycle: BillingCycle;
+    planId: string;
   }) => {
     try {
       const result = await recordPayment.mutateAsync({
         amountPaid: payload.amountPaid,
-        cycle: payload.cycle,
+        planId: payload.planId,
       });
       setUploadOpen(false);
       toast.success("Payment recorded", {

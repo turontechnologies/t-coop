@@ -1,17 +1,29 @@
-export type BillingCycle = "Weekly" | "Monthly" | "Quarterly" | "Yearly";
-
 export type SubscriptionStatus = "Active" | "Overdue";
 
-/** One row of a co-op's payment history — matches SubscriptionPaymentDto. */
+export type SubscriptionPlanType = "New Subscription" | "Renewal";
+
+/** A super-admin-managed subscription price — Payment Settings > Subscription Plans. Freely
+ * addable/editable/deletable, so `label`/`durationInDays` are never a fixed enum. */
+export interface SubscriptionPlan {
+  id: string;
+  type: SubscriptionPlanType;
+  label: string;
+  durationInDays: number;
+  amount: number;
+  status: "Active" | "Inactive";
+}
+
+/** One row of a co-op's payment history — matches SubscriptionPaymentDto. `cycle` is whatever
+ * label the plan used at the time had; it's a snapshot, not a live reference to the plan. */
 export interface SubscriptionPayment {
   id: string;
   paymentRef: string;
   amountPaid: number;
-  method: "Manual" | "Paystack";
+  method: "Manual" | "Paystack" | "Flutterwave";
   date: string;
   /** "New Subscription" for a co-op's first ever payment, "Renewal" for every one after — set server-side. */
-  type: "New Subscription" | "Renewal";
-  cycle: BillingCycle;
+  type: SubscriptionPlanType;
+  cycle: string;
   status: SubscriptionStatus;
   resultingExpiresAt: string | null;
 }
@@ -22,7 +34,7 @@ export interface SubscriptionSummary {
   coopName: string;
   revenueEarned: number;
   subscriptionFee: number;
-  subscriptionCycle: BillingCycle | null;
+  subscriptionCycle: string | null;
   lastPaymentDate: string | null;
   subscriptionExpiresAt: string | null;
   status: SubscriptionStatus;
@@ -30,7 +42,7 @@ export interface SubscriptionSummary {
 
 export interface RecordSubscriptionPaymentPayload {
   amountPaid: number;
-  cycle: BillingCycle;
+  planId: string;
 }
 
 export interface RecordSubscriptionPaymentResult {
@@ -46,10 +58,9 @@ export interface MySubscription {
   coopName: string;
   adminName: string;
   status: SubscriptionStatus;
-  subscriptionCycle: BillingCycle | null;
+  subscriptionCycle: string | null;
   subscriptionExpiresAt: string | null;
-  yearlyFee: number;
-  cyclePricing: Record<Lowercase<BillingCycle>, number>;
+  availablePlans: SubscriptionPlan[];
   availableGateways: { gateway: PaymentGateway; publicKey: string }[];
 }
 
@@ -69,8 +80,8 @@ export interface SubscriptionReceipt {
   amountPaid: number;
   method: string;
   date: string;
-  type: SubscriptionPayment["type"];
-  cycle: BillingCycle;
+  type: SubscriptionPlanType;
+  cycle: string;
   status: SubscriptionStatus;
   nextRenewalDate: string;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -19,19 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { BillingCycle } from "@/types/subscription";
-
-const BILLING_CYCLES: BillingCycle[] = [
-  "Weekly",
-  "Monthly",
-  "Quarterly",
-  "Yearly",
-];
+import { useSubscriptionPlans } from "@/hooks/use-subscription-plans";
+import { formatNaira } from "@/lib/format";
 
 export interface ManualSubscriptionPaymentPayload {
   coopId: string;
   amountPaid: number;
-  cycle: BillingCycle;
+  planId: string;
 }
 
 interface CooperativeOption {
@@ -59,19 +53,32 @@ export function ManualSubscriptionPaymentModal({
 }: ManualSubscriptionPaymentModalProps) {
   const coopId_ = useId();
   const amountId = useId();
-  const cycleId = useId();
+  const planId_ = useId();
+  const plansQuery = useSubscriptionPlans();
+  const activePlans = (plansQuery.data ?? []).filter(
+    (plan) => plan.status === "Active",
+  );
 
   const [coopId, setCoopId] = useState(coop?.id ?? "");
   const [amount, setAmount] = useState("");
-  const [cycle, setCycle] = useState<BillingCycle>("Yearly");
+  const [planId, setPlanId] = useState("");
+
+  // Picking a plan pre-fills the amount with its listed price — still editable, since a real
+  // manual payment (bank transfer, etc.) can legitimately differ from the catalog price.
+  useEffect(() => {
+    if (!planId && activePlans.length > 0) {
+      setPlanId(activePlans[0].id);
+      setAmount(String(activePlans[0].amount));
+    }
+  }, [planId, activePlans]);
 
   const amountNumber = Number(amount);
-  const isValid = !!coopId && amountNumber > 0;
+  const isValid = !!coopId && amountNumber > 0 && !!planId;
 
   const reset = () => {
     setCoopId(coop?.id ?? "");
     setAmount("");
-    setCycle("Yearly");
+    setPlanId("");
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -80,7 +87,13 @@ export function ManualSubscriptionPaymentModal({
   };
 
   const handleUpload = () => {
-    onUpload({ coopId, amountPaid: amountNumber, cycle });
+    onUpload({ coopId, amountPaid: amountNumber, planId });
+  };
+
+  const handlePlanChange = (value: string | null) => {
+    setPlanId(value ?? "");
+    const plan = activePlans.find((option) => option.id === value);
+    if (plan) setAmount(String(plan.amount));
   };
 
   return (
@@ -114,6 +127,33 @@ export function ManualSubscriptionPaymentModal({
           )}
 
           <div className="space-y-2">
+            <Label htmlFor={planId_}>Subscription Plan</Label>
+            <Select
+              value={planId}
+              onValueChange={handlePlanChange}
+              disabled={busy}
+            >
+              <SelectTrigger id={planId_} className="h-11 w-full">
+                <SelectValue placeholder="Select a plan" />
+              </SelectTrigger>
+              <SelectContent>
+                {activePlans.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label} ({option.type}) —{" "}
+                    {formatNaira(option.amount)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Whether this counts as a new subscription or a renewal is worked
+              out automatically from the co-op&apos;s payment history — pick
+              whichever plan duration matches what was actually paid. Manage
+              plans from Settings &gt; Payment Settings &gt; Subscription Plans.
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor={amountId}>Amount Paid</Label>
             <Input
               id={amountId}
@@ -125,32 +165,6 @@ export function ManualSubscriptionPaymentModal({
               disabled={busy}
               className="h-11"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={cycleId}>Billing Cycle</Label>
-            <Select
-              value={cycle}
-              onValueChange={(value) =>
-                setCycle((value ?? "Yearly") as BillingCycle)
-              }
-              disabled={busy}
-            >
-              <SelectTrigger id={cycleId} className="h-11 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BILLING_CYCLES.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Whether this counts as a new subscription or a renewal is worked
-              out automatically from the co-op&apos;s payment history.
-            </p>
           </div>
         </div>
 

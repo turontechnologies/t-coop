@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -26,26 +26,11 @@ import { openPaystackCheckout } from "@/lib/paystack";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import type {
-  BillingCycle,
   PaymentGateway,
   SubscriptionPayment,
+  SubscriptionPlan,
   SubscriptionReceipt,
 } from "@/types/subscription";
-
-const CYCLES: BillingCycle[] = ["Weekly", "Monthly", "Quarterly", "Yearly"];
-const CYCLE_KEY: Record<BillingCycle, keyof MySubscriptionCyclePricing> = {
-  Weekly: "weekly",
-  Monthly: "monthly",
-  Quarterly: "quarterly",
-  Yearly: "yearly",
-};
-
-type MySubscriptionCyclePricing = {
-  weekly: number;
-  monthly: number;
-  quarterly: number;
-  yearly: number;
-};
 
 export function AdminSupportView() {
   const subscriptionQuery = useMySubscription();
@@ -53,7 +38,7 @@ export function AdminSupportView() {
   const { initialize, confirm } = useSubscriptionCheckout();
   const member = useAuthStore((state) => state.member);
 
-  const [cycle, setCycle] = useState<BillingCycle>("Yearly");
+  const [planId, setPlanId] = useState<string | null>(null);
   const [gateway, setGateway] = useState<PaymentGateway | null>(null);
   const [paying, setPaying] = useState(false);
   const [receipt, setReceipt] = useState<SubscriptionReceipt | null>(null);
@@ -62,12 +47,24 @@ export function AdminSupportView() {
   const activeGateway =
     gateway ?? subscription?.availableGateways[0]?.gateway ?? null;
 
+  // Defaults to the first available plan once they load — a super admin can add/remove plans
+  // at any time, so this can't be a hardcoded default the way a fixed Weekly/Monthly/Quarterly/
+  // Yearly set used to be.
+  useEffect(() => {
+    if (!planId && subscription?.availablePlans.length) {
+      setPlanId(subscription.availablePlans[0].id);
+    }
+  }, [planId, subscription]);
+
+  const selectedPlan: SubscriptionPlan | undefined =
+    subscription?.availablePlans.find((plan) => plan.id === planId);
+
   const handlePay = async () => {
-    if (!subscription || !activeGateway || !member) return;
+    if (!subscription || !activeGateway || !member || !planId) return;
     setPaying(true);
     try {
       const init = await initialize.mutateAsync({
-        cycle,
+        planId,
         gateway: activeGateway,
       });
 
@@ -194,7 +191,7 @@ export function AdminSupportView() {
 
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   <Field
-                    label="Current Cycle"
+                    label="Current Plan"
                     value={subscription.subscriptionCycle ?? "—"}
                   />
                   <Field
@@ -211,10 +208,6 @@ export function AdminSupportView() {
                         : "—"
                     }
                   />
-                  <Field
-                    label="Yearly Fee"
-                    value={formatNaira(subscription.yearlyFee)}
-                  />
                 </div>
               </CardContent>
             </Card>
@@ -227,36 +220,41 @@ export function AdminSupportView() {
                     : "Subscribe Now"}
                 </h2>
 
-                <div className="space-y-2">
-                  <Label>Billing Cycle</Label>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {CYCLES.map((option) => {
-                      const price =
-                        subscription.cyclePricing[CYCLE_KEY[option]];
-                      const selected = cycle === option;
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => setCycle(option)}
-                          className={cn(
-                            "rounded-xl border px-3 py-3 text-left transition-colors",
-                            selected
-                              ? "border-primary bg-primary/5 ring-1 ring-primary"
-                              : "border-border hover:bg-muted/50",
-                          )}
-                        >
-                          <p className="text-sm font-semibold text-foreground">
-                            {option}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatNaira(price)}
-                          </p>
-                        </button>
-                      );
-                    })}
+                {subscription.availablePlans.length === 0 ? (
+                  <p className="rounded-lg bg-muted px-3 py-2.5 text-sm text-muted-foreground">
+                    No subscription plans are available yet — ask your super
+                    admin to add one in Payment Settings.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Choose a Plan</Label>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {subscription.availablePlans.map((plan) => {
+                        const selected = planId === plan.id;
+                        return (
+                          <button
+                            key={plan.id}
+                            type="button"
+                            onClick={() => setPlanId(plan.id)}
+                            className={cn(
+                              "rounded-xl border px-3 py-3 text-left transition-colors",
+                              selected
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border hover:bg-muted/50",
+                            )}
+                          >
+                            <p className="text-sm font-semibold text-foreground">
+                              {plan.label}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatNaira(plan.amount)}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {subscription.availableGateways.length === 0 ? (
                   <p className="rounded-lg bg-muted px-3 py-2.5 text-sm text-muted-foreground">
@@ -298,7 +296,9 @@ export function AdminSupportView() {
                 <Button
                   className="w-full sm:w-auto"
                   disabled={
-                    paying || subscription.availableGateways.length === 0
+                    paying ||
+                    subscription.availableGateways.length === 0 ||
+                    !selectedPlan
                   }
                   onClick={handlePay}
                 >
@@ -313,8 +313,7 @@ export function AdminSupportView() {
                   ) : (
                     <>
                       <CheckCircle2 className="size-4" aria-hidden="true" />
-                      Pay{" "}
-                      {formatNaira(subscription.cyclePricing[CYCLE_KEY[cycle]])}
+                      Pay {selectedPlan ? formatNaira(selectedPlan.amount) : ""}
                     </>
                   )}
                 </Button>
