@@ -18,7 +18,7 @@ function PasswordInput({ className, ...props }: PasswordInputProps) {
   const [revealed, setRevealed] = React.useState(false);
 
   return (
-    <div className="relative">
+    <div className={cn("relative", className)}>
       <Input
         type={revealed ? "text" : "password"}
         className={cn("pr-10", className)}

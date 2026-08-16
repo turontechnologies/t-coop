@@ -21,6 +21,8 @@ export type AddCooperativeFormValues = z.infer<typeof addCooperativeSchema>;
 
 export const editCooperativeSchema = z.object({
   name: z.string().trim().min(1, "Enter the co-operative name"),
+  adminFirstName: z.string().trim().min(1, "Enter the admin's first name"),
+  adminLastName: z.string().trim().min(1, "Enter the admin's last name"),
   contactEmail: z.email("Enter a valid email address"),
   contactPhone: z
     .string()

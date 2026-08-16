@@ -138,7 +138,12 @@ async function mockUpdateCooperative(
   const coop = store.cooperatives.find((c) => c.id === id);
   if (!coop) throw new Error("We couldn't find that co-operative");
 
-  const updated: Cooperative = { ...coop, ...values };
+  const { adminFirstName, adminLastName, ...rest } = values;
+  const updated: Cooperative = {
+    ...coop,
+    ...rest,
+    adminName: `${adminFirstName.trim()} ${adminLastName.trim()}`,
+  };
   useCoopStore.setState({
     cooperatives: store.cooperatives.map((c) => (c.id === id ? updated : c)),
   });

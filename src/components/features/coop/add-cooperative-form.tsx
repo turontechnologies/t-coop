@@ -66,7 +66,7 @@ export function AddCooperativeForm() {
         state: values.state.trim(),
       });
       toast.success("Co-operative created", {
-        description: `${coop.name} has been added — its admin's login details were emailed to ${coop.contactEmail}.`,
+        description: `${coop.name} can now sign in with ID "${coop.id}" and the default password — details were emailed to ${coop.contactEmail}.`,
       });
       router.push(`/co-operatives/${coop.id}`);
     } catch (error) {

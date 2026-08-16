@@ -1,5 +1,16 @@
 # Co-operatives
 
+> **Real backend cutover (list/add/edit/enable-disable):** everything in
+> this doc below was written for the original mock-only build. The list,
+> "Add New Co-operative," edit, and enable/disable actions now call the real
+> `t-coop-backend` (`NEXT_PUBLIC_USE_MOCK_COOPERATIVES=false`) — see
+> `project-overview.md`'s Co-operatives section and
+> `t-coop-backend/documentation/flows.md`'s onboarding sequence for current
+> behavior, including that a co-op **is** its admin login (no separate
+> `AD-XXXX` id) and that disabling a co-op now genuinely blocks that admin's
+> login. The Members/Savings/Loans drill-down tabs described below are
+> still the original mock (`useCoopStore`) — not yet cut over.
+
 ## Overview
 
 `/co-operatives` and its sub-routes are a super-admin-only oversight area
@@ -218,7 +229,8 @@ nested route under it.
 - "Earnings on Savings" is a flat illustrative rate; a real product would
   need an actual dividend/interest accrual model shared with a real
   savings ledger.
-- Disabling a co-operative or deactivating a member currently only flips a
-  status badge — no cascading effect (blocking logins, freezing
-  transactions, etc.) is modeled, since there's no real backend to enforce
-  it against yet.
+- Deactivating a member (within the still-mock Members/Savings/Loans
+  drill-down) currently only flips a status badge — no cascading effect is
+  modeled there. Disabling a co-operative itself is no longer in this
+  bucket: against the real backend it now genuinely blocks that co-op's
+  admin from logging in (see the cutover note at the top of this doc).

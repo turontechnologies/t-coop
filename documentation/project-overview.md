@@ -29,14 +29,23 @@ co-operatives from `/co-operatives`, that's the only "onboarding" path.
 | Role        | Membership ID | Password   | Lands on                        |
 | ----------- | ------------- | ---------- | ------------------------------- |
 | Super Admin | `SA-0001`     | `admin123` | `/dashboard` (super admin view) |
-| Admin       | `AD-0001`     | `admin123` | `/dashboard` (admin view)       |
+| Admin       | `COOP-0001`   | `admin123` | `/dashboard` (admin view)       |
 | Member      | `MB-0001`     | `admin123` | `/dashboard` (member view)      |
 
-Same IDs and password against both the mock (`src/lib/mock-users.ts`,
-`NEXT_PUBLIC_USE_MOCK_LOGIN=true`) and the real backend
-(`t-coop-backend`'s `V2__seed_demo_users.sql`) — deliberately kept in sync
-so switching the mock flag doesn't change which credentials work. Mock
-passwords are mutable at runtime (the password-recovery flow genuinely
+**A co-op's admin logs in with the co-op's own ID** — there's no separate
+`AD-XXXX` admin ID. Onboarding a co-op from `/co-operatives/new` provisions
+exactly one admin account whose membership ID is the co-op's own ID, default
+password `admin123`. `COOP-0001` above is the demo co-op seeded by the
+backend (`V2`/`V3`/`V4`, renamed onto this scheme by `V7`).
+
+The offline mock login (`src/lib/mock-users.ts`,
+`NEXT_PUBLIC_USE_MOCK_LOGIN=true`) still predates this and uses its own
+`AD-0001`/non-`admin123` credentials — it's a standalone fallback for
+demoing with no backend running at all, not something this cutover touches;
+see that file's own "remove once real auth lands" comment. Against the real
+backend (`NEXT_PUBLIC_USE_MOCK_LOGIN=false`, the current default), only the
+table above applies. Mock passwords are mutable at runtime (the
+password-recovery flow genuinely
 changes them in-memory) but reset on a full page reload; the real backend
 has no working password-reset endpoint yet (see Auth above).
 
@@ -183,12 +192,26 @@ backend should standardize on the richer one.
 
 ### Co-operatives (`/co-operatives`, super admin only)
 
-List every co-op, add a new one (writes straight to the co-op store,
-duplicate-ID checked, no "pending review" queue — the super admin _is_
-the approval authority). Drill down: co-op → Members/Savings/Loans tabs →
-individual member/savings-type/loan-type → individual record detail.
-This replaced the old public `/register` route entirely — co-operatives
-are admin-created, not self-service.
+Wired to the real backend (`NEXT_PUBLIC_USE_MOCK_COOPERATIVES=false`): list
+every co-op with real member counts and savings/loans totals, add a new one
+(duplicate co-op ID / duplicate email both checked server-side, no "pending
+review" queue — the super admin _is_ the approval authority), edit, and
+enable/disable. Onboarding a co-op provisions its admin login too — the
+co-op logs in with its own ID and the platform default password
+(`admin123`); see [Roles & Demo Accounts](#roles--demo-accounts) above and
+`t-coop-backend/documentation/flows.md`'s co-operative onboarding section.
+Editing a co-op's admin name/email/phone here updates the same row that
+admin logs in and self-edits as, so the change shows up on their own portal
+immediately. Disabling a co-op locks its admin out of login with a friendly
+"account not active" message.
+
+Drill down: co-op → Members/Savings/Loans tabs → individual
+member/savings-type/loan-type → individual record detail — that part is
+still not wired to a real backend (see
+[Backend Integration](#backend-integration)), so those tabs render an
+honest empty state for a real co-op rather than fake mock data. This
+replaced the old public `/register` route entirely — co-operatives are
+admin-created, not self-service.
 
 ### Members Directory (`/members`, admin only)
 
@@ -216,9 +239,11 @@ Every co-operative's subscription standing at a glance: Quick Summary
 Name, Revenue Earned, Subscription Fee, Date of last payment, Active/
 Overdue status) with search + status filter + date range, "Manual
 Upload" to record a payment for any co-op. Clicking a row drills into
-`/subscriptions/[id]` — the same `CoopHeaderCard` used on
-`/co-operatives/[id]` (Co-op ID/Name/Contact/Admin/Address/Total
-Savings/Total Loan + Disable Co-operative), plus that one co-op's full
+`/subscriptions/[id]` — a `SubscriptionCoopHeaderCard` with the same field
+layout as `/co-operatives/[id]`'s real `CoopHeaderCard` (Co-op ID/Name/
+Contact/Admin/Address/Total Savings/Total Loan + Disable Co-operative), kept
+as a separate component since Subscriptions is still fully mock-store-backed
+and hasn't been cut over to the real backend — plus that one co-op's full
 "Subscription History" table and its own Manual Upload. No real payment
 gateway here (money coming _in_ from a co-op, recorded manually, not a
 Paystack flow) — see [subscriptions-page.md](./subscriptions-page.md).
@@ -587,7 +612,10 @@ src/
 - [x] My Profile (real Cloudinary photo upload, real bank verification)
 - [x] Savings & Contributions (member + admin + **super admin oversight, now built**)
 - [x] Loans (member + admin; super-admin top-level view still pending — per-co-op view already covers it)
-- [x] Co-operatives (super admin: list, add, full drill-down)
+- [x] Co-operatives (super admin: list, add, edit, enable/disable — all real
+      backend now; onboarding provisions a real admin login, the co-op's own
+      ID; drill-down into a real co-op's Members/Savings/Loans tabs is
+      still not wired, renders an honest empty state)
 - [x] Members Directory (admin: list, add w/ bank verification, bulk import, export, edit, disable/activate)
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
@@ -603,10 +631,11 @@ src/
 - [x] Per-co-op currency + live conversion rate (admin sets it, super admin sees it live everywhere a co-op shows up; every displayed savings/loans amount app-wide formats in that co-op's currency, isolated per co-op on the super-admin side, with cross-co-op aggregates genuinely converted and summed)
 - [x] Light/dark theme
 - [x] Real backend integration — login/me/logout, the dashboard summary,
-      profile view/edit, the audit log, and platform settings (Fees &
-      Charges / Account Details / Integrations) all call the real
-      `t-coop-backend` (see [Backend Integration](#backend-integration));
-      the rest of `src/services/*.service.ts` is still mocked
+      profile view/edit, the audit log, platform settings (Fees & Charges /
+      Account Details / Integrations), and Co-operatives (list/add/edit/
+      enable-disable) all call the real `t-coop-backend` (see
+      [Backend Integration](#backend-integration)); the rest of
+      `src/services/*.service.ts` is still mocked
 - [x] Dashboard's real numbers — cards + Recent Activities are real
       aggregates; the hourly chart and Dividends figure are still
       illustrative (no dedicated ledger exists yet)

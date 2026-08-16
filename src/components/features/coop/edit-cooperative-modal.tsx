@@ -38,9 +38,16 @@ export function EditCooperativeModal({
   const updateCooperative = useUpdateCooperative(coop.id);
 
   const nameId = useId();
+  const adminFirstNameId = useId();
+  const adminLastNameId = useId();
   const emailId = useId();
   const phoneId = useId();
   const addressId = useId();
+
+  const [adminFirstName, ...adminLastNameParts] = coop.adminName
+    .trim()
+    .split(/\s+/);
+  const adminLastName = adminLastNameParts.join(" ");
 
   const {
     register,
@@ -53,6 +60,8 @@ export function EditCooperativeModal({
     resolver: zodResolver(editCooperativeSchema),
     defaultValues: {
       name: coop.name,
+      adminFirstName: adminFirstName ?? "",
+      adminLastName,
       contactEmail: coop.contactEmail,
       contactPhone: coop.contactPhone,
       address: coop.address,
@@ -103,6 +112,31 @@ export function EditCooperativeModal({
               {...register("name")}
             />
             <FieldError message={errors.name?.message} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={adminFirstNameId}>Admin First Name</Label>
+              <Input
+                id={adminFirstNameId}
+                disabled={busy}
+                aria-invalid={!!errors.adminFirstName}
+                className="h-11"
+                {...register("adminFirstName")}
+              />
+              <FieldError message={errors.adminFirstName?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={adminLastNameId}>Admin Last Name</Label>
+              <Input
+                id={adminLastNameId}
+                disabled={busy}
+                aria-invalid={!!errors.adminLastName}
+                className="h-11"
+                {...register("adminLastName")}
+              />
+              <FieldError message={errors.adminLastName?.message} />
+            </div>
           </div>
 
           <div className="space-y-2">
