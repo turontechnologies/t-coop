@@ -2,6 +2,8 @@ import { apiClient } from "@/lib/axios";
 import { logActivity } from "@/lib/audit-log";
 import { useCoopStore } from "@/store/coop.store";
 import type { Cooperative } from "@/lib/coop-data";
+import { LOAN_TYPES } from "@/lib/loans-data";
+import { SAVINGS_TYPES } from "@/lib/savings-data";
 import type { CooperativeSummary } from "@/types/cooperative";
 import type {
   AddCooperativeFormValues,
@@ -24,6 +26,8 @@ function toSummary(coop: Cooperative): CooperativeSummary {
     status: coop.status,
     currency: coop.currency,
     memberCount: coop.members.length,
+    savingsTypeCount: SAVINGS_TYPES.length,
+    loanTypeCount: LOAN_TYPES.length,
     totalSavings: coop.savings.reduce((sum, record) => sum + record.amount, 0),
     totalLoans: coop.loans.reduce((sum, record) => sum + record.amount, 0),
   };

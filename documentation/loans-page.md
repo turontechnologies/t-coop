@@ -7,14 +7,24 @@ the `(dashboard)` route group, alongside `/dashboard`, `/profile`, and
 `/savings` — see [dashboard.md](./dashboard.md) and
 [savings-page.md](./savings-page.md).
 
-**Member and admin are both built; super_admin is still inert.** The
-member experience described in most of this document is unchanged. The
-admin role now has its own real "Loans" page — see
-[Admin view](#admin-view) below — built the same way `/savings`' admin
-view was: Quick Summary, tabs, a per-type drill-down reusing the
-super-admin co-op components via an optional `basePath`. Super admin's
-"Loans" nav item still has no `href`; the equivalent oversight already
-exists per co-operative under `/co-operatives/[id]/loans/...`.
+**Member, admin, and super admin are all built** — `LoansPage` branches by
+role, mirroring `/savings` exactly. The member experience described in
+most of this document is unchanged. The admin role has its own real
+"Loans" page — see [Admin view](#admin-view) below: Quick Summary, tabs, a
+per-type drill-down reusing the super-admin co-op components via an
+optional `basePath`. Super admin gets `<SuperAdminLoansView>`
+(`src/components/features/loans/super-admin-loans-view.tsx`): a
+platform-wide Quick Summary (Total Loans across every co-op, converted
+into one currency; an illustrative Transaction Fees Received figure) above
+`<SuperAdminLoansTable>` — every co-operative, its loan-type count, its
+total, and its status, row click → that co-op's own
+`/co-operatives/[id]?tab=loans`. **This is real backend data**
+(`useCooperatives()` → `GET /api/v1/cooperatives`, same real DTO the
+Co-operatives list page uses — `loanTypeCount` and `totalLoans` are both
+computed server-side), same as `/savings`' equivalent — not the separate
+per-co-op drill-down under `/co-operatives/[id]/loans/...` (see
+[co-operatives-page.md](./co-operatives-page.md)); the two intentionally
+share nothing but their real data source.
 
 ## Purpose
 
@@ -204,7 +214,7 @@ scope that was actually asked for.
 /loans
   member      → <MemberLoansView> (their own records + "+ New Loan")
   admin       → <AdminLoansView> (Quick Summary + Requests/Members Loans/My Loans tabs)
-  super_admin → null (nav item inert)
+  super_admin → <SuperAdminLoansView> (platform-wide Quick Summary + all-co-operatives table, real backend)
 
 Member "+ New Loan" → <TakeLoanModal>
   pick Loan Type → shows eligible amount + rate/duration for that type
@@ -317,10 +327,6 @@ Transactions tabs use Base UI's `Tabs.Indicator` sliding highlight.
   guarantor/admin pipeline (or building an equivalent for it) is the
   natural next step, but was out of scope here since "My Loans" was
   explicitly asked to stay identical to the member's existing flow.
-- **A dedicated super-admin `/loans` view**, if ever requested — today
-  super admin's oversight equivalent lives per-co-operative under
-  `/co-operatives/[id]/loans/...` (see
-  [co-operatives-page.md](./co-operatives-page.md)).
 - **Disbursement is real (a genuine Paystack Transfer); repayment
   collection is not.** Approving a co-op loan request now attempts a real
   payout — see [payments-and-payouts.md](./payments-and-payouts.md) — but

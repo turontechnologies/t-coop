@@ -8,8 +8,20 @@
 > `t-coop-backend/documentation/flows.md`'s onboarding sequence for current
 > behavior, including that a co-op **is** its admin login (no separate
 > `AD-XXXX` id) and that disabling a co-op now genuinely blocks that admin's
-> login. The Members/Savings/Loans drill-down tabs described below are
-> still the original mock (`useCoopStore`) — not yet cut over.
+> login. **The Members, Savings, and Loans tabs — and their drill-downs —
+> are all real now** (`CooperativeController`/`SavingsController`/
+> `LoanController` — see `t-coop-backend/documentation/flows.md`'s Members/
+> Savings/Loans oversight sections), all reading from the same real
+> `members`/`savings_records`/`savings_types`/`loan_records`/`loan_types`
+> tables. A member's id/name shown on a savings or loan record always
+> matches what's on the Members tab, since every one of these queries
+> joins against the exact same `Member` rows — no separate or cached copy
+> of a co-op's identity anywhere. **The Members tab's Edit/Disable actions
+> are real writes too** — `EditMemberModal` now takes an `onSubmit`
+> callback instead of only ever touching the mock store directly, so both
+> this real oversight view and the still-mock Members Directory page
+> (`/members`) can share the same modal component without either one
+> faking the other's backend.
 
 ## Overview
 
@@ -117,12 +129,45 @@ panel) — and:
   honesty pattern used for photo upload and the terms/privacy links
   elsewhere in the app.
 - **"Earnings on Savings" is an illustrative dividend figure, not a real
-  accrual engine.** The reference's co-op Savings tab shows an "Earnings on
-  Savings" column that doesn't correspond to anything the rest of the app
-  models (savings don't currently pay interest anywhere else in the app).
-  `coopSavingsBySummaryType` (`src/lib/coop-data.ts`) computes it as a flat
-  2% of each type's total — clearly labeled as a mock simplification here
-  rather than left unexplained.
+  accrual engine — true for both the mock and the real backend now.** The
+  reference's co-op Savings tab shows an "Earnings on Savings" column that
+  doesn't correspond to anything the rest of the app models (savings don't
+  currently pay interest anywhere else). `coopSavingsBySummaryType`
+  (`src/lib/coop-data.ts`, still used by the mock fallback and by the
+  admin's own `/savings` page) computes it as a flat 2% of each type's
+  total; `SavingsTypeSummaryDto` on the real backend does the exact same
+  2% math server-side now — one honest simplification, not two that could
+  drift apart.
+- **The Savings and Loans tabs are both real for real co-ops now, built the
+  same way.** `CoopSavingsSummaryTable`/`CoopLoansSummaryTable` no longer
+  take a whole `Cooperative` — each takes its totals array, currency, and
+  coop id directly, so it can be fed either real data (`useCoopSavingsTypes`/
+  `useCoopLoanTypes`) or the mock's `coopSavingsBySummaryType(coop)`/
+  `coopLoansBySummaryType(coop)` output, both shaped identically. The four
+  drill-down pages (`savings/[type]`, `savings/record/[recordId]`,
+  `loans/[type]`, `loans/record/[recordId]`) were all rewritten off
+  `useCoopStore`/`findCooperative` onto real hooks
+  (`src/hooks/use-coop-savings.ts`/`use-coop-loans.ts` →
+  `coop-savings.service.ts`/`coop-loan.service.ts`, same
+  `NEXT_PUBLIC_USE_MOCK_COOPERATIVES` flag the co-op list/detail pages
+  already used). Both record detail pages' "Member" link points at
+  `record.memberId` directly rather than a looked-up `CoopMember` object —
+  correct now that the Members tab is real too, and would have stayed
+  correct even before that, unlike silently hiding the link.
+- **The Members tab is real for real co-ops now, including Edit/Disable.**
+  `CoopMembersTable` takes `members`/`coopId` directly (same refactor
+  pattern as the tables above) and calls real mutations
+  (`useUpdateCoopMember`/`useUpdateCoopMemberStatus` →
+  `coop-member.service.ts`) instead of the mock `useCoopStore` actions —
+  no more "Coming soon" placeholder. `EditMemberModal` no longer reaches
+  into `useCoopStore` itself; it takes an `onSubmit` callback, so both this
+  real oversight view and the still-mock Members Directory page (`/members`)
+  can share the exact same form component while going to different
+  backends. The real backend also gained the ability to _add_ a member
+  (`POST /cooperatives/:id/members` — same onboarding convention as a
+  co-op's own admin: caller picks the membership ID, password starts as
+  `admin123`, a welcome email goes out), though this specific oversight
+  page doesn't have an "Add Member" button — that's Members Directory's job.
 - **Activate/Deactivate requires an explicit confirmation, not an
   instant toggle — via one shared component, not three near-duplicate
   implementations.** Both the co-operative level (`CoopHeaderCard`'s

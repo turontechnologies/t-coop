@@ -31,22 +31,20 @@ import {
   editMemberSchema,
   type EditMemberFormValues,
 } from "@/lib/validations/coop.schema";
-import { useCoopStore } from "@/store/coop.store";
 
 interface EditMemberModalProps {
-  coopId: string;
   member: CoopMember;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubmit: (values: EditMemberFormValues) => Promise<void>;
 }
 
 export function EditMemberModal({
-  coopId,
   member,
   open,
   onOpenChange,
+  onSubmit: submitMember,
 }: EditMemberModalProps) {
-  const updateMember = useCoopStore((state) => state.updateMember);
   const { banks, loading: banksLoading } = useBankList();
   const [verifying, setVerifying] = useState(false);
 
@@ -110,15 +108,18 @@ export function EditMemberModal({
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    updateMember(coopId, member.id, {
-      ...values,
-      accountName: values.accountName ?? "",
-    });
-    toast.success("Member updated", {
-      description: `${values.firstName} ${values.lastName}'s details were saved.`,
-    });
-    onOpenChange(false);
+    try {
+      await submitMember(values);
+      toast.success("Member updated", {
+        description: `${values.firstName} ${values.lastName}'s details were saved.`,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Couldn't update member", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
 
   return (

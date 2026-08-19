@@ -283,7 +283,12 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
             </div>
 
             <TabsPanel value="members">
-              <CoopSavingsSummaryTable coop={coop} basePath="/savings/type" />
+              <CoopSavingsSummaryTable
+                totalsByType={totalsByType}
+                currency={coop.currency}
+                coopId={coop.id}
+                basePath="/savings/type"
+              />
             </TabsPanel>
 
             <TabsPanel value="my">

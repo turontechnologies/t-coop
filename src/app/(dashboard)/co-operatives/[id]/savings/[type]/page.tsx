@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopSavingsTypeRecordsTable } from "@/components/features/coop/coop-savings-type-records-table";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
-import { findCooperative } from "@/lib/coop-data";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
-import { useCoopStore } from "@/store/coop.store";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
 
 interface CoopSavingsTypePageProps {
   params: Promise<{ id: string; type: string }>;
@@ -32,21 +33,17 @@ export default function CoopSavingsTypePage({
   const { id, type } = use(params);
   const savingsType = decodeURIComponent(type);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = findCooperative(cooperatives, id);
+  const coopQuery = useCooperative(id);
+  const coop = coopQuery.data;
+  const recordsQuery = useCoopSavingsRecords(id, { type: savingsType });
+  const records = recordsQuery.data;
 
-  const records = useMemo(
-    () =>
-      coop?.savings.filter((record) => record.savingsType === savingsType) ??
-      [],
-    [coop, savingsType],
-  );
   const total = useMemo(
-    () => records.reduce((sum, record) => sum + record.amount, 0),
+    () => (records ?? []).reduce((sum, record) => sum + record.amount, 0),
     [records],
   );
 
-  if (!coop) {
+  if (coopQuery.isError) {
     return (
       <div className="space-y-4 pt-6">
         <p className="text-sm text-muted-foreground">
@@ -56,6 +53,16 @@ export default function CoopSavingsTypePage({
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Co-operatives
         </Button>
+      </div>
+    );
+  }
+
+  if (coopQuery.isLoading || !coop) {
+    return (
+      <div className="space-y-4 pt-6">
+        <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+        <div className="h-24 animate-pulse rounded-xl bg-muted" />
+        <div className="h-56 animate-pulse rounded-xl bg-muted" />
       </div>
     );
   }
@@ -101,13 +108,24 @@ export default function CoopSavingsTypePage({
                   Savings Record
                 </h3>
                 <ExportImportMenu
-                  rows={records}
+                  rows={records ?? []}
                   columns={EXPORT_COLUMNS}
                   filenamePrefix={`${coop.id}-${savingsType}`}
                   exportTitle={`${coop.name} — ${savingsType}`}
                 />
               </div>
-              <CoopSavingsTypeRecordsTable coopId={coop.id} records={records} />
+              <QueryBoundary
+                isLoading={recordsQuery.isLoading}
+                isError={recordsQuery.isError}
+                error={recordsQuery.error}
+                onRetry={() => recordsQuery.refetch()}
+                isRetrying={recordsQuery.isFetching}
+              >
+                <CoopSavingsTypeRecordsTable
+                  coopId={coop.id}
+                  records={records ?? []}
+                />
+              </QueryBoundary>
             </CardContent>
           </Card>
         </div>

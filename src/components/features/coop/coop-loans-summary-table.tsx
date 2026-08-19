@@ -5,21 +5,32 @@ import {
   MobileRecordCard,
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
-import { coopLoansBySummaryType, type Cooperative } from "@/lib/coop-data";
 import { formatMoney } from "@/lib/format";
 
+interface LoanTypeSummary {
+  name: string;
+  eligibilityPercent: number;
+  durationMonths: number;
+  numberOfRepayments: number;
+  interestRate: number;
+  earnings: number;
+}
+
 interface CoopLoansSummaryTableProps {
-  coop: Cooperative;
+  totalsByType: LoanTypeSummary[];
+  currency: string;
+  coopId: string;
   /** Defaults to the super-admin co-operative oversight path. */
   basePath?: string;
 }
 
 export function CoopLoansSummaryTable({
-  coop,
-  basePath = `/co-operatives/${coop.id}/loans`,
+  totalsByType,
+  currency,
+  coopId,
+  basePath = `/co-operatives/${coopId}/loans`,
 }: CoopLoansSummaryTableProps) {
   const router = useRouter();
-  const totalsByType = coopLoansBySummaryType(coop);
 
   return (
     <div className="space-y-4">
@@ -72,7 +83,7 @@ export function CoopLoansSummaryTable({
                   {type.interestRate}%
                 </td>
                 <td className="px-4 py-3 font-medium text-foreground">
-                  {formatMoney(type.earnings, coop.currency)}
+                  {formatMoney(type.earnings, currency)}
                 </td>
               </tr>
             ))}
@@ -101,7 +112,7 @@ export function CoopLoansSummaryTable({
               { label: "Interest", value: `${type.interestRate}%` },
               {
                 label: "Earnings on Loan",
-                value: formatMoney(type.earnings, coop.currency),
+                value: formatMoney(type.earnings, currency),
               },
             ]}
           />

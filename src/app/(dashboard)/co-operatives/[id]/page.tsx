@@ -8,6 +8,7 @@ import { CoopHeaderCard } from "@/components/features/coop/coop-header-card";
 import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-summary-table";
 import { CoopMembersTable } from "@/components/features/coop/coop-members-table";
 import { CoopSavingsSummaryTable } from "@/components/features/coop/coop-savings-summary-table";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import {
   Tabs,
   TabsIndicator,
@@ -16,7 +17,9 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { useCooperative } from "@/hooks/use-cooperative";
-import type { Cooperative } from "@/lib/coop-data";
+import { useCoopLoanTypes } from "@/hooks/use-coop-loans";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useCoopSavingsTypes } from "@/hooks/use-coop-savings";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 
 interface CooperativeDetailsPageProps {
@@ -39,6 +42,9 @@ export default function CooperativeDetailsPage({
     refetch,
     isFetching,
   } = useCooperative(id);
+  const { data: savingsTypes } = useCoopSavingsTypes(id);
+  const { data: loanTypes } = useCoopLoanTypes(id);
+  const membersQuery = useCoopMembers(id);
 
   if (isError) {
     return (
@@ -78,21 +84,6 @@ export default function CooperativeDetailsPage({
     );
   }
 
-  // Members/Savings/Loans-within-a-co-op aren't cut over to the real
-  // backend yet — this bridges the real header fields into the legacy
-  // mock `Cooperative` shape those three tabs still expect, with empty
-  // record arrays (an honest "nothing here yet" rather than fake mock
-  // data for a co-op that's now real).
-  const legacyCoop: Cooperative = {
-    ...coop,
-    members: [],
-    savings: [],
-    loans: [],
-    savingsRequests: [],
-    subscriptionFee: 0,
-    subscriptionPayments: [],
-  };
-
   return (
     <CurrencyProvider currency={coop.currency}>
       <div className="space-y-4 pt-6">
@@ -116,13 +107,32 @@ export default function CooperativeDetailsPage({
             <TabsIndicator />
           </TabsList>
           <TabsPanel value="members">
-            <CoopMembersTable coop={legacyCoop} />
+            <QueryBoundary
+              isLoading={membersQuery.isLoading}
+              isError={membersQuery.isError}
+              error={membersQuery.error}
+              onRetry={() => membersQuery.refetch()}
+              isRetrying={membersQuery.isFetching}
+            >
+              <CoopMembersTable
+                coopId={coop.id}
+                members={membersQuery.data ?? []}
+              />
+            </QueryBoundary>
           </TabsPanel>
           <TabsPanel value="savings">
-            <CoopSavingsSummaryTable coop={legacyCoop} />
+            <CoopSavingsSummaryTable
+              totalsByType={savingsTypes ?? []}
+              currency={coop.currency}
+              coopId={coop.id}
+            />
           </TabsPanel>
           <TabsPanel value="loans">
-            <CoopLoansSummaryTable coop={legacyCoop} />
+            <CoopLoansSummaryTable
+              totalsByType={loanTypes ?? []}
+              currency={coop.currency}
+              coopId={coop.id}
+            />
           </TabsPanel>
         </Tabs>
       </div>

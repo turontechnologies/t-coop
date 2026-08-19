@@ -10,40 +10,39 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { SuperAdminLoansTable } from "@/components/features/coop/super-admin-loans-table";
-import {
-  coopLoansTotal,
-  platformLoansFeesTotal,
-  type Cooperative,
-} from "@/lib/coop-data";
+import { useCooperatives } from "@/hooks/use-cooperatives";
 import { useAggregateInCurrency } from "@/hooks/use-aggregate-in-currency";
 import { formatMoney } from "@/lib/format";
-import { LOAN_TYPES } from "@/lib/loans-data";
 import type { ExportColumn } from "@/lib/table-export";
-import { useCoopStore } from "@/store/coop.store";
+import type { CooperativeSummary } from "@/types/cooperative";
 
-const EXPORT_COLUMNS: ExportColumn<{ coop: Cooperative; total: number }>[] = [
-  { header: "Co-op ID", accessor: (row) => row.coop.id },
-  { header: "Co-op Name", accessor: (row) => row.coop.name },
-  { header: "No of Loan Types", accessor: () => LOAN_TYPES.length },
-  { header: "Total Loans", accessor: (row) => row.total },
+/** Illustrative platform revenue figure (0.25% of real loan volume), not a real fee ledger —
+ * same rate/honesty note as the per-co-op "Earnings on Loan" figure on the backend. */
+const PLATFORM_LOANS_FEE_RATE = 0.0025;
+
+const EXPORT_COLUMNS: ExportColumn<CooperativeSummary>[] = [
+  { header: "Co-op ID", accessor: (coop) => coop.id },
+  { header: "Co-op Name", accessor: (coop) => coop.name },
+  { header: "No of Loan Types", accessor: (coop) => coop.loanTypeCount },
+  { header: "Total Loans", accessor: (coop) => coop.totalLoans },
 ];
 
 export function SuperAdminLoansView() {
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const transactionFees = platformLoansFeesTotal(cooperatives);
-  const exportRows = cooperatives.map((coop) => ({
-    coop,
-    total: coopLoansTotal(coop),
-  }));
+  const cooperativesQuery = useCooperatives();
+  const cooperatives = cooperativesQuery.data ?? [];
+
   const { total: totalLoans, loading: totalLoansLoading } =
     useAggregateInCurrency(
-      exportRows.map(({ coop, total }) => ({
-        amount: total,
+      cooperatives.map((coop) => ({
+        amount: coop.totalLoans,
         currency: coop.currency,
       })),
       "NGN",
     );
+  const transactionFees =
+    totalLoans === null ? null : totalLoans * PLATFORM_LOANS_FEE_RATE;
 
   return (
     <div className="space-y-6">
@@ -59,6 +58,7 @@ export function SuperAdminLoansView() {
         <SummaryCard
           label="Transaction Fees Received"
           value={transactionFees}
+          loading={totalLoansLoading}
           icon={Receipt}
         />
       </div>
@@ -72,7 +72,7 @@ export function SuperAdminLoansView() {
                 <TabsIndicator />
               </TabsList>
               <ExportImportMenu
-                rows={exportRows}
+                rows={cooperatives}
                 columns={EXPORT_COLUMNS}
                 filenamePrefix="all-cooperatives-loans"
                 exportTitle="Loans — All Co-operatives"
@@ -81,7 +81,15 @@ export function SuperAdminLoansView() {
             </div>
 
             <TabsPanel value="total">
-              <SuperAdminLoansTable cooperatives={cooperatives} />
+              <QueryBoundary
+                isLoading={cooperativesQuery.isLoading}
+                isError={cooperativesQuery.isError}
+                error={cooperativesQuery.error}
+                onRetry={() => cooperativesQuery.refetch()}
+                isRetrying={cooperativesQuery.isFetching}
+              >
+                <SuperAdminLoansTable cooperatives={cooperatives} />
+              </QueryBoundary>
             </TabsPanel>
           </Tabs>
         </CardContent>

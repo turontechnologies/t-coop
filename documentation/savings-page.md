@@ -7,16 +7,25 @@ in the `(dashboard)` route group, alongside `/dashboard` and `/profile` —
 see [dashboard.md](./dashboard.md) and
 [profile-page.md](./profile-page.md).
 
-**Member and admin are both built; super_admin is still inert.** The
-member experience described in most of this document is unchanged. The
-admin role now has its own real "Savings & Contributions" page — see
-[Admin view](#admin-view) below — built against a corrected reference
-design. Super admin's "Savings & Contributions" nav item still has no
-`href` and shows the standard "coming soon" toast; super admin already has
-an equivalent oversight view per co-operative under
+**Member, admin, and super admin are all built** — `SavingsPage` branches
+by role. The member experience described in most of this document is
+unchanged. The admin role has its own real "Savings & Contributions" page
+— see [Admin view](#admin-view) below. Super admin gets
+`<SuperAdminSavingsView>` (`src/components/features/savings/super-admin-savings-view.tsx`):
+a platform-wide Quick Summary (Total Savings across every co-op, converted
+into one currency via `useAggregateInCurrency`; an illustrative Transaction
+Fees Received figure) above `<SuperAdminSavingsTable>` — every co-operative,
+its savings-type count, its total, and its status, row click → that co-op's
+own `/co-operatives/[id]?tab=savings`. **This is real backend data**
+(`useCooperatives()` → `GET /api/v1/cooperatives`, same real DTO
+`CooperativeSummary` the Co-operatives list page uses — `savingsTypeCount`
+and `totalSavings` are both computed server-side, never invented or
+summed from stale mock data), not the separate per-co-op drill-down under
 `/co-operatives/[id]/savings/...` (see
-[co-operatives-page.md](./co-operatives-page.md)), so a dedicated
-super-admin `/savings` view hasn't been requested.
+[co-operatives-page.md](./co-operatives-page.md)) — the two intentionally
+share nothing but their real data source, so a co-op's numbers always
+match between this cross-co-op summary, its own detail page, and the
+Co-operatives list.
 
 ## Purpose
 
@@ -256,6 +265,10 @@ Request tab → <SavingsRequestsTable> (coop-seeded requests + every real
   per-type records across the co-operative.
 - `src/app/(dashboard)/savings/record/[recordId]/page.tsx` — admin-only:
   single-record details, mirrors the super-admin co-op equivalent.
+- `src/components/features/savings/super-admin-savings-view.tsx` /
+  `src/components/features/coop/super-admin-savings-table.tsx` —
+  super-admin-only: platform-wide Quick Summary + all-co-operatives table,
+  real backend (`useCooperatives()`), see [Overview](#overview) above.
 - `src/components/features/savings/member-savings-view.tsx` — summary
   card, table, "+ New Savings"/"Export/Import" actions, modal
   orchestration (this is where the Paystack call actually happens); see
@@ -283,7 +296,13 @@ Request tab → <SavingsRequestsTable> (coop-seeded requests + every real
   `coop-savings-type-records-table.tsx` — the by-type aggregate and
   per-type records table, shared between the super-admin co-op oversight
   view and the admin's Members Savings tab via an optional `basePath`
-  prop that points each at its own route tree.
+  prop that points each at its own route tree. `CoopSavingsSummaryTable`
+  takes the totals array/currency/coopId directly (not a whole
+  `Cooperative`) specifically so this admin view (still mock/`useCoopStore`)
+  and the real super-admin oversight view
+  (`src/hooks/use-coop-savings.ts` → `SavingsController` on the backend —
+  see [co-operatives-page.md](./co-operatives-page.md)) can share it
+  without either one faking the other's data source.
 - `src/components/features/shared/export-import-menu.tsx` — the
   Export/Import dropdown (generic over row shape via `ExportColumn<T>`
   and, separately, over the imported row shape via `ImportConfig<TImportRow>`).

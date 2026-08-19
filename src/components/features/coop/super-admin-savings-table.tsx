@@ -17,13 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { coopSavingsTotal, type Cooperative } from "@/lib/coop-data";
 import { formatMoney } from "@/lib/format";
-import { SAVINGS_TYPES } from "@/lib/savings-data";
 import { cn } from "@/lib/utils";
+import type { CooperativeSummary } from "@/types/cooperative";
 
 interface SuperAdminSavingsTableProps {
-  cooperatives: Cooperative[];
+  cooperatives: CooperativeSummary[];
 }
 
 const STATUS_OPTIONS = ["All statuses", "Active", "Disabled"] as const;
@@ -39,18 +38,9 @@ export function SuperAdminSavingsTable({
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
 
-  const rows = useMemo(
-    () =>
-      cooperatives.map((coop) => ({
-        coop,
-        total: coopSavingsTotal(coop),
-      })),
-    [cooperatives],
-  );
-
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return rows.filter(({ coop }) => {
+    return cooperatives.filter((coop) => {
       const matchesSearch =
         !query ||
         coop.name.toLowerCase().includes(query) ||
@@ -58,7 +48,7 @@ export function SuperAdminSavingsTable({
       const matchesStatus = status === "All statuses" || coop.status === status;
       return matchesSearch && matchesStatus;
     });
-  }, [rows, search, status]);
+  }, [cooperatives, search, status]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -138,7 +128,7 @@ export function SuperAdminSavingsTable({
                 </td>
               </tr>
             ) : (
-              pageRows.map(({ coop, total }) => (
+              pageRows.map((coop) => (
                 <tr
                   key={coop.id}
                   onClick={() =>
@@ -151,10 +141,10 @@ export function SuperAdminSavingsTable({
                   </td>
                   <td className="px-4 py-3 text-foreground">{coop.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {SAVINGS_TYPES.length}
+                    {coop.savingsTypeCount}
                   </td>
                   <td className="px-4 py-3 text-foreground">
-                    {formatMoney(total, coop.currency)}
+                    {formatMoney(coop.totalSavings, coop.currency)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge
@@ -180,7 +170,7 @@ export function SuperAdminSavingsTable({
         isEmpty={pageRows.length === 0}
         emptyMessage="No co-operatives match your filters."
       >
-        {pageRows.map(({ coop, total }) => (
+        {pageRows.map((coop) => (
           <MobileRecordCard
             key={coop.id}
             onClick={() => router.push(`/co-operatives/${coop.id}?tab=savings`)}
@@ -199,11 +189,11 @@ export function SuperAdminSavingsTable({
               { label: "Co-op ID", value: coop.id },
               {
                 label: "No of Savings Types",
-                value: SAVINGS_TYPES.length,
+                value: coop.savingsTypeCount,
               },
               {
                 label: "Total Savings & Contributions",
-                value: formatMoney(total, coop.currency),
+                value: formatMoney(coop.totalSavings, coop.currency),
               },
             ]}
           />

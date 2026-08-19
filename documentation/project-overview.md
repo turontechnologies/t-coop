@@ -159,12 +159,15 @@ wipe out fields it doesn't show (NIN, bank account, gender, state/city).
   deposit or withdrawal requests — approving a withdrawal triggers a
   **real** Paystack payout to the member's saved bank details (never
   marks Approved if the transfer fails).
-- **Super Admin**: `/savings` now shows a real oversight page — Quick
-  Summary (Total Savings + an illustrative Transaction Fees Received
-  figure, 0.25% of volume, clearly not a real fee ledger), a table of
-  every co-operative with its savings totals, clicking a row deep-links
-  into that co-op's existing Savings tab. (Loans doesn't have this
-  super-admin top-level view yet — see Loans below.)
+- **Super Admin**: `/savings` shows a real oversight page, now backed by
+  real backend data end to end (`useCooperatives()` → `GET
+/api/v1/cooperatives`, the same real DTO the Co-operatives list page
+  uses) — Quick Summary (Total Savings + an illustrative Transaction Fees
+  Received figure, 0.25% of volume, clearly not a real fee ledger), a
+  table of every real co-operative with its real savings-type count and
+  total, clicking a row deep-links into that co-op's existing Savings
+  tab. (Loans doesn't have this super-admin top-level view yet — see
+  Loans below.)
 
 Filter-by-savings-type is available everywhere records are listed
 (records tables and the Requests tabs, both admin and member).
@@ -610,12 +613,24 @@ src/
 - [x] Forgot password → OTP → new password
 - [x] Dashboard (super admin / admin / member views — figures are static, not real)
 - [x] My Profile (real Cloudinary photo upload, real bank verification)
-- [x] Savings & Contributions (member + admin + **super admin oversight, now built**)
-- [x] Loans (member + admin; super-admin top-level view still pending — per-co-op view already covers it)
+- [x] Savings & Contributions (member + admin still mock; **super admin
+      oversight now real backend, both the platform-wide `/savings` page
+      and the per-co-op drill-down** — `GET /cooperatives/:id/savings/types`,
+      `/savings` per-type records, `/savings/:recordId` detail — read-only,
+      see `t-coop-backend/documentation/flows.md`'s savings oversight
+      section)
+- [x] Loans (member + admin unchanged; **super admin oversight now real
+      backend too, mirroring Savings exactly** — platform-wide `/loans`
+      page and the per-co-op drill-down both read `GET
+    /cooperatives/:id/loans/types`, `/loans`, `/loans/:recordId`; loan
+      types are seeded for every real co-op (a deliberate one-time
+      backfill, unlike savings types), see `t-coop-backend/documentation/
+    flows.md`'s loans oversight section)
 - [x] Co-operatives (super admin: list, add, edit, enable/disable — all real
-      backend now; onboarding provisions a real admin login, the co-op's own
-      ID; drill-down into a real co-op's Members/Savings/Loans tabs is
-      still not wired, renders an honest empty state)
+      backend now; onboarding provisions a real admin login and the co-op's
+      own ID; drill-down into a real co-op's Members, Savings, and Loans
+      tabs are all real backend now — Members tab's Edit/Disable are real
+      writes too, not a placeholder)
 - [x] Members Directory (admin: list, add w/ bank verification, bulk import, export, edit, disable/activate)
 - [x] Notice Board (all roles, real cross-tab real-time)
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City

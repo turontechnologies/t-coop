@@ -12,44 +12,54 @@ import {
 } from "@/components/ui/mobile-record-card";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
+import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
-  coopMemberFullName,
-  type CoopMember,
-  type Cooperative,
-} from "@/lib/coop-data";
-import { useCoopStore } from "@/store/coop.store";
+  useUpdateCoopMember,
+  useUpdateCoopMemberStatus,
+} from "@/hooks/use-coop-members";
 import { cn } from "@/lib/utils";
 
 interface CoopMembersTableProps {
-  coop: Cooperative;
+  coopId: string;
+  members: CoopMember[];
 }
 
-export function CoopMembersTable({ coop }: CoopMembersTableProps) {
+export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [editingMember, setEditingMember] = useState<CoopMember | null>(null);
-  const setMemberStatus = useCoopStore((state) => state.setMemberStatus);
+  const updateMember = useUpdateCoopMember(coopId);
+  const updateMemberStatus = useUpdateCoopMemberStatus(coopId);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return coop.members;
-    return coop.members.filter(
+    if (!query) return members;
+    return members.filter(
       (member) =>
         coopMemberFullName(member).toLowerCase().includes(query) ||
         member.email.toLowerCase().includes(query) ||
         member.id.toLowerCase().includes(query),
     );
-  }, [coop.members, search]);
+  }, [members, search]);
 
   const handleToggleStatus = async (member: CoopMember) => {
     const isActive = member.status === "Active";
     const fullName = coopMemberFullName(member);
-    await new Promise((resolve) => setTimeout(resolve, 500));
     const next = isActive ? "Inactive" : "Active";
-    setMemberStatus(coop.id, member.id, next);
-    toast.success(
-      next === "Active" ? `${fullName} activated` : `${fullName} disabled`,
-    );
+    try {
+      await updateMemberStatus.mutateAsync({
+        memberId: member.id,
+        status: next,
+      });
+      toast.success(
+        next === "Active" ? `${fullName} activated` : `${fullName} disabled`,
+      );
+    } catch (error) {
+      toast.error("Couldn't update status", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   return (
@@ -111,7 +121,7 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
                     key={member.id}
                     onClick={() =>
                       router.push(
-                        `/co-operatives/${coop.id}/members/${member.id}`,
+                        `/co-operatives/${coopId}/members/${member.id}`,
                       )
                     }
                     className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
@@ -193,7 +203,7 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
             <MobileRecordCard
               key={member.id}
               onClick={() =>
-                router.push(`/co-operatives/${coop.id}/members/${member.id}`)
+                router.push(`/co-operatives/${coopId}/members/${member.id}`)
               }
               title={fullName}
               badge={
@@ -251,12 +261,16 @@ export function CoopMembersTable({ coop }: CoopMembersTableProps) {
 
       {editingMember ? (
         <EditMemberModal
-          coopId={coop.id}
           member={editingMember}
           open={true}
           onOpenChange={(open) => {
             if (!open) setEditingMember(null);
           }}
+          onSubmit={(values) =>
+            updateMember
+              .mutateAsync({ memberId: editingMember.id, values })
+              .then(() => {})
+          }
         />
       ) : null}
     </div>

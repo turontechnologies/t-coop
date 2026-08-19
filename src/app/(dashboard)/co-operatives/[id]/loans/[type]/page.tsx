@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopLoanTypeRecordsTable } from "@/components/features/coop/coop-loan-type-records-table";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
-import { findCooperative } from "@/lib/coop-data";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopLoanRecord } from "@/lib/coop-data";
-import { useCoopStore } from "@/store/coop.store";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 
 interface CoopLoanTypePageProps {
   params: Promise<{ id: string; type: string }>;
@@ -30,19 +31,17 @@ export default function CoopLoanTypePage({ params }: CoopLoanTypePageProps) {
   const { id, type } = use(params);
   const loanType = decodeURIComponent(type);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = findCooperative(cooperatives, id);
+  const coopQuery = useCooperative(id);
+  const coop = coopQuery.data;
+  const recordsQuery = useCoopLoanRecords(id, { type: loanType });
+  const records = recordsQuery.data;
 
-  const records = useMemo(
-    () => coop?.loans.filter((record) => record.loanType === loanType) ?? [],
-    [coop, loanType],
-  );
   const total = useMemo(
-    () => records.reduce((sum, record) => sum + record.amount, 0),
+    () => (records ?? []).reduce((sum, record) => sum + record.amount, 0),
     [records],
   );
 
-  if (!coop) {
+  if (coopQuery.isError) {
     return (
       <div className="space-y-4 pt-6">
         <p className="text-sm text-muted-foreground">
@@ -52,6 +51,16 @@ export default function CoopLoanTypePage({ params }: CoopLoanTypePageProps) {
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Co-operatives
         </Button>
+      </div>
+    );
+  }
+
+  if (coopQuery.isLoading || !coop) {
+    return (
+      <div className="space-y-4 pt-6">
+        <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+        <div className="h-24 animate-pulse rounded-xl bg-muted" />
+        <div className="h-56 animate-pulse rounded-xl bg-muted" />
       </div>
     );
   }
@@ -97,13 +106,24 @@ export default function CoopLoanTypePage({ params }: CoopLoanTypePageProps) {
                   Loan Record
                 </h3>
                 <ExportImportMenu
-                  rows={records}
+                  rows={records ?? []}
                   columns={EXPORT_COLUMNS}
                   filenamePrefix={`${coop.id}-${loanType}`}
                   exportTitle={`${coop.name} — ${loanType}`}
                 />
               </div>
-              <CoopLoanTypeRecordsTable coopId={coop.id} records={records} />
+              <QueryBoundary
+                isLoading={recordsQuery.isLoading}
+                isError={recordsQuery.isError}
+                error={recordsQuery.error}
+                onRetry={() => recordsQuery.refetch()}
+                isRetrying={recordsQuery.isFetching}
+              >
+                <CoopLoanTypeRecordsTable
+                  coopId={coop.id}
+                  records={records ?? []}
+                />
+              </QueryBoundary>
             </CardContent>
           </Card>
         </div>

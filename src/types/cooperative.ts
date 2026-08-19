@@ -17,6 +17,8 @@ export interface CooperativeSummary {
   status: "Active" | "Disabled";
   currency: string;
   memberCount: number;
+  savingsTypeCount: number;
+  loanTypeCount: number;
   totalSavings: number;
   totalLoans: number;
 }

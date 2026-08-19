@@ -5,21 +5,31 @@ import {
   MobileRecordCard,
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
-import { coopSavingsBySummaryType, type Cooperative } from "@/lib/coop-data";
 import { formatMoney } from "@/lib/format";
 
+interface SavingsTypeSummary {
+  name: string;
+  min: number;
+  max: number;
+  earnings: number;
+  total: number;
+}
+
 interface CoopSavingsSummaryTableProps {
-  coop: Cooperative;
+  totalsByType: SavingsTypeSummary[];
+  currency: string;
   /** Defaults to the super-admin co-operative oversight path. */
   basePath?: string;
+  coopId: string;
 }
 
 export function CoopSavingsSummaryTable({
-  coop,
-  basePath = `/co-operatives/${coop.id}/savings`,
+  totalsByType,
+  currency,
+  coopId,
+  basePath = `/co-operatives/${coopId}/savings`,
 }: CoopSavingsSummaryTableProps) {
   const router = useRouter();
-  const totalsByType = coopSavingsBySummaryType(coop);
 
   return (
     <div className="space-y-4">
@@ -57,16 +67,16 @@ export function CoopSavingsSummaryTable({
                   {type.name}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {formatMoney(type.min, coop.currency)}
+                  {formatMoney(type.min, currency)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {formatMoney(type.max, coop.currency)}
+                  {formatMoney(type.max, currency)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
-                  {formatMoney(type.earnings, coop.currency)}
+                  {formatMoney(type.earnings, currency)}
                 </td>
                 <td className="px-4 py-3 font-medium text-foreground">
-                  {formatMoney(type.total, coop.currency)}
+                  {formatMoney(type.total, currency)}
                 </td>
               </tr>
             ))}
@@ -88,19 +98,19 @@ export function CoopSavingsSummaryTable({
             fields={[
               {
                 label: "Minimum Savings",
-                value: formatMoney(type.min, coop.currency),
+                value: formatMoney(type.min, currency),
               },
               {
                 label: "Maximum Savings",
-                value: formatMoney(type.max, coop.currency),
+                value: formatMoney(type.max, currency),
               },
               {
                 label: "Earnings on Savings",
-                value: formatMoney(type.earnings, coop.currency),
+                value: formatMoney(type.earnings, currency),
               },
               {
                 label: "Total Savings & Contributions",
-                value: formatMoney(type.total, coop.currency),
+                value: formatMoney(type.total, currency),
               },
             ]}
           />

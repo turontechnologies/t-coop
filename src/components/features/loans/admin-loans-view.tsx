@@ -153,7 +153,12 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
             </TabsPanel>
 
             <TabsPanel value="members">
-              <CoopLoansSummaryTable coop={coop} basePath="/loans/type" />
+              <CoopLoansSummaryTable
+                totalsByType={totalsByType}
+                currency={coop.currency}
+                coopId={coop.id}
+                basePath="/loans/type"
+              />
             </TabsPanel>
 
             <TabsPanel value="my">

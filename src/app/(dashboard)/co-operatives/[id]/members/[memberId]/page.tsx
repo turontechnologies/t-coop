@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,11 @@ import {
   TabsPanel,
   TabsTab,
 } from "@/components/ui/tabs";
-import { findCoopMember, findCooperative } from "@/lib/coop-data";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
-import { useCoopStore } from "@/store/coop.store";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
 
 interface CoopMemberDetailsPageProps {
   params: Promise<{ id: string; memberId: string }>;
@@ -27,20 +29,19 @@ export default function CoopMemberDetailsPage({
 }: CoopMemberDetailsPageProps) {
   const { id, memberId } = use(params);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = findCooperative(cooperatives, id);
-  const member = findCoopMember(coop, memberId);
+  const coopQuery = useCooperative(id);
+  const coop = coopQuery.data;
+  const membersQuery = useCoopMembers(id);
+  const member = membersQuery.data?.find((item) => item.id === memberId);
+  const savingsQuery = useCoopSavingsRecords(id, { memberId });
+  const savingsRecords = savingsQuery.data ?? [];
+  const loansQuery = useCoopLoanRecords(id, { memberId });
+  const loanRecords = loansQuery.data ?? [];
 
-  const savingsRecords = useMemo(
-    () => coop?.savings.filter((record) => record.memberId === memberId) ?? [],
-    [coop, memberId],
-  );
-  const loanRecords = useMemo(
-    () => coop?.loans.filter((record) => record.memberId === memberId) ?? [],
-    [coop, memberId],
-  );
+  const loading = coopQuery.isLoading || membersQuery.isLoading;
+  const notFound = (!loading && !coop) || (!membersQuery.isLoading && !member);
 
-  if (!coop || !member) {
+  if (coopQuery.isError || membersQuery.isError || notFound) {
     return (
       <div className="space-y-4 pt-6">
         <p className="text-sm text-muted-foreground">
@@ -53,6 +54,16 @@ export default function CoopMemberDetailsPage({
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Co-operative
         </Button>
+      </div>
+    );
+  }
+
+  if (loading || !coop || !member) {
+    return (
+      <div className="space-y-4 pt-6">
+        <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+        <div className="h-32 animate-pulse rounded-xl bg-muted" />
+        <div className="h-56 animate-pulse rounded-xl bg-muted" />
       </div>
     );
   }

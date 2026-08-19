@@ -7,10 +7,10 @@ import { ArrowLeft, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { findCooperative } from "@/lib/coop-data";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { useCoopStore } from "@/store/coop.store";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopSavingsRecord } from "@/hooks/use-coop-savings";
 import { cn } from "@/lib/utils";
 
 interface CoopSavingsRecordPageProps {
@@ -22,12 +22,17 @@ export default function CoopSavingsRecordPage({
 }: CoopSavingsRecordPageProps) {
   const { id, recordId } = use(params);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = findCooperative(cooperatives, id);
-  const record = coop?.savings.find((item) => item.id === recordId);
-  const member = coop?.members.find((item) => item.id === record?.memberId);
+  const coopQuery = useCooperative(id);
+  const coop = coopQuery.data;
+  const recordQuery = useCoopSavingsRecord(recordId);
+  const record = recordQuery.data;
 
-  if (!coop || !record) {
+  if (
+    coopQuery.isError ||
+    recordQuery.isError ||
+    (!coopQuery.isLoading && !coop) ||
+    (!recordQuery.isLoading && !record)
+  ) {
     return (
       <div className="space-y-4 pt-6">
         <p className="text-sm text-muted-foreground">
@@ -40,6 +45,15 @@ export default function CoopSavingsRecordPage({
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Co-operative
         </Button>
+      </div>
+    );
+  }
+
+  if (coopQuery.isLoading || recordQuery.isLoading || !coop || !record) {
+    return (
+      <div className="space-y-4 pt-6">
+        <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
+        <div className="h-72 animate-pulse rounded-xl bg-muted" />
       </div>
     );
   }
@@ -75,16 +89,12 @@ export default function CoopSavingsRecordPage({
             <Field
               label="Member"
               value={
-                member ? (
-                  <Link
-                    href={`/co-operatives/${coop.id}/members/${member.id}`}
-                    className="font-semibold text-primary underline-offset-4 hover:underline"
-                  >
-                    {record.memberName}
-                  </Link>
-                ) : (
-                  record.memberName
-                )
+                <Link
+                  href={`/co-operatives/${coop.id}/members/${record.memberId}`}
+                  className="font-semibold text-primary underline-offset-4 hover:underline"
+                >
+                  {record.memberName}
+                </Link>
               }
             />
             <Field

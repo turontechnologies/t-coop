@@ -15,6 +15,7 @@ import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-d
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
+import type { EditMemberFormValues } from "@/lib/validations/coop.schema";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
@@ -211,11 +212,19 @@ export function MembersDirectoryTable({ members }: MembersDirectoryTableProps) {
 
       {editingMember ? (
         <EditMemberModal
-          coopId={ADMIN_DIRECTORY_COOP_ID}
           member={editingMember}
           open={true}
           onOpenChange={(open) => {
             if (!open) setEditingMember(null);
+          }}
+          onSubmit={async (values: EditMemberFormValues) => {
+            await new Promise((resolve) => setTimeout(resolve, 700));
+            useCoopStore
+              .getState()
+              .updateMember(ADMIN_DIRECTORY_COOP_ID, editingMember.id, {
+                ...values,
+                accountName: values.accountName ?? "",
+              });
           }}
         />
       ) : null}
