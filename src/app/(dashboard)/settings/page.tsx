@@ -17,13 +17,17 @@ import { SettingsLogsTab } from "@/components/features/settings/settings-logs-ta
 import { SettingsPaymentTab } from "@/components/features/settings/settings-payment-tab";
 import { SettingsProfileTab } from "@/components/features/settings/settings-profile-tab";
 import { SettingsUserManagementTab } from "@/components/features/settings/settings-user-management-tab";
+import { SuperAdminUserManagementTab } from "@/components/features/settings/super-admin-user-management-tab";
 import { useAuthStore } from "@/store/auth.store";
 
 export default function SettingsPage() {
   const member = useAuthStore((state) => state.member);
   if (!member) return null;
 
-  if (member.role === "member") {
+  if (member.role === "member" || member.role === "support") {
+    // Platform staff (support) have no co-operative of their own — same single-tab Profile
+    // view as a member, not the co-op-scoped Savings/Loans/Co-operative/User Management tabs
+    // the admin branch below renders.
     return (
       <div className="pt-6">
         <Card>
@@ -69,7 +73,7 @@ export default function SettingsPage() {
                 <SettingsIntegrationsTab />
               </TabsPanel>
               <TabsPanel value="users">
-                <SettingsUserManagementTab />
+                <SuperAdminUserManagementTab />
               </TabsPanel>
               <TabsPanel value="logs">
                 <SettingsLogsTab />

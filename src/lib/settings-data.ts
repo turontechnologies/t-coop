@@ -76,7 +76,9 @@ export const PERMISSION_MODULES = [
   "Settings",
 ] as const;
 
-export type PlatformUserStatus = "Active" | "Inactive";
+/** "Invited" is a real backend state now — a super admin invited them by email but they
+ * haven't accepted yet, so they can't log in. Never produced by the mock. */
+export type PlatformUserStatus = "Active" | "Inactive" | "Invited";
 
 export interface PlatformUser {
   id: string;

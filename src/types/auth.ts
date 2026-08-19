@@ -4,7 +4,7 @@ export interface LoginRequest {
   keepLoggedIn: boolean;
 }
 
-export type UserRole = "super_admin" | "admin" | "member";
+export type UserRole = "super_admin" | "admin" | "member" | "support";
 
 export interface AuthenticatedMember {
   id: string;
@@ -15,6 +15,9 @@ export interface AuthenticatedMember {
   /** Only ever set for role "admin" — null for super_admin/member. */
   subscriptionActive?: boolean | null;
   subscriptionExpiresAt?: string | null;
+  /** Only ever set for role "support" (platform staff) — the modules their assigned
+   * PlatformRole grants access to. Null for every other role. */
+  permissionModules?: string[] | null;
 }
 
 export interface LoginResponse {

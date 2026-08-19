@@ -51,6 +51,7 @@ export function DashboardShell({
     <div className="flex min-h-dvh bg-background">
       <DashboardSidebar
         role={member.role}
+        permissionModules={member.permissionModules}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
         onLogout={handleLogout}

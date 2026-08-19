@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Power, Trash2 } from "lucide-react";
+import { Mail, Pencil, Power, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +27,15 @@ interface PlatformUsersTableProps {
   onEdit: (user: PlatformUser) => void;
   onToggleStatus: (user: PlatformUser) => void;
   onRemove: (user: PlatformUser) => void;
+  /** Only relevant for a real "Invited" user — resend their invite email. Omit for the mock,
+   * which never produces that status. */
+  onResendInvite?: (user: PlatformUser) => void;
+}
+
+function statusBadgeVariant(status: PlatformUser["status"]) {
+  if (status === "Active") return "secondary";
+  if (status === "Invited") return "outline";
+  return "destructive";
 }
 
 export function PlatformUsersTable({
@@ -34,6 +43,7 @@ export function PlatformUsersTable({
   onEdit,
   onToggleStatus,
   onRemove,
+  onResendInvite,
 }: PlatformUsersTableProps) {
   return (
     <div className="space-y-4">
@@ -68,6 +78,7 @@ export function PlatformUsersTable({
             ) : (
               users.map((user) => {
                 const isActive = user.status === "Active";
+                const isInvited = user.status === "Invited";
                 return (
                   <tr
                     key={user.id}
@@ -87,7 +98,7 @@ export function PlatformUsersTable({
                     </td>
                     <td className="px-4 py-3">
                       <Badge
-                        variant={isActive ? "secondary" : "destructive"}
+                        variant={statusBadgeVariant(user.status)}
                         className={cn(isActive && "bg-success/15 text-success")}
                       >
                         {user.status}
@@ -103,25 +114,37 @@ export function PlatformUsersTable({
                         >
                           <Pencil className="size-3.5" aria-hidden="true" />
                         </button>
-                        <ConfirmToggleDialog
-                          trigger={
-                            <button
-                              type="button"
-                              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                              aria-label={
-                                isActive
-                                  ? `Disable ${user.name}`
-                                  : `Activate ${user.name}`
-                              }
-                            />
-                          }
-                          entityLabel="User"
-                          name={user.name}
-                          isActive={isActive}
-                          onConfirm={() => onToggleStatus(user)}
-                        >
-                          <Power className="size-3.5" aria-hidden="true" />
-                        </ConfirmToggleDialog>
+                        {isInvited && onResendInvite ? (
+                          <button
+                            type="button"
+                            onClick={() => onResendInvite(user)}
+                            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            aria-label={`Resend invite to ${user.name}`}
+                            title="Resend invite"
+                          >
+                            <Mail className="size-3.5" aria-hidden="true" />
+                          </button>
+                        ) : (
+                          <ConfirmToggleDialog
+                            trigger={
+                              <button
+                                type="button"
+                                className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                aria-label={
+                                  isActive
+                                    ? `Disable ${user.name}`
+                                    : `Activate ${user.name}`
+                                }
+                              />
+                            }
+                            entityLabel="User"
+                            name={user.name}
+                            isActive={isActive}
+                            onConfirm={() => onToggleStatus(user)}
+                          >
+                            <Power className="size-3.5" aria-hidden="true" />
+                          </ConfirmToggleDialog>
+                        )}
                         <RemoveUserDialog user={user} onRemove={onRemove} />
                       </div>
                     </td>
@@ -139,13 +162,14 @@ export function PlatformUsersTable({
       >
         {users.map((user) => {
           const isActive = user.status === "Active";
+          const isInvited = user.status === "Invited";
           return (
             <MobileRecordCard
               key={user.id}
               title={user.name}
               badge={
                 <Badge
-                  variant={isActive ? "secondary" : "destructive"}
+                  variant={statusBadgeVariant(user.status)}
                   className={cn(isActive && "bg-success/15 text-success")}
                 >
                   {user.status}
@@ -169,25 +193,36 @@ export function PlatformUsersTable({
                   >
                     <Pencil className="size-3.5" aria-hidden="true" />
                   </button>
-                  <ConfirmToggleDialog
-                    trigger={
-                      <button
-                        type="button"
-                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={
-                          isActive
-                            ? `Disable ${user.name}`
-                            : `Activate ${user.name}`
-                        }
-                      />
-                    }
-                    entityLabel="User"
-                    name={user.name}
-                    isActive={isActive}
-                    onConfirm={() => onToggleStatus(user)}
-                  >
-                    <Power className="size-3.5" aria-hidden="true" />
-                  </ConfirmToggleDialog>
+                  {isInvited && onResendInvite ? (
+                    <button
+                      type="button"
+                      onClick={() => onResendInvite(user)}
+                      className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      aria-label={`Resend invite to ${user.name}`}
+                    >
+                      <Mail className="size-3.5" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <ConfirmToggleDialog
+                      trigger={
+                        <button
+                          type="button"
+                          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          aria-label={
+                            isActive
+                              ? `Disable ${user.name}`
+                              : `Activate ${user.name}`
+                          }
+                        />
+                      }
+                      entityLabel="User"
+                      name={user.name}
+                      isActive={isActive}
+                      onConfirm={() => onToggleStatus(user)}
+                    >
+                      <Power className="size-3.5" aria-hidden="true" />
+                    </ConfirmToggleDialog>
+                  )}
                   <RemoveUserDialog user={user} onRemove={onRemove} />
                 </>
               }

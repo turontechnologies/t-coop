@@ -40,3 +40,17 @@ export const createNewPasswordSchema = z
 export type CreateNewPasswordFormValues = z.infer<
   typeof createNewPasswordSchema
 >;
+
+export const acceptInviteSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "Enter a first name"),
+    lastName: z.string().trim().min(1, "Enter a last name"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string().min(1, "Confirm your password"),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type AcceptInviteFormValues = z.infer<typeof acceptInviteSchema>;

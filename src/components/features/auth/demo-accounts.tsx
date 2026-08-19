@@ -1,13 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ShieldCheck, UserCog, UserRound } from "lucide-react";
+import { LifeBuoy, ShieldCheck, UserCog, UserRound } from "lucide-react";
 import { MOCK_USERS } from "@/lib/mock-users";
 
 const ROLE_META = {
   super_admin: { label: "Super Administrator", icon: ShieldCheck },
   admin: { label: "Administrator", icon: UserCog },
   member: { label: "Member", icon: UserRound },
+  // MOCK_USERS never seeds a "support" demo account (platform staff are always real, invited
+  // accounts — see settings-page.md), but the type is included here for exhaustiveness.
+  support: { label: "Platform Staff", icon: LifeBuoy },
 } as const;
 
 interface DemoAccountsProps {

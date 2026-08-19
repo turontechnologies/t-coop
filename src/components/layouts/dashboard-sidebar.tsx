@@ -13,6 +13,8 @@ import type { UserRole } from "@/types/auth";
 
 interface DashboardSidebarProps {
   role: UserRole;
+  /** Only meaningful for role "support" — see getNavItems. */
+  permissionModules?: string[] | null;
   mobileOpen: boolean;
   onMobileClose: () => void;
   onLogout: () => void;
@@ -20,12 +22,13 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({
   role,
+  permissionModules,
   mobileOpen,
   onMobileClose,
   onLogout,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
-  const navItems = getNavItems(role);
+  const navItems = getNavItems(role, permissionModules);
 
   return (
     <>
