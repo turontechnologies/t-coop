@@ -22,6 +22,7 @@ import { useMySubscriptionHistory } from "@/hooks/use-my-subscription-history";
 import { useSubscriptionCheckout } from "@/hooks/use-subscription-checkout";
 import { openFlutterwaveCheckout } from "@/lib/flutterwave";
 import { formatDateLong, formatNaira } from "@/lib/format";
+import { redirectToOpayCheckout } from "@/lib/opay";
 import { openPaystackCheckout } from "@/lib/paystack";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
@@ -59,6 +60,39 @@ export function AdminSupportView() {
   const selectedPlan: SubscriptionPlan | undefined =
     subscription?.availablePlans.find((plan) => plan.id === planId);
 
+  const confirmAndShowReceipt = async (reference: string) => {
+    try {
+      const result = await confirm.mutateAsync(reference);
+      setReceipt(result);
+      await Promise.all([subscriptionQuery.refetch(), historyQuery.refetch()]);
+      toast.success("Payment confirmed", {
+        description: `${formatNaira(result.amountPaid)} received — your subscription is active.`,
+      });
+    } catch (error) {
+      toast.error("We received your payment but couldn't confirm it", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please contact support — your money is safe with the gateway.",
+      });
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // OPay's checkout is a full-page redirect, not a same-page widget — the payer leaves this page
+  // entirely and OPay sends them back to /support?opay_reference=... afterwards. Pick that up
+  // here and finish the same confirm step the Paystack/Flutterwave widget callbacks use.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reference = params.get("opay_reference");
+    if (!reference) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    setPaying(true);
+    void confirmAndShowReceipt(reference);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handlePay = async () => {
     if (!subscription || !activeGateway || !member || !planId) return;
     setPaying(true);
@@ -68,29 +102,6 @@ export function AdminSupportView() {
         gateway: activeGateway,
       });
 
-      const onSuccess = async (reference: string) => {
-        try {
-          const result = await confirm.mutateAsync(reference);
-          setReceipt(result);
-          await Promise.all([
-            subscriptionQuery.refetch(),
-            historyQuery.refetch(),
-          ]);
-          toast.success("Payment confirmed", {
-            description: `${formatNaira(result.amountPaid)} received — your subscription is active.`,
-          });
-        } catch (error) {
-          toast.error("We received your payment but couldn't confirm it", {
-            description:
-              error instanceof Error
-                ? error.message
-                : "Please contact support — your money is safe with the gateway.",
-          });
-        } finally {
-          setPaying(false);
-        }
-      };
-
       const onClose = () => setPaying(false);
 
       if (activeGateway === "Paystack") {
@@ -99,18 +110,24 @@ export function AdminSupportView() {
           amountNaira: init.amount,
           reference: init.reference,
           publicKey: init.publicKey,
-          onSuccess,
+          onSuccess: confirmAndShowReceipt,
           onClose,
         });
-      } else {
+      } else if (activeGateway === "Flutterwave") {
         await openFlutterwaveCheckout({
           publicKey: init.publicKey,
           email: member.email,
           amountNaira: init.amount,
           reference: init.reference,
-          onSuccess,
+          onSuccess: confirmAndShowReceipt,
           onClose,
         });
+      } else if (init.checkoutUrl) {
+        redirectToOpayCheckout(init.checkoutUrl);
+      } else {
+        throw new Error(
+          "OPay didn't return a checkout link. Please try again.",
+        );
       }
     } catch (error) {
       setPaying(false);
@@ -259,7 +276,7 @@ export function AdminSupportView() {
                 {subscription.availableGateways.length === 0 ? (
                   <p className="rounded-lg bg-muted px-3 py-2.5 text-sm text-muted-foreground">
                     No payment gateway is configured on the platform yet — ask
-                    your super admin to enable Paystack or Flutterwave in
+                    your super admin to enable Paystack, Flutterwave, or OPay in
                     Settings before you can pay.
                   </p>
                 ) : (

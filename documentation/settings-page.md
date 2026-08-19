@@ -53,28 +53,36 @@ log.
   the illustrative `PLATFORM_SAVINGS_FEE_RATE` used on the Savings
   oversight page — flagged honestly below rather than silently
   pretending they're connected.
-- **Integrations tab is a settings _record_, not a live credential
-  switch.** Toggling Paystack and typing keys here saves to
-  `useSettingsStore`, but the actually-active Paystack integration
-  still reads `PAYSTACK_SECRET_KEY`/`NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
-  from the server environment, same as before this page existed — a
-  real secret key must never live in client-observable Zustand state.
-  The form says so directly under the key fields rather than implying
-  otherwise.
-- **Paystack and Flutterwave are independent toggles, not a choice
-  between the two** — either can be on, both can be on, both can be
-  off. `GatewayCard` (`settings-integrations-tab.tsx`) renders both
-  gateways from the same shape (name, description, enable switch,
-  credential fields, caveat text) rather than special-casing one as
-  primary. Flutterwave gets its own three fields (Public Key, Secret
-  Key, Encryption Key — Flutterwave's actual credential set, not
-  Paystack's) in `IntegrationSettings`
-  (`src/lib/settings-data.ts`). Its caveat is more direct than
-  Paystack's: there's no Flutterwave route handler anywhere in this
-  app, so enabling it here is purely a settings record for now, not a
-  second live payment path — building that would mean duplicating the
-  whole `/api/paystack/*` effort (checkout, resolve, transfer) for a
-  second provider, out of scope for the settings screen alone.
+- **Integrations tab now writes real, live credentials** — `PATCH
+/api/v1/settings/integrations` persists to the backend's
+  `PlatformSettings` singleton row (via `platform-settings.service.ts`,
+  `NEXT_PUBLIC_USE_MOCK_SETTINGS=true` still falls back to
+  `useSettingsStore`). Two different things read these values: the
+  self-service subscription checkout on `/support` reads all three
+  gateways' keys live, server-side, on every payment (see
+  `subscriptions-page.md` / the backend's `flows.md`); the separate
+  outbound bank-payout route handlers under `/api/paystack/*` are
+  unrelated and still read the server's own `PAYSTACK_SECRET_KEY`
+  environment variable, never values saved here. The secret key field
+  is a `PasswordInput`, but is still transmitted and stored — this
+  page is meant for a trusted super admin only, same as every other
+  Settings tab.
+- **Paystack, Flutterwave, and OPay are three independent toggles, not
+  a choice between them** — any combination can be on. `GatewayCard`
+  (`settings-integrations-tab.tsx`) renders all three from the same
+  shape (name, description, enable switch, credential fields, caveat
+  text) rather than special-casing one as primary. Flutterwave gets
+  its own three fields (Public Key, Secret Key, Encryption Key —
+  Flutterwave's actual credential set, not Paystack's); OPay gets
+  Public Key, Secret Key, and Merchant ID (OPay's checkout API needs a
+  `MerchantId` header alongside the signed request, unlike the other
+  two) — all in `IntegrationSettings` (`src/lib/settings-data.ts`).
+  Unlike Paystack/Flutterwave's client-side inline widgets, OPay's
+  checkout is server-initiated: `POST /subscriptions/me/initialize`
+  has the backend call OPay's `cashier/create` API directly
+  (HMAC-SHA512-signed with the secret key) and hand back a hosted
+  `checkoutUrl` to redirect to, rather than a `publicKey` for a widget
+  — see `src/lib/opay.ts` and `admin-support-view.tsx`.
 - **User Management is platform staff, not co-operative members.**
   `PlatformUser`/`PlatformRole` (`src/lib/settings-data.ts`) are a new,
   separate concept from `CoopMember` — people who help operate T-Coop

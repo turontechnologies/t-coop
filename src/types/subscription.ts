@@ -19,7 +19,7 @@ export interface SubscriptionPayment {
   id: string;
   paymentRef: string;
   amountPaid: number;
-  method: "Manual" | "Paystack" | "Flutterwave";
+  method: "Manual" | "Paystack" | "Flutterwave" | "Opay";
   date: string;
   /** "New Subscription" for a co-op's first ever payment, "Renewal" for every one after — set server-side. */
   type: SubscriptionPlanType;
@@ -50,7 +50,7 @@ export interface RecordSubscriptionPaymentResult {
   nextRenewalDate: string;
 }
 
-export type PaymentGateway = "Paystack" | "Flutterwave";
+export type PaymentGateway = "Paystack" | "Flutterwave" | "Opay";
 
 /** GET /subscriptions/me — the signed-in admin's own co-op. */
 export interface MySubscription {
@@ -69,6 +69,9 @@ export interface InitializePaymentResult {
   amount: number;
   gateway: PaymentGateway;
   publicKey: string;
+  /** OPay's server-issued hosted checkout redirect — null for Paystack/Flutterwave, which use a
+   * client-side inline widget (publicKey) instead. */
+  checkoutUrl: string | null;
 }
 
 /** Everything a receipt (on-screen or downloaded) needs. */

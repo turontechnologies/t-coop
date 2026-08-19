@@ -63,6 +63,10 @@ export const integrationsSchema = z.object({
   flutterwavePublicKey: z.string().trim().optional(),
   flutterwaveSecretKey: z.string().trim().optional(),
   flutterwaveEncryptionKey: z.string().trim().optional(),
+  opayEnabled: z.boolean(),
+  opayPublicKey: z.string().trim().optional(),
+  opaySecretKey: z.string().trim().optional(),
+  opayMerchantId: z.string().trim().optional(),
 });
 
 export type IntegrationsFormValues = z.infer<typeof integrationsSchema>;

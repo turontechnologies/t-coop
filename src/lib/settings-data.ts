@@ -43,6 +43,10 @@ export interface IntegrationSettings {
   flutterwavePublicKey: string;
   flutterwaveSecretKey: string;
   flutterwaveEncryptionKey: string;
+  opayEnabled: boolean;
+  opayPublicKey: string;
+  opaySecretKey: string;
+  opayMerchantId: string;
 }
 
 export const INITIAL_INTEGRATIONS: IntegrationSettings = {
@@ -54,6 +58,10 @@ export const INITIAL_INTEGRATIONS: IntegrationSettings = {
   flutterwavePublicKey: "",
   flutterwaveSecretKey: "",
   flutterwaveEncryptionKey: "",
+  opayEnabled: false,
+  opayPublicKey: "",
+  opaySecretKey: "",
+  opayMerchantId: "",
 };
 
 export const PERMISSION_MODULES = [

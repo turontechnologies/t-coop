@@ -567,7 +567,7 @@ gateway(s) the super admin enabled and entered real keys for in Settings → Int
   "subscriptionExpiresAt": "iso-date|null",
   "availablePlans": [SubscriptionPlan, ...],
   "availableGateways": [
-    { "gateway": "Paystack|Flutterwave", "publicKey": "string" }
+    { "gateway": "Paystack|Flutterwave|Opay", "publicKey": "string" }
   ]
 }
 ```
@@ -583,14 +583,32 @@ Same shape as `GET /cooperatives/:id/subscriptions`, scoped to the caller's own 
 
 ```json
 // Request
-{ "planId": "uuid", "gateway": "Paystack|Flutterwave" }
+{ "planId": "uuid", "gateway": "Paystack|Flutterwave|Opay" }
 // Response
-{ "reference": "string", "amount": 25000, "gateway": "Paystack", "publicKey": "string" }
+{ "reference": "string", "amount": 25000, "gateway": "Paystack", "publicKey": "string", "checkoutUrl": "string|null" }
 ```
 
 `amount` comes straight from the plan — never client-supplied. `409` if the plan's type doesn't
-match what this co-op can currently buy. Open Paystack/Flutterwave's Inline checkout with the
-returned `reference`/`amount`/`publicKey`.
+match what this co-op can currently buy, or if the chosen gateway isn't fully configured.
+
+Paystack/Flutterwave are **client-side inline widgets**: `publicKey` is set, `checkoutUrl` is
+`null`; open the gateway's own Inline checkout with `reference`/`amount`/`publicKey`.
+
+OPay is **server-initiated and redirect-based**, unlike the other two: this call has the backend
+hit OPay's real `cashier/create` API server-side (HMAC-SHA512-signed with the platform's OPay
+secret key) and returns a hosted `checkoutUrl` — `publicKey` is `null`. Just navigate the browser
+to `checkoutUrl`; OPay redirects back to `returnUrl` (`{FRONTEND_URL}/support?opay_reference=...`)
+once the payer finishes, at which point the frontend picks the reference back up from the URL and
+calls `confirm` the same way the other two gateways' success callback does. `502` if OPay's
+`cashier/create` call itself fails (bad credentials, OPay outage, etc).
+
+**Note:** this platform's live OPay merchant account is provisioned for **Egypt** — OPay's own
+API rejects `country: "NG"` for this merchant ID ("request forbidden(request domain error.)").
+`PaymentGatewayService.createOpayCheckout`/`verifyOpay` hardcode `country: "EG"` /
+`currency: "EGP"` as a result. Subscription plan amounts are priced in Naira by the super admin
+and passed straight through with **no currency conversion** — confirm the intended NGN-to-EGP
+handling (a Nigeria-provisioned OPay merchant account, or real FX conversion) before relying on
+OPay for live subscription charges.
 
 #### `POST /subscriptions/me/confirm`
 
@@ -601,7 +619,8 @@ returned `reference`/`amount`/`publicKey`.
 //   date, type, cycle, status, nextRenewalDate }
 ```
 
-Call this from the gateway's client-side success callback. `402` if the backend's own
+Call this from the gateway's client-side success callback (Paystack/Flutterwave) or after
+picking the reference back up from the OPay return redirect. `402` if the backend's own
 server-side verification against the real gateway API fails or the amount is short; `409` if
 that reference was already confirmed.
 
@@ -743,18 +762,30 @@ Details**, and **Integrations**.
   "flutterwaveEnabled": false,
   "flutterwavePublicKey": "string?",
   "flutterwaveSecretKey": "string?",
-  "flutterwaveEncryptionKey": "string?"
+  "flutterwaveEncryptionKey": "string?",
+  "opayEnabled": false,
+  "opayPublicKey": "string?",
+  "opaySecretKey": "string?",
+  "opayMerchantId": "string?"
 }
 ```
 
 **Built.** Used by `fees-charges-form.tsx`, `collection-account-form.tsx`,
 and `settings-integrations-tab.tsx` via `platform-settings.service.ts` and
 the `use-fee-settings`/`use-collection-account`/`use-integration-settings`
-hooks. Integration credentials are stored for reference only — the real
-Paystack checkout/payout route handlers always read from the server's own
-`PAYSTACK_SECRET_KEY` environment variable, never from values saved here.
-`NEXT_PUBLIC_USE_MOCK_SETTINGS=true` falls back to the old
+hooks. `NEXT_PUBLIC_USE_MOCK_SETTINGS=true` falls back to the old
 `useSettingsStore` mock.
+
+**Two different consumers of these same credentials:**
+
+- The self-service subscription checkout (`POST /subscriptions/me/initialize` /
+  `/confirm`, § 8b) reads all three gateways' keys **live** from this same
+  `PlatformSettings` row, server-side — enabling a gateway here and saving real
+  keys is exactly what makes it usable on `/support`.
+- The unrelated outbound-payout Next.js route handlers under `src/app/api/paystack/*`
+  (§ 10 below — bank resolution, transfers) always read from the server's own
+  `PAYSTACK_SECRET_KEY` environment variable instead, never from values saved
+  here. Flutterwave/OPay have no live payout route at all.
 
 ---
 

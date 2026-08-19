@@ -72,6 +72,7 @@ function SettingsIntegrationsForm({
 
   const paystackEnabled = watch("paystackEnabled");
   const flutterwaveEnabled = watch("flutterwaveEnabled");
+  const opayEnabled = watch("opayEnabled");
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -84,6 +85,10 @@ function SettingsIntegrationsForm({
         flutterwavePublicKey: values.flutterwavePublicKey ?? "",
         flutterwaveSecretKey: values.flutterwaveSecretKey ?? "",
         flutterwaveEncryptionKey: values.flutterwaveEncryptionKey ?? "",
+        opayEnabled: values.opayEnabled,
+        opayPublicKey: values.opayPublicKey ?? "",
+        opaySecretKey: values.opaySecretKey ?? "",
+        opayMerchantId: values.opayMerchantId ?? "",
       });
       reset(values);
       toast.success("Integrations saved");
@@ -135,9 +140,10 @@ function SettingsIntegrationsForm({
           ]}
           caveat={
             <>
-              These are stored for reference only — the live integration still
-              reads its keys from the server environment (
-              <code>PAYSTACK_SECRET_KEY</code>), never from values saved here.
+              These are read live for subscription checkout (Support page). The
+              separate bank payout routes still read from the server&apos;s{" "}
+              <code>PAYSTACK_SECRET_KEY</code> environment variable, not from
+              values saved here.
             </>
           }
         />
@@ -167,9 +173,41 @@ function SettingsIntegrationsForm({
           ]}
           caveat={
             <>
-              These are stored for reference only — unlike Paystack, there is no
-              live Flutterwave route handler behind this yet, so enabling it
-              here does not change how payments are actually processed.
+              These are read live for subscription checkout (Support page) —
+              there&apos;s no separate bank payout route for Flutterwave yet,
+              unlike Paystack.
+            </>
+          }
+        />
+
+        <GatewayCard
+          name="OPay"
+          description="Setup your OPay credentials"
+          enabled={opayEnabled}
+          control={control}
+          enabledField="opayEnabled"
+          disabled={saving}
+          fields={[
+            {
+              label: "Public Key",
+              registration: register("opayPublicKey"),
+            },
+            {
+              label: "Secret Key",
+              type: "password",
+              registration: register("opaySecretKey"),
+            },
+            {
+              label: "Merchant ID",
+              registration: register("opayMerchantId"),
+            },
+          ]}
+          caveat={
+            <>
+              These are read live on every subscription payment — a co-op admin
+              choosing OPay at checkout is redirected to a real OPay-hosted
+              cashier page, and the payment is verified server-side against OPay
+              before it&apos;s recorded.
             </>
           }
         />
@@ -211,7 +249,7 @@ interface GatewayCardProps {
   enabled: boolean;
   disabled: boolean;
   control: ReturnType<typeof useForm<IntegrationsFormValues>>["control"];
-  enabledField: "paystackEnabled" | "flutterwaveEnabled";
+  enabledField: "paystackEnabled" | "flutterwaveEnabled" | "opayEnabled";
   fields: GatewayField[];
   caveat: React.ReactNode;
 }
