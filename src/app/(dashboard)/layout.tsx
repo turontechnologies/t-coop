@@ -2,9 +2,11 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
+import { getNavItems, isPathPermitted } from "@/config/dashboard-nav";
 import { useMinimumDuration } from "@/hooks/use-minimum-duration";
 import { hasAppIntroShown } from "@/lib/app-intro";
 import { getDirectoryCoop } from "@/lib/member-directory";
@@ -127,6 +129,23 @@ export default function DashboardRouteLayout({
     ) {
       router.replace("/support");
     }
+  }, [member, pathname, router]);
+
+  // Hiding a restricted item from the sidebar (see getNavItems) only stops someone from
+  // clicking their way to a page they weren't assigned — it does nothing against a typed-in,
+  // bookmarked, or stale-linked URL. This is the actual enforcement: a support/co-op-staff
+  // member who lands on a page outside their granted permissions gets bounced to the first page
+  // they DO have, not shown the page while just missing its sidebar entry.
+  useEffect(() => {
+    if (!member) return;
+    if (isPathPermitted(member.role, member.permissionModules, pathname))
+      return;
+    const fallback =
+      getNavItems(member.role, member.permissionModules).find(
+        (item) => item.href,
+      )?.href ?? "/profile";
+    toast.error("You don't have access to that page");
+    router.replace(fallback);
   }, [member, pathname, router]);
 
   if (!showDashboard || !member) {

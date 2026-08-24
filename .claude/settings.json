@@ -53,7 +53,11 @@
       "Bash(curl -s http://localhost:8080/api/v1/cooperatives/coop-0002 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
       "Bash(curl -s http://localhost:8080/api/v1/cooperatives/coop-0002/roles -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
       "Bash(powershell -NoProfile -Command \"netstat -ano | Select-String ':3000|:3001' \")",
-      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 27444 -Force\")"
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 27444 -Force\")",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"membershipId\":\"AD-001\",\"password\":\"admin123\"}')",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT m.id, m.role, m.status, m.coop_role_id, r.name as role_name FROM tcoopdb.dbo.members m LEFT JOIN tcoopdb.dbo.coop_roles r ON m.coop_role_id = r.id WHERE m.coop_role_id IS NOT NULL\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT id, cooperative_id, name, status FROM tcoopdb.dbo.coop_roles\")",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 1156 -Force\")"
     ]
   }
 }

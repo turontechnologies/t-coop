@@ -78,6 +78,19 @@ export function getRoleLabel(role: UserRole): string {
   return ROLE_LABEL[role];
 }
 
+/** The nav-item list a permission-restricted role's `permissionModules` gets filtered against —
+ * `null` for every role whose nav is fixed (permissions don't apply). Shared by `getNavItems`
+ * (what the sidebar shows) and `isPathPermitted` (what a direct URL visit is actually allowed to
+ * reach) so the two can never drift apart from each other. */
+function candidateItems(
+  role: UserRole,
+  permissionModules?: string[] | null,
+): NavItem[] | null {
+  if (role === "support") return NAV_ITEMS.support;
+  if (role === "member" && permissionModules != null) return NAV_ITEMS.admin;
+  return null;
+}
+
 /** `permissionModules` matters for role "support" (platform staff, filtered against
  * super_admin's own module set) and for role "member" when `permissionModules` is non-null — a
  * co-op-scoped staff member invited via Settings -> User Management (see CoopRole/CoopUser on
@@ -88,13 +101,38 @@ export function getNavItems(
   role: UserRole,
   permissionModules?: string[] | null,
 ): NavItem[] {
-  if (role === "support") {
-    const allowed = new Set(permissionModules ?? []);
-    return NAV_ITEMS.support.filter((item) => allowed.has(item.label));
-  }
-  if (role === "member" && permissionModules != null) {
-    const allowed = new Set(permissionModules);
-    return NAV_ITEMS.admin.filter((item) => allowed.has(item.label));
-  }
-  return NAV_ITEMS[role];
+  const candidates = candidateItems(role, permissionModules);
+  if (!candidates) return NAV_ITEMS[role];
+  const allowed = new Set(permissionModules ?? []);
+  return candidates.filter((item) => allowed.has(item.label));
+}
+
+function matchesHref(pathname: string, href: string): boolean {
+  return (
+    pathname === href ||
+    (href !== "/dashboard" && pathname.startsWith(`${href}/`))
+  );
+}
+
+/** Hiding a restricted item from the sidebar isn't enough on its own — this is the guard that
+ * stops a direct URL visit (typed in, bookmarked, or reached via a stale link) from reaching a
+ * page the signed-in user's role/permissions were never actually granted. Only applies to
+ * permission-restricted roles (support, or a co-op-staff member) — every other role's pages are
+ * unrestricted, same as `getNavItems`. A path that doesn't correspond to any permission-gated nav
+ * item at all (e.g. `/profile`, `/settings` — self-service, not administrative) is always
+ * permitted; only paths that DO map to a gated module are checked against what was actually
+ * granted. */
+export function isPathPermitted(
+  role: UserRole,
+  permissionModules: string[] | null | undefined,
+  pathname: string,
+): boolean {
+  const candidates = candidateItems(role, permissionModules);
+  if (!candidates) return true;
+  const matched = candidates.find(
+    (item) => item.href && matchesHref(pathname, item.href),
+  );
+  if (!matched) return true;
+  const allowed = new Set(permissionModules ?? []);
+  return allowed.has(matched.label);
 }
