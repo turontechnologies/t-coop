@@ -1,5 +1,4 @@
 import {
-  findCoopMember,
   findCooperative,
   type CoopMember,
   type Cooperative,
@@ -22,11 +21,4 @@ export function getDirectoryCoop(
 
 export function getDirectoryMembers(cooperatives: Cooperative[]): CoopMember[] {
   return getDirectoryCoop(cooperatives)?.members ?? [];
-}
-
-export function findDirectoryMember(
-  cooperatives: Cooperative[],
-  memberId: string,
-): CoopMember | undefined {
-  return findCoopMember(getDirectoryCoop(cooperatives), memberId);
 }

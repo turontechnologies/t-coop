@@ -21,16 +21,16 @@ import {
 } from "@/components/ui/select";
 import { LocationFields } from "@/components/features/shared/location-fields";
 import { useBankList } from "@/hooks/use-bank-list";
+import { useAddCoopMember } from "@/hooks/use-coop-members";
 import { resolveBankAccount } from "@/lib/bank-lookup";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
-import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
 import {
   addMemberSchema,
   type AddMemberFormValues,
 } from "@/lib/validations/member-directory.schema";
-import { useCoopStore } from "@/store/coop.store";
 
 interface AddMemberFormProps {
+  coopId: string;
   existingMembers: CoopMember[];
 }
 
@@ -48,10 +48,10 @@ function splitResolvedName(fullName: string): {
   };
 }
 
-export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
+export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const router = useRouter();
   const [verifying, setVerifying] = useState(false);
-  const addMember = useCoopStore((state) => state.addMember);
+  const addMember = useAddCoopMember(coopId);
   const { banks, loading: banksLoading } = useBankList();
 
   const bankId = useId();
@@ -144,29 +144,28 @@ export function AddMemberForm({ existingMembers }: AddMemberFormProps) {
       return;
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 900));
-
-    const member: CoopMember = {
-      id: values.membershipId.trim(),
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      email: values.email.trim(),
-      role: values.role,
-      status: "Active",
-      guarantor: values.guarantor,
-      country: values.country,
-      state: values.state?.trim() ?? "",
-      city: values.city?.trim() ?? "",
-      bankCode: values.bankCode,
-      accountNumber: values.accountNumber,
-      accountName: values.accountName ?? "",
-    };
-
-    addMember(ADMIN_DIRECTORY_COOP_ID, member);
-    toast.success("Member added", {
-      description: `${coopMemberFullName(member)} has been added to the directory.`,
-    });
-    router.push(`/members/${member.id}`);
+    try {
+      const member = await addMember.mutateAsync({
+        ...values,
+        membershipId: values.membershipId.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
+        email: values.email.trim(),
+      });
+      toast.success("Member added", {
+        description: `${coopMemberFullName(member)} has been added — a welcome email with their login (membership ID + default password) was sent to ${member.email}.`,
+      });
+      router.push(`/members/${member.id}`);
+    } catch (error) {
+      if (error instanceof Error && /membership id/i.test(error.message)) {
+        setError("membershipId", { message: error.message });
+        return;
+      }
+      toast.error("Couldn't add that member", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
 
   return (

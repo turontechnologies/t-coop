@@ -89,7 +89,9 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
       type: "General",
       title: "",
       message: "",
-      recipient: "All Members",
+      // A super admin only ever reaches a co-op's admin directly (see below) — the backend
+      // rejects anything else from that role, so this starts on the one value that's valid.
+      recipient: isSuperAdmin ? "All Admins" : "All Members",
       medium: "Email",
       schedule: "now",
       // Admins only ever manage one co-op, so it's picked implicitly and never shown as a
@@ -125,7 +127,9 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
       } catch (error) {
         toast.error("Couldn't attach that file", {
           description:
-            error instanceof Error ? error.message : "Please try a different file.",
+            error instanceof Error
+              ? error.message
+              : "Please try a different file.",
         });
         return;
       }
@@ -410,29 +414,39 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
           <Controller
             control={control}
             name="recipient"
-            render={({ field }) => (
-              <RadioGroup
-                value={field.value}
-                onValueChange={field.onChange}
-                disabled={isSubmitting}
-              >
-                <RadioOption
-                  id="recipient-members"
-                  value="All Members"
-                  label="All Members"
-                />
-                <RadioOption
-                  id="recipient-admins"
-                  value="All Admins"
-                  label="All Admins"
-                />
-                <RadioOption
-                  id="recipient-both"
-                  value="All Members & Admins"
-                  label="All Members & Admins"
-                />
-              </RadioGroup>
-            )}
+            render={({ field }) =>
+              isSuperAdmin ? (
+                // A super admin only ever reaches a co-op's admin — passing it on to members
+                // is that admin's own call, not the platform's. The backend rejects anything
+                // else from this role, so there's nothing to choose here.
+                <p className="text-sm text-muted-foreground">
+                  Delivered to each selected co-operative&apos;s admin.
+                  It&apos;s their call whether to pass it on to their members.
+                </p>
+              ) : (
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={isSubmitting}
+                >
+                  <RadioOption
+                    id="recipient-members"
+                    value="All Members"
+                    label="All Members"
+                  />
+                  <RadioOption
+                    id="recipient-admins"
+                    value="All Admins"
+                    label="All Admins"
+                  />
+                  <RadioOption
+                    id="recipient-both"
+                    value="All Members & Admins"
+                    label="All Members & Admins"
+                  />
+                </RadioGroup>
+              )
+            }
           />
 
           <div className="border-t border-border pt-4">
@@ -460,8 +474,8 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
             />
             <p className="mt-2 text-xs text-muted-foreground">
               Every recipient also gets an in-app notification regardless of
-              medium; real Email/SMS delivery for this medium selection isn&apos;t
-              wired up yet.
+              medium; real Email/SMS delivery for this medium selection
+              isn&apos;t wired up yet.
             </p>
           </div>
 

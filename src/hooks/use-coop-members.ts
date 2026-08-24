@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { coopMemberService } from "@/services/coop-member.service";
 import type { EditMemberFormValues } from "@/lib/validations/coop.schema";
+import type { AddMemberFormValues } from "@/lib/validations/member-directory.schema";
 
 export function useCoopMembers(coopId: string | undefined) {
   return useQuery({
@@ -8,6 +9,17 @@ export function useCoopMembers(coopId: string | undefined) {
     queryFn: () => coopMemberService.getMembers(coopId as string),
     enabled: Boolean(coopId),
     staleTime: 30_000,
+  });
+}
+
+export function useAddCoopMember(coopId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (values: AddMemberFormValues) =>
+      coopMemberService.addMember(coopId, values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coop-members", coopId] });
+    },
   });
 }
 

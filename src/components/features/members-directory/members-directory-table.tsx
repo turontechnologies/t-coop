@@ -13,25 +13,31 @@ import {
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
+import {
+  useUpdateCoopMember,
+  useUpdateCoopMemberStatus,
+} from "@/hooks/use-coop-members";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
-import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
-import type { EditMemberFormValues } from "@/lib/validations/coop.schema";
-import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
 interface MembersDirectoryTableProps {
+  coopId: string;
   members: CoopMember[];
 }
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
-export function MembersDirectoryTable({ members }: MembersDirectoryTableProps) {
+export function MembersDirectoryTable({
+  coopId,
+  members,
+}: MembersDirectoryTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [editingMember, setEditingMember] = useState<CoopMember | null>(null);
-  const setMemberStatus = useCoopStore((state) => state.setMemberStatus);
+  const updateStatus = useUpdateCoopMemberStatus(coopId);
+  const updateMember = useUpdateCoopMember(coopId);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -54,12 +60,18 @@ export function MembersDirectoryTable({ members }: MembersDirectoryTableProps) {
   const handleToggleStatus = async (member: CoopMember) => {
     const isActive = member.status === "Active";
     const fullName = coopMemberFullName(member);
-    await new Promise((resolve) => setTimeout(resolve, 500));
     const next = isActive ? "Inactive" : "Active";
-    setMemberStatus(ADMIN_DIRECTORY_COOP_ID, member.id, next);
-    toast.success(
-      next === "Active" ? `${fullName} activated` : `${fullName} disabled`,
-    );
+    try {
+      await updateStatus.mutateAsync({ memberId: member.id, status: next });
+      toast.success(
+        next === "Active" ? `${fullName} activated` : `${fullName} disabled`,
+      );
+    } catch (error) {
+      toast.error("Couldn't update status", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   return (
@@ -217,14 +229,11 @@ export function MembersDirectoryTable({ members }: MembersDirectoryTableProps) {
           onOpenChange={(open) => {
             if (!open) setEditingMember(null);
           }}
-          onSubmit={async (values: EditMemberFormValues) => {
-            await new Promise((resolve) => setTimeout(resolve, 700));
-            useCoopStore
-              .getState()
-              .updateMember(ADMIN_DIRECTORY_COOP_ID, editingMember.id, {
-                ...values,
-                accountName: values.accountName ?? "",
-              });
+          onSubmit={async (values) => {
+            await updateMember.mutateAsync({
+              memberId: editingMember.id,
+              values,
+            });
           }}
         />
       ) : null}

@@ -23,6 +23,12 @@ every reply as member feedback.
 
 ## Design Decisions
 
+- **A super admin only ever reaches a co-op's admin, never its members directly** (added
+  2026-08-24). Passing a platform-wide announcement on to members is that admin's own call —
+  `NoticeController.create` rejects (403) any `recipient` other than `"All Admins"` from a
+  `super_admin` caller; the frontend hides the other two radio options for that role entirely
+  rather than letting the request round-trip and fail. An admin (who only ever reaches their own
+  co-op regardless) keeps all three options unchanged.
 - **Tenant isolation is structural, not a client-side filter.** Every notice explicitly names the
   co-op(s) it targets (`targetCoopIds`, a required, non-empty field with no "empty means everyone"
   fallback). An admin can only ever target their own co-op — `NoticeController` ignores/overrides
@@ -34,7 +40,7 @@ every reply as member feedback.
 - **A real, downloadable attachment, hosted, not inlined.** The old base64-in-record approach
   (`dataUrl` field, capped at 2MB by `localStorage`'s own quota) is gone. Attachments now upload
   via a real endpoint (`POST /api/v1/uploads/attachment`, Cloudinary-backed, `folder:
-  t-coop/notice-attachments`, `resource_type: auto` so PDFs/Word docs work, not just images) and
+t-coop/notice-attachments`, `resource_type: auto` so PDFs/Word docs work, not just images) and
   the notice stores a real hosted URL. Same 2MB cap, now enforced server-side (not because of a
   browser storage quota, but as a deliberate limit) — see `UploadController.uploadAttachment`.
 - **Email and SMS medium selections trigger real delivery, on top of the always-real in-app
@@ -76,12 +82,12 @@ every reply as member feedback.
 
 ## Routes
 
-| Route                | Purpose                                                                                                                                                          |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/notice-board`      | Admin/super admin: full management list (filters, bulk Resend/Delete) + "+ Create Notice." Member: a read list of notices addressed to them.                     |
-| `/notice-board/new`  | Create a notice — type, title, message, optional meeting date, optional attachment, recipient, medium, send now/later. Admin/super admin only.                   |
-| `/notice-board/[id]` | Full notice + attachment download + the reply/feedback thread. Everyone who can see the notice can reply; only admin/super admin see Resend/Delete.              |
-| `/notifications`     | The real notification feed (all types, not just Notice Board) — see [Notifications](#see-also).                                                                  |
+| Route                | Purpose                                                                                                                                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/notice-board`      | Admin/super admin: full management list (filters, bulk Resend/Delete) + "+ Create Notice." Member: a read list of notices addressed to them.        |
+| `/notice-board/new`  | Create a notice — type, title, message, optional meeting date, optional attachment, recipient, medium, send now/later. Admin/super admin only.      |
+| `/notice-board/[id]` | Full notice + attachment download + the reply/feedback thread. Everyone who can see the notice can reply; only admin/super admin see Resend/Delete. |
+| `/notifications`     | The real notification feed (all types, not just Notice Board) — see [Notifications](#see-also).                                                     |
 
 ## Components
 

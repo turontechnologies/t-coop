@@ -4,13 +4,16 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddMemberForm } from "@/components/features/members-directory/add-member-form";
-import { getDirectoryMembers } from "@/lib/member-directory";
-import { useCoopStore } from "@/store/coop.store";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function NewMemberPage() {
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const existingMembers = getDirectoryMembers(cooperatives);
+  const member = useAuthStore((state) => state.member);
+  const coopId = member?.id;
+  const { data: existingMembers = [] } = useCoopMembers(coopId);
+
+  if (!member) return null;
 
   return (
     <div className="space-y-4 pt-6">
@@ -24,7 +27,10 @@ export default function NewMemberPage() {
         Back to Members Directory
       </Button>
 
-      <AddMemberForm existingMembers={existingMembers} />
+      <AddMemberForm
+        coopId={coopId as string}
+        existingMembers={existingMembers}
+      />
     </div>
   );
 }

@@ -8,6 +8,7 @@ const TEMPLATE_HEADERS = [
   "First Name",
   "Last Name",
   "Email Address",
+  "Phone",
   "Role",
   "Guarantor",
   "Country",
@@ -21,6 +22,7 @@ export interface ImportedMemberRow {
   firstName: string;
   lastName: string;
   email: string;
+  phone: string;
   role: CoopMemberRole;
   guarantor: string;
   country: string;
@@ -35,6 +37,7 @@ export function downloadMemberImportTemplate() {
       "Ada",
       "Lovelace",
       "ada.lovelace@example.com",
+      "08012345678",
       "Member",
       "Jonathan Newman",
       "Nigeria",
@@ -46,6 +49,7 @@ export function downloadMemberImportTemplate() {
     { wch: 14 },
     { wch: 14 },
     { wch: 28 },
+    { wch: 16 },
     { wch: 10 },
     { wch: 20 },
     { wch: 12 },
@@ -58,12 +62,13 @@ export function downloadMemberImportTemplate() {
     ["First Name", "Required"],
     ["Last Name", "Required"],
     ["Email Address", "Required, must be a valid email address"],
+    ["Phone", "Required"],
     [
       "Role",
       `Optional — defaults to "Member". Valid values: ${VALID_ROLES.join(", ")}`,
     ],
     ["Guarantor", "Optional"],
-    ["Country", "Optional"],
+    ["Country", "Required"],
     ["State", "Optional"],
   ]);
   referenceSheet["!cols"] = [{ wch: 18 }, { wch: 55 }];
@@ -131,6 +136,12 @@ export async function parseMemberImportFile(
       return;
     }
 
+    const phone = String(raw["Phone"] ?? "").trim();
+    if (!phone) {
+      errors.push({ row: rowNumber, message: "Phone is required" });
+      return;
+    }
+
     const roleRaw = String(raw["Role"] ?? "").trim();
     const matchedRole = VALID_ROLES.find(
       (role) => role.toLowerCase() === roleRaw.toLowerCase(),
@@ -143,15 +154,22 @@ export async function parseMemberImportFile(
       return;
     }
 
+    const country = String(raw["Country"] ?? "").trim();
+    if (!country) {
+      errors.push({ row: rowNumber, message: "Country is required" });
+      return;
+    }
+
     seenIds.add(membershipId.toLowerCase());
     rows.push({
       membershipId,
       firstName,
       lastName,
       email,
+      phone,
       role: matchedRole ?? "Member",
       guarantor: String(raw["Guarantor"] ?? "").trim(),
-      country: String(raw["Country"] ?? "").trim(),
+      country,
       state: String(raw["State"] ?? "").trim(),
     });
   });

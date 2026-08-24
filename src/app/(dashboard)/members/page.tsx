@@ -2,21 +2,20 @@
 
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { MembersDirectoryTable } from "@/components/features/members-directory/members-directory-table";
+import { useAddCoopMember, useCoopMembers } from "@/hooks/use-coop-members";
 import type { CoopMember } from "@/lib/coop-data";
-import {
-  ADMIN_DIRECTORY_COOP_ID,
-  getDirectoryMembers,
-} from "@/lib/member-directory";
 import {
   downloadMemberImportTemplate,
   parseMemberImportFile,
   type ImportedMemberRow,
 } from "@/lib/member-import";
 import type { ExportColumn } from "@/lib/table-export";
-import { useCoopStore } from "@/store/coop.store";
+import { useAuthStore } from "@/store/auth.store";
 
 const EXPORT_COLUMNS: ExportColumn<CoopMember>[] = [
   { header: "Members Id", accessor: (member) => member.id },
@@ -27,31 +26,55 @@ const EXPORT_COLUMNS: ExportColumn<CoopMember>[] = [
 ];
 
 export default function MembersDirectoryPage() {
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const addMember = useCoopStore((state) => state.addMember);
-  const members = getDirectoryMembers(cooperatives);
+  const authMember = useAuthStore((state) => state.member);
+  const coopId = authMember?.id;
+  const {
+    data: members = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useCoopMembers(coopId);
+  const addMember = useAddCoopMember(coopId as string);
 
-  const handleImport = (importedRows: ImportedMemberRow[]) => {
-    importedRows.forEach((row) => {
-      const member: CoopMember = {
-        id: row.membershipId,
-        firstName: row.firstName,
-        lastName: row.lastName,
-        email: row.email,
-        role: row.role,
-        status: "Active",
-        guarantor: row.guarantor,
-        country: row.country,
-        state: row.state,
-        // Bulk import doesn't capture bank details — the admin adds these
-        // later via Edit, same as any other field the template omits.
-        city: "",
-        bankCode: "",
-        accountNumber: "",
-        accountName: "",
-      };
-      addMember(ADMIN_DIRECTORY_COOP_ID, member);
-    });
+  if (!authMember) return null;
+
+  const handleImport = async (importedRows: ImportedMemberRow[]) => {
+    let succeeded = 0;
+    let failed = 0;
+    for (const row of importedRows) {
+      try {
+        await addMember.mutateAsync({
+          membershipId: row.membershipId,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          email: row.email,
+          phone: row.phone,
+          role: row.role,
+          guarantor: row.guarantor,
+          country: row.country,
+          state: row.state,
+          // Bulk import doesn't capture bank details or city — the admin adds these later via
+          // Edit, same as any other field the template omits.
+          city: "",
+          bankCode: "",
+          accountNumber: "",
+          accountName: "",
+        });
+        succeeded += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    if (succeeded > 0) {
+      toast.success(`${succeeded} member${succeeded === 1 ? "" : "s"} added`);
+    }
+    if (failed > 0) {
+      toast.error(
+        `${failed} row${failed === 1 ? "" : "s"} couldn't be added — check for duplicate IDs/emails and try again.`,
+      );
+    }
   };
 
   return (
@@ -87,7 +110,16 @@ export default function MembersDirectoryPage() {
         </div>
       </div>
 
-      <MembersDirectoryTable members={members} />
+      <QueryBoundary
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={() => refetch()}
+        isRetrying={isRefetching}
+        errorTitle="Couldn't load the members directory"
+      >
+        <MembersDirectoryTable coopId={coopId as string} members={members} />
+      </QueryBoundary>
     </div>
   );
 }

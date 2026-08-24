@@ -8,6 +8,47 @@ showed a "coming soon" toast. Lives in the `(dashboard)` route group like
 every other feature. Distinct from, but built on the same data as, the
 super admin's [Co-operatives](./co-operatives-page.md) oversight area.
 
+**As of 2026-08-24 this is fully real, end to end** — list/add/edit/status
+all call the real backend (`coop-member.service.ts`, no mock fallback), and
+a member added here gets a real account: they can log in immediately with
+the membership ID the admin chose and the platform default password
+(`admin123`), and receive a real `MEMBER_ADDED` notification + welcome
+email. Everything below describing the mock-store era (`ADMIN_DIRECTORY_COOP_ID`
+as this page's data source, the store's `addMember`, etc.) has been
+superseded — see "What changed 2026-08-24" below for the delta; the rest of
+this file (form design, bank verification, bulk import, responsive layout)
+is still accurate as _implementation_ detail, just now backed by real
+network calls instead of a Zustand store.
+
+## What changed 2026-08-24
+
+- **Data source**: `/members`, `/members/new`, and `/members/[memberId]`
+  no longer read `ADMIN_DIRECTORY_COOP_ID` at all — the co-op is derived
+  from the signed-in admin's own id (`useAuthStore` — recall the
+  architecture: a co-op's admin id _is_ the co-op's id), via
+  `useCoopMembers`/`useAddCoopMember`/`useUpdateCoopMember`/
+  `useUpdateCoopMemberStatus` (`src/hooks/use-coop-members.ts`). This was
+  already real infrastructure, built earlier for the super admin's
+  `/co-operatives/[id]` Members tab — this page just wasn't calling it yet.
+  `ADMIN_DIRECTORY_COOP_ID` itself still exists and is still load-bearing
+  for the several still-mock features that haven't been converted yet
+  (Savings, Loans, admin Settings tabs) — don't remove it.
+- **`coop-member.service.ts` lost its mock fallback entirely** (was
+  `NEXT_PUBLIC_USE_MOCK_COOPERATIVES`-gated) — explicit user request ("no
+  mock data now, all should be from the backend"), matching how
+  platform-staff/notifications/notices were already built real-only.
+- **`/members/[memberId]`'s Savings/Loans tabs now show real records**,
+  not the mock `Cooperative.savings/loans` arrays — `useCoopSavingsRecords`/
+  `useCoopLoanRecords` filtered by `memberId` (same real hooks the
+  super-admin oversight drill-down already used), reusing
+  `CoopMemberSavingsTable`/`CoopMemberLoansTable` unmodified since they
+  were already typed against the real DTO shape.
+- **Bulk import gained a required `Phone` column** (and made `Country`
+  actually required, matching the manual Add form — it was previously
+  marked "Optional" in the template despite the backend needing it) — the
+  real `POST /cooperatives/:id/members` requires both; the old template
+  would have produced real 400s on every imported row otherwise.
+
 ## Purpose
 
 Let an admin see and manage the members of the one co-operative they run:
@@ -205,10 +246,6 @@ parseFile, onImport }` instead of a hard-coded savings import, plus an
 
 ## Future Improvements
 
-- If admins ever need to manage a co-operative _they_ choose (rather than
-  a hardcoded one), `ADMIN_DIRECTORY_COOP_ID` is the one place that
-  decision needs to become a real lookup (e.g. tied to the logged-in
-  admin's own membership record).
 - Paystack's test-mode account-resolve quota (3 real-bank lookups/day —
   see [payments-and-payouts.md](./payments-and-payouts.md#design-decisions))
   applies here too; the sandbox "Test Bank" option in the bank list works
@@ -216,7 +253,11 @@ parseFile, onImport }` instead of a hard-coded savings import, plus an
   payout.
 - Import only adds new members — no bulk edit/delete of existing ones,
   matching the same limitation already documented for `/savings`' import.
-- A large import file would call the store's `addMember` once per row in
-  a synchronous loop (one Zustand update each) rather than a single
-  batched update — fine at the scale a demo needs, worth revisiting if
-  bulk imports of hundreds of rows become a real use case.
+- A large import file now calls the real `POST /cooperatives/:id/members`
+  once per row, sequentially awaited (not parallelized) — fine at realistic
+  import sizes, but a genuinely large file (hundreds of rows) would be slow
+  and there's no partial-progress indicator, just a final success/fail
+  count toast.
+- No endpoint to remove a member entirely (only Active/Inactive toggle) —
+  matches the rest of the app's convention (co-ops and platform staff are
+  disabled, never hard-deleted, for audit-trail reasons).
