@@ -81,22 +81,31 @@ export function getRoleLabel(role: UserRole): string {
 /** The nav-item list a permission-restricted role's `permissionModules` gets filtered against —
  * `null` for every role whose nav is fixed (permissions don't apply). Shared by `getNavItems`
  * (what the sidebar shows) and `isPathPermitted` (what a direct URL visit is actually allowed to
- * reach) so the two can never drift apart from each other. */
+ * reach) so the two can never drift apart from each other.
+ *
+ * Co-op-scoped staff (assigned a CoopRole — see CoopUserController) can carry EITHER role
+ * "member" or role "admin": Members Directory lets an admin add a person with role "Admin" too,
+ * so a co-op can have several `role: "admin"` members alongside its one true admin (the row whose
+ * `id` equals the co-op's own `id`). That true admin is structurally guaranteed to never have a
+ * CoopRole — `CoopUserController.assignRole` explicitly rejects assigning one to `id == cooperativeId`
+ * — so `permissionModules != null` alone is always a safe, sufficient signal for "this is a
+ * restricted co-op staff member," regardless of which of the two roles they carry. */
 function candidateItems(
   role: UserRole,
   permissionModules?: string[] | null,
 ): NavItem[] | null {
   if (role === "support") return NAV_ITEMS.support;
-  if (role === "member" && permissionModules != null) return NAV_ITEMS.admin;
+  if ((role === "member" || role === "admin") && permissionModules != null) {
+    return NAV_ITEMS.admin;
+  }
   return null;
 }
 
 /** `permissionModules` matters for role "support" (platform staff, filtered against
- * super_admin's own module set) and for role "member" when `permissionModules` is non-null — a
- * co-op-scoped staff member invited via Settings -> User Management (see CoopRole/CoopUser on
- * the backend). A co-op can only have one "admin" (the row whose id equals the co-op's own id),
- * so this kind of staff stays role "member" structurally but is filtered against admin's nav
- * instead of the plain member nav. Every other case is fixed, ignoring whatever's passed. */
+ * super_admin's own module set) and for role "member"/"admin" when `permissionModules` is
+ * non-null — a co-op-scoped staff member assigned a CoopRole via Settings -> User Management (see
+ * CoopRole/CoopUser on the backend and the `candidateItems` note above for why role alone can't
+ * distinguish this case). Every other case is fixed, ignoring whatever's passed. */
 export function getNavItems(
   role: UserRole,
   permissionModules?: string[] | null,
