@@ -185,10 +185,21 @@ they can start typing). Page-level entrance still comes from the root
   quota — fine for a demo, worth adding (plus deleting the previous
   Cloudinary asset on re-upload, rather than leaving orphaned images) once
   this is backed by real user accounts.
-- NIN's "Verified" badge is still hardcoded permanently `true`; once
-  there's a real KYC provider, that status (and whether the field should
-  even be user-editable after verification) should come from that
-  provider instead. Bank Account's badge is no longer in this category —
-  it's real now, see [payments-and-payouts.md](./payments-and-payouts.md).
+- **NIN's fake, permanently-`true` "Verified" badge was removed 2026-08-24** (flagged by the user
+  noticing it showing "Verified" on a profile with no NIN entered at all) — NIN is now honestly
+  just a plain text field (admin/self-entered), no verification claim, until there's a real
+  provider behind it. Bank Account's badge is unaffected — it's genuinely real, see
+  [payments-and-payouts.md](./payments-and-payouts.md).
+- **Real NIN verification — deliberately not built yet, provider recommendation on file for when
+  it's funded.** Unlike Termii (SMS), there's no free tier for NIN lookups in Nigeria — NIMC
+  restricts direct access to licensed aggregators, all charge per-lookup. Suggested provider:
+  **Prembly (QoreID)** — widely used by Nigerian fintechs/co-ops specifically, straightforward
+  REST API, competitive per-lookup pricing; YouVerify and VerifyMe Nigeria are the other two
+  commonly-used alternatives if Prembly's pricing/terms don't fit. Whenever this gets funded, the
+  integration shape should mirror `SmsService`/Termii exactly (see
+  `t-coop-backend/documentation/flows.md`'s Notifications section): credentials live on the
+  `PlatformSettings` singleton (Settings → Integrations), read live server-side, never a static
+  env var, verification triggered the same "instant, no button" way the bank-account `Combobox`/
+  `useAutoVerifyBankAccount` fields already work.
 - No confirmation prompt before "Cancel" discards edits — fine for a demo,
   worth adding once real users could lose meaningful unsaved work.

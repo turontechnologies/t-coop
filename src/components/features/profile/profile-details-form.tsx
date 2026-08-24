@@ -202,12 +202,6 @@ export function ProfileDetailsForm({
             registration={register("nin")}
             error={errors.nin?.message}
             disabled={busy}
-            trailing={
-              <span className="flex items-center gap-1 text-xs font-medium text-success">
-                <BadgeCheck className="size-3.5" aria-hidden="true" />
-                Verified
-              </span>
-            }
           />
           <ProfileField
             label="First Name"
@@ -415,7 +409,6 @@ function ProfileReadOnlyView({
           <ProfileViewField
             label="National Identification Number (NIN)"
             value={profile.nin}
-            trailing={verifiedBadge}
           />
           <ProfileViewField label="First Name" value={profile.firstName} />
           <ProfileViewField label="Last Name" value={profile.lastName} />

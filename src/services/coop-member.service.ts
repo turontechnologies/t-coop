@@ -7,16 +7,24 @@ interface CoopMemberDto {
   id: string;
   firstName: string;
   lastName: string;
+  otherName: string | null;
+  gender: string | null;
   email: string;
+  phone: string | null;
+  nin: string | null;
+  homeAddress: string | null;
   role: "admin" | "member" | "super_admin";
   status: "Active" | "Inactive";
   guarantor: string | null;
   country: string | null;
   state: string | null;
   city: string | null;
+  facebook: string | null;
+  twitter: string | null;
   bankCode: string | null;
   accountNumber: string | null;
   accountName: string | null;
+  avatarUrl: string | null;
 }
 
 function toRole(role: CoopMemberDto["role"]): CoopMemberRole {
@@ -28,16 +36,24 @@ function fromDto(dto: CoopMemberDto): CoopMember {
     id: dto.id,
     firstName: dto.firstName,
     lastName: dto.lastName,
+    otherName: dto.otherName ?? "",
+    gender: dto.gender ?? "",
     email: dto.email,
+    phone: dto.phone ?? "",
+    nin: dto.nin ?? "",
+    homeAddress: dto.homeAddress ?? "",
     role: toRole(dto.role),
     status: dto.status,
     guarantor: dto.guarantor ?? "",
     country: dto.country ?? "",
     state: dto.state ?? "",
     city: dto.city ?? "",
+    facebook: dto.facebook ?? "",
+    twitter: dto.twitter ?? "",
     bankCode: dto.bankCode ?? "",
     accountNumber: dto.accountNumber ?? "",
     accountName: dto.accountName ?? "",
+    avatarUrl: dto.avatarUrl ?? "",
   };
 }
 

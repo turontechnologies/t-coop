@@ -20,6 +20,16 @@ export interface CoopMember {
   bankCode: string;
   accountNumber: string;
   accountName: string;
+  /** The rest are optional — carried for "View Full Profile" (CoopMemberHeaderCard) when backed
+   * by the real API; the still-mock views that build a `CoopMember` by hand don't set these. */
+  otherName?: string;
+  gender?: string;
+  phone?: string;
+  nin?: string;
+  homeAddress?: string;
+  facebook?: string;
+  twitter?: string;
+  avatarUrl?: string;
 }
 
 export type CoopSavingsStatus = "Success" | "Pending" | "Failed";
