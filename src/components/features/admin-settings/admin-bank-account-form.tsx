@@ -6,18 +6,12 @@ import { Controller, useForm } from "react-hook-form";
 import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { logActivity } from "@/lib/audit-log";
-import { resolveBankAccount } from "@/lib/bank-lookup";
 import { getProfileData, updateProfileData } from "@/lib/profile-data";
 import {
   coopBankAccountSchema,
@@ -33,7 +27,6 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
   const profile = getProfileData(member.id);
   const { banks, loading: banksLoading } = useBankList();
   const [saving, setSaving] = useState(false);
-  const [verifying, setVerifying] = useState(false);
   const bankId = useId();
   const accountNumberId = useId();
 
@@ -62,20 +55,15 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
     if (accountName) setValue("accountName", "", { shouldDirty: true });
   };
 
-  const handleVerify = async () => {
-    setVerifying(true);
-    try {
-      const resolvedName = await resolveBankAccount(accountNumber, bankCode);
-      setValue("accountName", resolvedName, { shouldDirty: true });
-      toast.success("Account verified", { description: resolvedName });
-    } catch (error) {
-      toast.error("Couldn't verify that account", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setVerifying(false);
-    }
-  };
+  const { verifying } = useAutoVerifyBankAccount({
+    bankCode,
+    accountNumber,
+    onVerified: (resolvedName) =>
+      setValue("accountName", resolvedName, { shouldDirty: true }),
+    initialBankCode: profile.bankCode,
+    initialAccountNumber: profile.accountNumber,
+    initialAccountName: profile.accountName,
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     setSaving(true);
@@ -100,40 +88,30 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-xl space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1fr_auto]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={bankId}>Bank Name</Label>
           <Controller
             control={control}
             name="bankCode"
             render={({ field }) => (
-              <Select
+              <Combobox
+                id={bankId}
                 value={field.value ?? ""}
                 onValueChange={(value) => {
-                  field.onChange(value ?? "");
+                  field.onChange(value);
                   invalidateAccountName();
                 }}
-                disabled={busy || banksLoading}
-              >
-                <SelectTrigger
-                  id={bankId}
-                  className="h-11 w-full"
-                  aria-invalid={!!errors.bankCode}
-                >
-                  <SelectValue
-                    placeholder={
-                      banksLoading ? "Loading banks…" : "Displayed Here"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {banks.map((bank) => (
-                    <SelectItem key={bank.code} value={bank.code}>
-                      {bank.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={banks.map((bank) => ({
+                  value: bank.code,
+                  label: bank.name,
+                }))}
+                placeholder="Displayed Here"
+                searchPlaceholder="Search banks…"
+                loading={banksLoading}
+                disabled={busy}
+                ariaInvalid={!!errors.bankCode}
+              />
             )}
           />
           <FieldError message={errors.bankCode?.message} />
@@ -151,25 +129,6 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
           />
           <FieldError message={errors.accountNumber?.message} />
         </div>
-
-        <div className="space-y-2 sm:pt-7">
-          <Button
-            type="button"
-            onClick={handleVerify}
-            disabled={
-              busy || !bankCode || accountNumber?.length !== 10 || !!accountName
-            }
-            className="h-11 w-full sm:w-auto"
-          >
-            {verifying ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : accountName ? (
-              "Verified"
-            ) : (
-              "Verify"
-            )}
-          </Button>
-        </div>
       </div>
 
       <div className="space-y-2">
@@ -177,10 +136,15 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
         <Input
           value={accountName ?? ""}
           disabled
-          placeholder="Displayed Here"
+          placeholder={verifying ? "Verifying…" : "Displayed Here"}
           className="h-11"
         />
-        {accountName ? (
+        {verifying ? (
+          <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+            Verifying with the bank…
+          </p>
+        ) : accountName ? (
           <p className="flex items-center gap-1 text-xs font-medium text-success">
             <BadgeCheck className="size-3.5" aria-hidden="true" />
             Verified with the bank

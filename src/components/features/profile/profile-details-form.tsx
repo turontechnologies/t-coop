@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,9 +32,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LocationFields } from "@/components/features/shared/location-fields";
+import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { useUpdateProfile } from "@/hooks/use-update-profile";
-import { resolveBankAccount } from "@/lib/bank-lookup";
 import { findBankByCode } from "@/lib/bank-data";
 import type { ProfileRecord } from "@/lib/profile-data";
 import {
@@ -52,7 +53,6 @@ export function ProfileDetailsForm({
 }: ProfileDetailsFormProps) {
   const [editing, setEditing] = useState(false);
   const [displayProfile, setDisplayProfile] = useState(profile);
-  const [verifyingAccount, setVerifyingAccount] = useState(false);
   const membershipIdFieldId = useId();
   const bankId = useId();
   const accountNumberId = useId();
@@ -80,22 +80,15 @@ export function ProfileDetailsForm({
     if (accountName) setValue("accountName", "", { shouldDirty: true });
   };
 
-  const handleVerifyAccount = async () => {
-    setVerifyingAccount(true);
-    try {
-      const resolvedName = await resolveBankAccount(accountNumber, bankCode);
-      setValue("accountName", resolvedName, { shouldDirty: true });
-      toast.success("Account verified", {
-        description: resolvedName,
-      });
-    } catch (error) {
-      toast.error("Couldn't verify that account", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setVerifyingAccount(false);
-    }
-  };
+  const { verifying: verifyingAccount } = useAutoVerifyBankAccount({
+    bankCode,
+    accountNumber,
+    onVerified: (resolvedName) =>
+      setValue("accountName", resolvedName, { shouldDirty: true }),
+    initialBankCode: profile.bankCode,
+    initialAccountNumber: profile.accountNumber,
+    initialAccountName: profile.accountName,
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     updateProfile.reset();
@@ -145,38 +138,28 @@ export function ProfileDetailsForm({
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label>Bank Account</Label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Controller
                 control={control}
                 name="bankCode"
                 render={({ field }) => (
-                  <Select
+                  <Combobox
+                    id={bankId}
                     value={field.value ?? ""}
                     onValueChange={(value) => {
-                      field.onChange(value ?? "");
+                      field.onChange(value);
                       invalidateAccountName();
                     }}
-                    disabled={busy || banksLoading}
-                  >
-                    <SelectTrigger
-                      id={bankId}
-                      className="h-11 w-full"
-                      aria-invalid={!!errors.bankCode}
-                    >
-                      <SelectValue
-                        placeholder={
-                          banksLoading ? "Loading banks…" : "Select bank"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {banks.map((bank) => (
-                        <SelectItem key={bank.code} value={bank.code}>
-                          {bank.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={banks.map((bank) => ({
+                      value: bank.code,
+                      label: bank.name,
+                    }))}
+                    placeholder="Select bank"
+                    searchPlaceholder="Search banks…"
+                    loading={banksLoading}
+                    disabled={busy}
+                    ariaInvalid={!!errors.bankCode}
+                  />
                 )}
               />
               <Input
@@ -189,41 +172,27 @@ export function ProfileDetailsForm({
                   onChange: invalidateAccountName,
                 })}
               />
-              <Button
-                type="button"
-                onClick={handleVerifyAccount}
-                disabled={
-                  busy ||
-                  verifyingAccount ||
-                  !bankCode ||
-                  accountNumber?.length !== 10
-                }
-                className="h-11"
-              >
-                {verifyingAccount ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                ) : accountName ? (
-                  "Verified"
-                ) : (
-                  "Verify"
-                )}
-              </Button>
             </div>
             <FieldError
               message={
                 errors.bankCode?.message ?? errors.accountNumber?.message
               }
             />
-            {accountName ? (
+            {verifyingAccount ? (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                Verifying with the bank…
+              </p>
+            ) : accountName ? (
               <p className="flex items-center gap-1 text-xs font-medium text-success">
                 <BadgeCheck className="size-3.5" aria-hidden="true" />
                 {accountName}
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Select a bank, enter the account number, then Verify — this is
-                where payouts (loan disbursement, savings withdrawal) will be
-                sent.
+                Select a bank and enter the account number — it verifies
+                automatically. This is where payouts (loan disbursement, savings
+                withdrawal) will be sent.
               </p>
             )}
           </div>

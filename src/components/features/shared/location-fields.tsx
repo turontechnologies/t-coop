@@ -2,14 +2,8 @@
 
 import { useEffect, useId, useState } from "react";
 import { TriangleAlert } from "lucide-react";
+import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { fetchCities, fetchCountries, fetchStates } from "@/lib/geo-lookup";
 
 interface LocationFieldsProps {
@@ -29,7 +23,9 @@ interface LocationFieldsProps {
  * Live, cascading Country → State → City selects (countriesnow.space —
  * no API key). Shared across every form that captures an address, so the
  * behavior (loading states, clearing downstream selections when an
- * upstream one changes) only needs to be right in one place.
+ * upstream one changes) only needs to be right in one place. Searchable
+ * (`Combobox`) rather than a plain `Select` — a country list alone runs to
+ * ~195 entries, scrolling through that to find one is a bad experience.
  */
 export function LocationFields({
   country,
@@ -105,30 +101,21 @@ export function LocationFields({
     <>
       <div className="space-y-2">
         <Label htmlFor={countryId}>Country</Label>
-        <Select
+        <Combobox
+          id={countryId}
           value={country}
-          onValueChange={(value) => handleCountryChange(value ?? "")}
-          disabled={disabled || loadingCountries}
-        >
-          <SelectTrigger
-            id={countryId}
-            className="h-11 w-full"
-            aria-invalid={!!countryError}
-          >
-            <SelectValue
-              placeholder={
-                loadingCountries ? "Loading countries…" : "Select country"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {countries.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onValueChange={handleCountryChange}
+          options={countries.map((option) => ({
+            value: option,
+            label: option,
+          }))}
+          placeholder="Select country"
+          searchPlaceholder="Search countries…"
+          loading={loadingCountries}
+          loadingText="Loading countries…"
+          disabled={disabled}
+          ariaInvalid={!!countryError}
+        />
         <FieldError
           message={
             countryError ??
@@ -141,34 +128,18 @@ export function LocationFields({
 
       <div className="space-y-2">
         <Label htmlFor={stateId}>State</Label>
-        <Select
+        <Combobox
+          id={stateId}
           value={state}
-          onValueChange={(value) => handleStateChange(value ?? "")}
-          disabled={disabled || !country || loadingStates}
-        >
-          <SelectTrigger
-            id={stateId}
-            className="h-11 w-full"
-            aria-invalid={!!stateError}
-          >
-            <SelectValue
-              placeholder={
-                !country
-                  ? "Select a country first"
-                  : loadingStates
-                    ? "Loading states…"
-                    : "Select state"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {states.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onValueChange={handleStateChange}
+          options={states.map((option) => ({ value: option, label: option }))}
+          placeholder={!country ? "Select a country first" : "Select state"}
+          searchPlaceholder="Search states…"
+          loading={loadingStates}
+          loadingText="Loading states…"
+          disabled={disabled || !country}
+          ariaInvalid={!!stateError}
+        />
         <FieldError
           message={
             stateError ??
@@ -179,34 +150,18 @@ export function LocationFields({
 
       <div className="space-y-2">
         <Label htmlFor={cityId}>City / Local Government</Label>
-        <Select
+        <Combobox
+          id={cityId}
           value={city}
-          onValueChange={(value) => onCityChange(value ?? "")}
-          disabled={disabled || !state || loadingCities}
-        >
-          <SelectTrigger
-            id={cityId}
-            className="h-11 w-full"
-            aria-invalid={!!cityError}
-          >
-            <SelectValue
-              placeholder={
-                !state
-                  ? "Select a state first"
-                  : loadingCities
-                    ? "Loading cities…"
-                    : "Select city"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {cities.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onValueChange={onCityChange}
+          options={cities.map((option) => ({ value: option, label: option }))}
+          placeholder={!state ? "Select a state first" : "Select city"}
+          searchPlaceholder="Search cities…"
+          loading={loadingCities}
+          loadingText="Loading cities…"
+          disabled={disabled || !state}
+          ariaInvalid={!!cityError}
+        />
         <FieldError
           message={
             cityError ??

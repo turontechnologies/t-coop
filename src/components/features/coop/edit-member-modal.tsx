@@ -1,12 +1,13 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LocationFields } from "@/components/features/shared/location-fields";
+import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
-import { resolveBankAccount } from "@/lib/bank-lookup";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
   editMemberSchema,
@@ -46,7 +47,6 @@ export function EditMemberModal({
   onSubmit: submitMember,
 }: EditMemberModalProps) {
   const { banks, loading: banksLoading } = useBankList();
-  const [verifying, setVerifying] = useState(false);
 
   const firstNameId = useId();
   const lastNameId = useId();
@@ -62,9 +62,7 @@ export function EditMemberModal({
     control,
     watch,
     setValue,
-    getValues,
     setError,
-    trigger,
     formState: { errors, isSubmitting },
   } = useForm<EditMemberFormValues>({
     resolver: zodResolver(editMemberSchema),
@@ -84,28 +82,19 @@ export function EditMemberModal({
   });
 
   const accountName = watch("accountName");
+  const bankCode = watch("bankCode");
+  const accountNumber = watch("accountNumber");
 
-  const handleVerify = async () => {
-    const fieldsValid = await trigger(["accountNumber", "bankCode"]);
-    if (!fieldsValid) return;
-
-    setVerifying(true);
-    try {
-      const resolvedName = await resolveBankAccount(
-        getValues("accountNumber"),
-        getValues("bankCode"),
-      );
-      setValue("accountName", resolvedName, { shouldValidate: true });
-      toast.success("Account verified", { description: resolvedName });
-    } catch (error) {
-      setError("accountNumber", {
-        message:
-          error instanceof Error ? error.message : "Verification failed.",
-      });
-    } finally {
-      setVerifying(false);
-    }
-  };
+  const { verifying } = useAutoVerifyBankAccount({
+    bankCode,
+    accountNumber,
+    onVerified: (resolvedName) =>
+      setValue("accountName", resolvedName, { shouldValidate: true }),
+    onError: (message) => setError("accountNumber", { message }),
+    initialBankCode: member.bankCode,
+    initialAccountNumber: member.accountNumber,
+    initialAccountName: member.accountName,
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -227,35 +216,28 @@ export function EditMemberModal({
 
           <div className="space-y-2">
             <Label>Bank Account</Label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Controller
                 control={control}
                 name="bankCode"
                 render={({ field }) => (
-                  <Select
+                  <Combobox
+                    id={bankId}
                     value={field.value ?? ""}
-                    onValueChange={(value) => field.onChange(value ?? "")}
-                    disabled={isSubmitting || verifying || banksLoading}
-                  >
-                    <SelectTrigger
-                      id={bankId}
-                      className="h-11 w-full"
-                      aria-invalid={!!errors.bankCode}
-                    >
-                      <SelectValue
-                        placeholder={
-                          banksLoading ? "Loading banks…" : "Select bank"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {banks.map((bank) => (
-                        <SelectItem key={bank.code} value={bank.code}>
-                          {bank.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setValue("accountName", "");
+                    }}
+                    options={banks.map((bank) => ({
+                      value: bank.code,
+                      label: bank.name,
+                    }))}
+                    placeholder="Select bank"
+                    searchPlaceholder="Search banks…"
+                    loading={banksLoading}
+                    disabled={isSubmitting || verifying}
+                    ariaInvalid={!!errors.bankCode}
+                  />
                 )}
               />
               <Input
@@ -268,26 +250,22 @@ export function EditMemberModal({
                   onChange: () => setValue("accountName", ""),
                 })}
               />
-              <Button
-                type="button"
-                onClick={handleVerify}
-                disabled={isSubmitting || verifying}
-                className="h-11"
-              >
-                {verifying ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  "Verify"
-                )}
-              </Button>
             </div>
             <FieldError
               message={
                 errors.accountNumber?.message ?? errors.bankCode?.message
               }
             />
-            {accountName ? (
-              <p className="text-xs font-medium text-success">{accountName}</p>
+            {verifying ? (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                Verifying with the bank…
+              </p>
+            ) : accountName ? (
+              <p className="flex items-center gap-1 text-xs font-medium text-success">
+                <BadgeCheck className="size-3.5" aria-hidden="true" />
+                {accountName}
+              </p>
             ) : null}
           </div>
 

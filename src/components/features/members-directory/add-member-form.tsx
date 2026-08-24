@@ -1,15 +1,16 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,9 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LocationFields } from "@/components/features/shared/location-fields";
+import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { useAddCoopMember } from "@/hooks/use-coop-members";
-import { resolveBankAccount } from "@/lib/bank-lookup";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
   addMemberSchema,
@@ -50,7 +51,6 @@ function splitResolvedName(fullName: string): {
 
 export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const router = useRouter();
-  const [verifying, setVerifying] = useState(false);
   const addMember = useAddCoopMember(coopId);
   const { banks, loading: banksLoading } = useBankList();
 
@@ -76,8 +76,6 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
     watch,
     setValue,
     setError,
-    trigger,
-    getValues,
     formState: { errors, isSubmitting },
   } = useForm<AddMemberFormValues>({
     resolver: zodResolver(addMemberSchema),
@@ -103,34 +101,21 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   });
 
   const accountName = watch("accountName");
+  const bankCode = watch("bankCode");
+  const accountNumber = watch("accountNumber");
   const verified = !!accountName;
 
-  const handleVerify = async () => {
-    const fieldsValid = await trigger(["accountNumber", "bankCode"]);
-    if (!fieldsValid) return;
-
-    setVerifying(true);
-    try {
-      const resolvedName = await resolveBankAccount(
-        getValues("accountNumber"),
-        getValues("bankCode"),
-      );
+  const { verifying } = useAutoVerifyBankAccount({
+    bankCode,
+    accountNumber,
+    onVerified: (resolvedName) => {
       const { firstName, lastName } = splitResolvedName(resolvedName);
       setValue("accountName", resolvedName, { shouldValidate: true });
       setValue("firstName", firstName, { shouldValidate: true });
       setValue("lastName", lastName, { shouldValidate: true });
-      toast.success("Account verified", {
-        description: `${resolvedName} — name auto-filled below.`,
-      });
-    } catch (error) {
-      setError("accountNumber", {
-        message:
-          error instanceof Error ? error.message : "Verification failed.",
-      });
-    } finally {
-      setVerifying(false);
-    }
-  };
+    },
+    onError: (message) => setError("accountNumber", { message }),
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     const isTaken = existingMembers.some(
@@ -184,35 +169,25 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Bank Account</Label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Controller
                 control={control}
                 name="bankCode"
                 render={({ field }) => (
-                  <Select
+                  <Combobox
+                    id={bankId}
                     value={field.value ?? ""}
-                    onValueChange={(value) => field.onChange(value ?? "")}
-                    disabled={verifying || verified || banksLoading}
-                  >
-                    <SelectTrigger
-                      id={bankId}
-                      className="h-11 w-full"
-                      aria-invalid={!!errors.bankCode}
-                    >
-                      <SelectValue
-                        placeholder={
-                          banksLoading ? "Loading banks…" : "Select bank"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {banks.map((bank) => (
-                        <SelectItem key={bank.code} value={bank.code}>
-                          {bank.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onValueChange={field.onChange}
+                    options={banks.map((bank) => ({
+                      value: bank.code,
+                      label: bank.name,
+                    }))}
+                    placeholder="Select bank"
+                    searchPlaceholder="Search banks…"
+                    loading={banksLoading}
+                    disabled={verifying || verified}
+                    ariaInvalid={!!errors.bankCode}
+                  />
                 )}
               />
               <Input
@@ -223,32 +198,27 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
                 aria-invalid={!!errors.accountNumber}
                 {...register("accountNumber")}
               />
-              <Button
-                type="button"
-                onClick={handleVerify}
-                disabled={verifying || verified}
-                className="h-11 sm:w-32"
-              >
-                {verifying ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                ) : verified ? (
-                  "Verified"
-                ) : (
-                  "Verify"
-                )}
-              </Button>
             </div>
             <FieldError
               message={
                 errors.accountNumber?.message ?? errors.bankCode?.message
               }
             />
-            {verified ? (
-              <p className="text-xs font-medium text-success">{accountName}</p>
+            {verifying ? (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                Verifying with the bank…
+              </p>
+            ) : verified ? (
+              <p className="flex items-center gap-1 text-xs font-medium text-success">
+                <BadgeCheck className="size-3.5" aria-hidden="true" />
+                {accountName}
+              </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                This is where the member&apos;s loan disbursements and savings
-                withdrawals will be paid out to.
+                Select a bank and enter the account number — it verifies
+                automatically. This is where the member&apos;s loan
+                disbursements and savings withdrawals will be paid out to.
               </p>
             )}
           </div>
@@ -410,29 +380,19 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
               control={control}
               name="guarantor"
               render={({ field }) => (
-                <Select
+                <Combobox
+                  id={guarantorId}
                   value={field.value ?? ""}
-                  onValueChange={(value) => field.onChange(value ?? "")}
+                  onValueChange={field.onChange}
+                  options={existingMembers.map((member) => ({
+                    value: coopMemberFullName(member),
+                    label: coopMemberFullName(member),
+                  }))}
+                  placeholder="Select guarantor"
+                  searchPlaceholder="Search members…"
                   disabled={isSubmitting}
-                >
-                  <SelectTrigger
-                    id={guarantorId}
-                    className="h-11 w-full"
-                    aria-invalid={!!errors.guarantor}
-                  >
-                    <SelectValue placeholder="Select guarantor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {existingMembers.map((member) => (
-                      <SelectItem
-                        key={member.id}
-                        value={coopMemberFullName(member)}
-                      >
-                        {coopMemberFullName(member)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  ariaInvalid={!!errors.guarantor}
+                />
               )}
             />
             <FieldError message={errors.guarantor?.message} />

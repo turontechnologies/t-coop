@@ -1,27 +1,21 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import {
   useCollectionAccount,
   useUpdateCollectionAccount,
 } from "@/hooks/use-collection-account";
-import { resolveBankAccount } from "@/lib/bank-lookup";
 import {
   collectionAccountSchema,
   type CollectionAccountFormValues,
@@ -84,52 +78,15 @@ function CollectionAccountFormBody({
     if (accountName) setValue("accountName", "", { shouldDirty: true });
   };
 
-  const [verifying, setVerifying] = useState(false);
-  // Already-saved, already-verified accounts shouldn't re-hit Paystack on
-  // every page load — seed this as "already attempted" for whatever came
-  // back from the backend already carrying a resolved account name.
-  const lastAttemptRef = useRef<string | null>(
-    collectionAccount.accountName
-      ? `${collectionAccount.bankCode}:${collectionAccount.accountNumber}`
-      : null,
-  );
-
-  // Auto-verifies the moment a bank is picked and the account number hits
-  // 10 digits — no manual "Verify" click needed. Re-fires automatically if
-  // either value changes afterward (invalidateAccountName clears the old
-  // result first), but never twice for the same bank+number pair.
-  useEffect(() => {
-    if (!bankCode || accountNumber?.length !== 10) {
-      lastAttemptRef.current = null;
-      return;
-    }
-
-    const attemptKey = `${bankCode}:${accountNumber}`;
-    if (lastAttemptRef.current === attemptKey) return;
-    lastAttemptRef.current = attemptKey;
-
-    let cancelled = false;
-    setVerifying(true);
-    resolveBankAccount(accountNumber, bankCode)
-      .then((resolvedName) => {
-        if (cancelled) return;
-        setValue("accountName", resolvedName, { shouldDirty: true });
-        toast.success("Account verified", { description: resolvedName });
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        toast.error("Couldn't verify that account", {
-          description: error instanceof Error ? error.message : undefined,
-        });
-      })
-      .finally(() => {
-        if (!cancelled) setVerifying(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [bankCode, accountNumber, setValue]);
+  const { verifying } = useAutoVerifyBankAccount({
+    bankCode,
+    accountNumber,
+    onVerified: (resolvedName) =>
+      setValue("accountName", resolvedName, { shouldDirty: true }),
+    initialBankCode: collectionAccount.bankCode,
+    initialAccountNumber: collectionAccount.accountNumber,
+    initialAccountName: collectionAccount.accountName,
+  });
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -158,31 +115,23 @@ function CollectionAccountFormBody({
             control={control}
             name="bankCode"
             render={({ field }) => (
-              <Select
+              <Combobox
+                id={bankId}
                 value={field.value ?? ""}
                 onValueChange={(value) => {
-                  field.onChange(value ?? "");
+                  field.onChange(value);
                   invalidateAccountName();
                 }}
-                disabled={busy || banksLoading}
-              >
-                <SelectTrigger
-                  id={bankId}
-                  className="h-11 w-full"
-                  aria-invalid={!!errors.bankCode}
-                >
-                  <SelectValue
-                    placeholder={banksLoading ? "Loading banks…" : "Select"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {banks.map((bank) => (
-                    <SelectItem key={bank.code} value={bank.code}>
-                      {bank.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={banks.map((bank) => ({
+                  value: bank.code,
+                  label: bank.name,
+                }))}
+                placeholder="Select"
+                searchPlaceholder="Search banks…"
+                loading={banksLoading}
+                disabled={busy}
+                ariaInvalid={!!errors.bankCode}
+              />
             )}
           />
           <FieldError message={errors.bankCode?.message} />
