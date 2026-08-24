@@ -75,6 +75,11 @@ export function ProfileDetailsForm({
   const accountName = watch("accountName");
   const accountNumber = watch("accountNumber");
   const bankCode = watch("bankCode");
+  const nin = watch("nin");
+  // No real NIN provider is wired up (see profile-page.md's Future Improvements) — this is a
+  // format check, not an identity verification, but it's the standard the user asked for: once
+  // it's a well-formed 11-digit NIN, treat it the same way a verified 10-digit account number is.
+  const ninValid = (nin ?? "").trim().length === 11;
 
   const invalidateAccountName = () => {
     if (accountName) setValue("accountName", "", { shouldDirty: true });
@@ -202,6 +207,14 @@ export function ProfileDetailsForm({
             registration={register("nin")}
             error={errors.nin?.message}
             disabled={busy}
+            trailing={
+              ninValid ? (
+                <span className="flex items-center gap-1 text-xs font-medium text-success">
+                  <BadgeCheck className="size-3.5" aria-hidden="true" />
+                  Verified
+                </span>
+              ) : undefined
+            }
           />
           <ProfileField
             label="First Name"
@@ -409,6 +422,11 @@ function ProfileReadOnlyView({
           <ProfileViewField
             label="National Identification Number (NIN)"
             value={profile.nin}
+            trailing={
+              (profile.nin ?? "").trim().length === 11
+                ? verifiedBadge
+                : undefined
+            }
           />
           <ProfileViewField label="First Name" value={profile.firstName} />
           <ProfileViewField label="Last Name" value={profile.lastName} />

@@ -185,10 +185,13 @@ they can start typing). Page-level entrance still comes from the root
   quota — fine for a demo, worth adding (plus deleting the previous
   Cloudinary asset on re-upload, rather than leaving orphaned images) once
   this is backed by real user accounts.
-- **NIN's fake, permanently-`true` "Verified" badge was removed 2026-08-24** (flagged by the user
-  noticing it showing "Verified" on a profile with no NIN entered at all) — NIN is now honestly
-  just a plain text field (admin/self-entered), no verification claim, until there's a real
-  provider behind it. Bank Account's badge is unaffected — it's genuinely real, see
+- **NIN's fake, permanently-`true` "Verified" badge was fixed 2026-08-24** (flagged by the user
+  noticing it showing "Verified" on a profile with no NIN entered at all) — first removed
+  entirely, then per explicit follow-up direction replaced with a length-based standard matching
+  Bank Account's own UX: `nin.trim().length === 11` shows the badge, same as a 10-digit account
+  number. **This is a format check, not identity verification** — no real NIN provider is called;
+  it just means "well-formed," the same honest caveat as the note below. Bank Account's badge is
+  categorically different — it's real, backed by an actual Paystack API call, see
   [payments-and-payouts.md](./payments-and-payouts.md).
 - **Real NIN verification — deliberately not built yet, provider recommendation on file for when
   it's funded.** Unlike Termii (SMS), there's no free tier for NIN lookups in Nigeria — NIMC

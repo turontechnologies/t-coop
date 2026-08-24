@@ -8,14 +8,14 @@ import {
   MobileRecordCard,
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
-import type { CoopLoanTypeSetting } from "@/lib/admin-settings-data";
 import { formatMoney } from "@/lib/format";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { cn } from "@/lib/utils";
+import type { CoopLoanTypeSummary } from "@/types/coop-loans";
 
 interface LoanTypeSettingsTableProps {
-  settings: CoopLoanTypeSetting[];
-  onToggleStatus: (setting: CoopLoanTypeSetting) => void;
+  settings: CoopLoanTypeSummary[];
+  onToggleStatus: (setting: CoopLoanTypeSummary) => void;
 }
 
 export function LoanTypeSettingsTable({
@@ -44,9 +44,6 @@ export function LoanTypeSettingsTable({
                 Max Amount
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
-                Loan Approver
-              </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
                 Status
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
@@ -58,7 +55,7 @@ export function LoanTypeSettingsTable({
             {settings.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={6}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No loan types yet.
@@ -86,9 +83,6 @@ export function LoanTypeSettingsTable({
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {formatMoney(setting.maxAmount, currency)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {setting.approver1}
                     </td>
                     <td className="px-4 py-3">
                       <Badge
@@ -161,10 +155,6 @@ export function LoanTypeSettingsTable({
                 {
                   label: "Max Amount",
                   value: formatMoney(setting.maxAmount, currency),
-                },
-                {
-                  label: "Loan Approver",
-                  value: setting.approver1,
                 },
               ]}
               actions={

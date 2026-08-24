@@ -37,7 +37,23 @@
       "Bash(grep -n \"'/settings'\\\\|/settings\\\\`\\\\|settings-page.md\\\\]\\\\|Full Per-Feature Docs\" \"c:\\\\Users\\\\user\\\\Documents\\\\sam\\\\t-coop-app\\\\documentation\\\\project-overview.md\")",
       "Bash(curl -s -m 5 \"https://open.er-api.com/v6/latest/USD\")",
       "Bash(curl -s -m 5 \"https://api.frankfurter.app/latest?from=USD&to=NGN,GHS,EUR,GBP\")",
-      "Bash(curl -s -m 5 \"https://api.exchangerate.host/latest?base=USD\")"
+      "Bash(curl -s -m 5 \"https://api.exchangerate.host/latest?base=USD\")",
+      "Bash(curl -s -X PATCH http://localhost:8080/api/v1/cooperatives/coop-0002/users/MB-001/role -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"roleId\":\"__TRACKED_VAR__\"}')",
+      "Bash(curl -s http://localhost:8080/api/v1/cooperatives/coop-0002/users -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"membershipId\":\"MB-001\",\"password\":\"admin123\"}')",
+      "Bash(curl -s -X PATCH http://localhost:8080/api/v1/cooperatives/coop-0002/users/coop-0002/role -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"roleId\":\"__TRACKED_VAR__\"}')",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/cooperatives/coop-0002/savings/types -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"name\":\"E2E Test Savings\",\"minAmount\":1000,\"maxAmount\":500000}')",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/cooperatives/coop-0002/loans/types -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"name\":\"E2E Test Loan\",\"eligibilityPercent\":50,\"durationMonths\":12,\"maxAmount\":200000,\"repaymentInterval\":\"Monthly\",\"numberOfInstallments\":12,\"interestType\":\"Percentage\",\"interestAmount\":5}')",
+      "Bash(curl -s -X PATCH http://localhost:8080/api/v1/cooperatives/coop-0002 -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s -X PATCH http://localhost:8080/api/v1/cooperatives/coop-0002/bank-account -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"bankCode\":\"057\",\"accountNumber\":\"2052134896\",\"accountName\":\"SAMUEL PRECIOUS ADEDARA\"}')",
+      "Bash(curl -s -X DELETE http://localhost:8080/api/v1/cooperatives/coop-0002/users/MB-001 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X DELETE http://localhost:8080/api/v1/cooperatives/coop-0002/roles/__TRACKED_VAR__ -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s -X PATCH http://localhost:8080/api/v1/cooperatives/coop-0002/savings/types/c22b04f7-c052-4b9a-b654-7759d70d31b8/status -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"status\":\"Inactive\"}')",
+      "Bash(curl -s -X PATCH http://localhost:8080/api/v1/cooperatives/coop-0002/loans/types/437ea7a7-9f07-4e12-aa58-3f7115ed2822/status -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -H 'Content-Type: application/json' -d '{\"status\":\"Inactive\"}')",
+      "Bash(curl -s http://localhost:8080/api/v1/cooperatives/coop-0002 -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(curl -s http://localhost:8080/api/v1/cooperatives/coop-0002/roles -H 'Authorization: Bearer __CMDSUB_OUTPUT__')",
+      "Bash(powershell -NoProfile -Command \"netstat -ano | Select-String ':3000|:3001' \")",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 27444 -Force\")"
     ]
   }
 }

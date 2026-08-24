@@ -4,6 +4,7 @@ import {
   findCooperative,
   type CoopLoanRecord,
 } from "@/lib/coop-data";
+import type { LoanTypeSettingFormValues } from "@/lib/validations/admin-settings.schema";
 import { useCoopStore } from "@/store/coop.store";
 import type { CoopLoanTypeSummary } from "@/types/coop-loans";
 
@@ -48,7 +49,58 @@ export const coopLoanService = {
     const { data } = await apiClient.get<CoopLoanRecord>(`/loans/${recordId}`);
     return data;
   },
+
+  async createLoanType(
+    coopId: string,
+    values: LoanTypeSettingFormValues,
+  ): Promise<CoopLoanTypeSummary> {
+    const { data } = await apiClient.post<CoopLoanTypeSummary>(
+      `/cooperatives/${coopId}/loans/types`,
+      toLoanTypeRequest(values),
+    );
+    return data;
+  },
+
+  async updateLoanType(
+    coopId: string,
+    typeId: string,
+    values: LoanTypeSettingFormValues,
+  ): Promise<CoopLoanTypeSummary> {
+    const { data } = await apiClient.patch<CoopLoanTypeSummary>(
+      `/cooperatives/${coopId}/loans/types/${typeId}`,
+      toLoanTypeRequest(values),
+    );
+    return data;
+  },
+
+  async updateLoanTypeStatus(
+    coopId: string,
+    typeId: string,
+    status: "Active" | "Inactive",
+  ): Promise<CoopLoanTypeSummary> {
+    const { data } = await apiClient.patch<CoopLoanTypeSummary>(
+      `/cooperatives/${coopId}/loans/types/${typeId}/status`,
+      { status },
+    );
+    return data;
+  },
 };
+
+// LoanTypeCreateRequest on the backend names two fields differently from the response DTO
+// (numberOfInstallments vs numberOfRepayments, interestAmount vs interestRate) — this is the one
+// place that mismatch needs bridging.
+function toLoanTypeRequest(values: LoanTypeSettingFormValues) {
+  return {
+    name: values.name,
+    eligibilityPercent: values.eligibilityPercent,
+    durationMonths: values.durationMonths,
+    maxAmount: values.maxAmount,
+    repaymentInterval: values.repaymentInterval,
+    numberOfInstallments: values.numberOfInstallments,
+    interestType: values.interestType,
+    interestAmount: values.interestAmount,
+  };
+}
 
 // Kept for local demoing without a backend running at all — flip
 // NEXT_PUBLIC_USE_MOCK_COOPERATIVES back to "true" to use these instead.
@@ -61,6 +113,9 @@ async function mockGetLoanTypes(
   return coopLoansBySummaryType(coop).map((type, index) => ({
     id: `mock-loan-type-${index}`,
     ...type,
+    maxAmount: 0,
+    repaymentInterval: "Monthly" as const,
+    interestType: "Percentage" as const,
     status: "Active" as const,
   }));
 }

@@ -6,37 +6,48 @@ import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { LoanTypeSettingsTable } from "@/components/features/admin-settings/loan-type-settings-table";
-import type { CoopLoanTypeSetting } from "@/lib/admin-settings-data";
-import { useAdminSettingsStore } from "@/store/admin-settings.store";
+import {
+  useCoopLoanTypeMutations,
+  useCoopLoanTypes,
+} from "@/hooks/use-coop-loans";
+import { useAuthStore } from "@/store/auth.store";
+import type { CoopLoanTypeSummary } from "@/types/coop-loans";
 
 export function AdminLoanSettingsTab() {
   const router = useRouter();
-  const loanTypeSettings = useAdminSettingsStore(
-    (state) => state.loanTypeSettings,
-  );
-  const setLoanTypeStatus = useAdminSettingsStore(
-    (state) => state.setLoanTypeStatus,
-  );
+  const member = useAuthStore((state) => state.member);
+  const coopId = member?.id;
+  const typesQuery = useCoopLoanTypes(coopId);
+  const mutations = useCoopLoanTypeMutations(coopId ?? "");
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
+    const types = typesQuery.data ?? [];
     const query = search.trim().toLowerCase();
-    if (!query) return loanTypeSettings;
-    return loanTypeSettings.filter((setting) =>
-      setting.name.toLowerCase().includes(query),
-    );
-  }, [loanTypeSettings, search]);
+    if (!query) return types;
+    return types.filter((type) => type.name.toLowerCase().includes(query));
+  }, [typesQuery.data, search]);
 
-  const handleToggleStatus = async (setting: CoopLoanTypeSetting) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+  const handleToggleStatus = async (setting: CoopLoanTypeSummary) => {
     const next = setting.status === "Active" ? "Inactive" : "Active";
-    setLoanTypeStatus(setting.id, next);
-    toast.success(
-      next === "Active"
-        ? `${setting.name} activated`
-        : `${setting.name} disabled`,
-    );
+    try {
+      await mutations.updateTypeStatus.mutateAsync({
+        typeId: setting.id,
+        status: next,
+      });
+      toast.success(
+        next === "Active"
+          ? `${setting.name} activated`
+          : `${setting.name} disabled`,
+      );
+    } catch (error) {
+      toast.error("Couldn't update status", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   return (
@@ -59,10 +70,18 @@ export function AdminLoanSettingsTab() {
         </Button>
       </div>
 
-      <LoanTypeSettingsTable
-        settings={filtered}
-        onToggleStatus={handleToggleStatus}
-      />
+      <QueryBoundary
+        isLoading={typesQuery.isLoading}
+        isError={typesQuery.isError}
+        error={typesQuery.error}
+        onRetry={() => typesQuery.refetch()}
+        isRetrying={typesQuery.isFetching}
+      >
+        <LoanTypeSettingsTable
+          settings={filtered}
+          onToggleStatus={handleToggleStatus}
+        />
+      </QueryBoundary>
     </div>
   );
 }

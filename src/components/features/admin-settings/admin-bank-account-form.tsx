@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
-import { logActivity } from "@/lib/audit-log";
-import { getProfileData, updateProfileData } from "@/lib/profile-data";
+import { useProfile } from "@/hooks/use-profile";
+import { useUpdateProfile } from "@/hooks/use-update-profile";
 import {
   coopBankAccountSchema,
   type CoopBankAccountFormValues,
@@ -23,10 +23,14 @@ interface AdminBankAccountFormProps {
   member: AuthenticatedMember;
 }
 
+/** The admin's own personal receiving account — same field as their /profile page's Bank
+ * Account, shown here too since Settings groups everything account-related in one place. Reuses
+ * useUpdateProfile with a merge-onto-full-profile submit (same pattern as SettingsProfileTab)
+ * since the profile update endpoint takes the whole record, not just these three fields. */
 export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
-  const profile = getProfileData(member.id);
+  const { data: profile, isLoading } = useProfile(member.id);
+  const updateProfile = useUpdateProfile();
   const { banks, loading: banksLoading } = useBankList();
-  const [saving, setSaving] = useState(false);
   const bankId = useId();
   const accountNumberId = useId();
 
@@ -40,12 +44,16 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
     formState: { errors, isDirty },
   } = useForm<CoopBankAccountFormValues>({
     resolver: zodResolver(coopBankAccountSchema),
-    defaultValues: {
+  });
+
+  useEffect(() => {
+    if (!profile) return;
+    reset({
       bankCode: profile.bankCode,
       accountNumber: profile.accountNumber,
       accountName: profile.accountName,
-    },
-  });
+    });
+  }, [profile, reset]);
 
   const bankCode = watch("bankCode");
   const accountNumber = watch("accountNumber");
@@ -60,31 +68,38 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
     accountNumber,
     onVerified: (resolvedName) =>
       setValue("accountName", resolvedName, { shouldDirty: true }),
-    initialBankCode: profile.bankCode,
-    initialAccountNumber: profile.accountNumber,
-    initialAccountName: profile.accountName,
+    initialBankCode: profile?.bankCode ?? "",
+    initialAccountNumber: profile?.accountNumber ?? "",
+    initialAccountName: profile?.accountName ?? "",
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    updateProfileData(member.id, {
-      ...profile,
-      bankCode: values.bankCode,
-      accountNumber: values.accountNumber,
-      accountName: values.accountName ?? "",
-    });
-    logActivity({
-      module: "Settings",
-      action: "Update",
-      resource: "Bank Account",
-    });
-    setSaving(false);
-    reset(values);
-    toast.success("Bank account saved");
+    if (!profile) return;
+    try {
+      await updateProfile.mutateAsync({
+        memberId: member.id,
+        values: {
+          ...profile,
+          bankCode: values.bankCode,
+          accountNumber: values.accountNumber,
+          accountName: values.accountName ?? "",
+        },
+      });
+      reset(values);
+      toast.success("Bank account saved");
+    } catch (error) {
+      toast.error("Couldn't save bank account", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
 
-  const busy = saving || verifying;
+  const busy = updateProfile.isPending || verifying;
+
+  if (isLoading || !profile) {
+    return <div className="h-56 max-w-xl animate-pulse rounded-xl bg-muted" />;
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-xl space-y-6">
@@ -168,7 +183,7 @@ export function AdminBankAccountForm({ member }: AdminBankAccountFormProps) {
           Reset
         </Button>
         <Button type="submit" disabled={busy || !isDirty}>
-          {saving ? (
+          {updateProfile.isPending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               Saving…

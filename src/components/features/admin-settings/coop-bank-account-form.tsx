@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
@@ -11,21 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useUpdateCooperativeBankAccount } from "@/hooks/use-update-cooperative";
 import {
   coopBankAccountSchema,
   type CoopBankAccountFormValues,
 } from "@/lib/validations/admin-settings.schema";
-import { useAdminSettingsStore } from "@/store/admin-settings.store";
+import { useAuthStore } from "@/store/auth.store";
 
 export function CoopBankAccountForm() {
-  const coopBankAccount = useAdminSettingsStore(
-    (state) => state.coopBankAccount,
-  );
-  const updateCoopBankAccount = useAdminSettingsStore(
-    (state) => state.updateCoopBankAccount,
-  );
+  const member = useAuthStore((state) => state.member);
+  const coopId = member?.id;
+  const { data: coop, isLoading } = useCooperative(coopId);
+  const updateBankAccount = useUpdateCooperativeBankAccount(coopId ?? "");
   const { banks, loading: banksLoading } = useBankList();
-  const [saving, setSaving] = useState(false);
   const bankId = useId();
   const accountNumberId = useId();
 
@@ -39,8 +38,16 @@ export function CoopBankAccountForm() {
     formState: { errors, isDirty },
   } = useForm<CoopBankAccountFormValues>({
     resolver: zodResolver(coopBankAccountSchema),
-    defaultValues: coopBankAccount,
   });
+
+  useEffect(() => {
+    if (!coop) return;
+    reset({
+      bankCode: coop.bankCode ?? "",
+      accountNumber: coop.accountNumber ?? "",
+      accountName: coop.accountName ?? "",
+    });
+  }, [coop, reset]);
 
   const bankCode = watch("bankCode");
   const accountNumber = watch("accountNumber");
@@ -55,24 +62,29 @@ export function CoopBankAccountForm() {
     accountNumber,
     onVerified: (resolvedName) =>
       setValue("accountName", resolvedName, { shouldDirty: true }),
-    initialBankCode: coopBankAccount.bankCode,
-    initialAccountNumber: coopBankAccount.accountNumber,
-    initialAccountName: coopBankAccount.accountName,
+    initialBankCode: coop?.bankCode ?? "",
+    initialAccountNumber: coop?.accountNumber ?? "",
+    initialAccountName: coop?.accountName ?? "",
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    updateCoopBankAccount({
-      ...values,
-      accountName: values.accountName ?? "",
-    });
-    setSaving(false);
-    reset(values);
-    toast.success("Bank account saved");
+    try {
+      await updateBankAccount.mutateAsync(values);
+      reset(values);
+      toast.success("Bank account saved");
+    } catch (error) {
+      toast.error("Couldn't save bank account", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
 
-  const busy = saving || verifying;
+  const busy = updateBankAccount.isPending || verifying;
+
+  if (isLoading || !coop) {
+    return <div className="h-56 max-w-xl animate-pulse rounded-xl bg-muted" />;
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="max-w-xl space-y-6">
@@ -144,13 +156,19 @@ export function CoopBankAccountForm() {
         <Button
           type="button"
           variant="ghost"
-          onClick={() => reset(coopBankAccount)}
+          onClick={() =>
+            reset({
+              bankCode: coop.bankCode ?? "",
+              accountNumber: coop.accountNumber ?? "",
+              accountName: coop.accountName ?? "",
+            })
+          }
           disabled={busy}
         >
           Reset
         </Button>
         <Button type="submit" disabled={busy || !isDirty}>
-          {saving ? (
+          {updateBankAccount.isPending ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               Saving…

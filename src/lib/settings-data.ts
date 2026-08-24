@@ -82,6 +82,19 @@ export const PERMISSION_MODULES = [
   "Settings",
 ] as const;
 
+/** Same idea as PERMISSION_MODULES but for a CoopRole (admin's own Settings -> User Management
+ * -> Roles) — matches admin's own nav labels exactly (see NAV_ITEMS.admin in dashboard-nav.ts),
+ * since a co-op-scoped staff member's nav is filtered against that list. */
+export const COOP_PERMISSION_MODULES = [
+  "Dashboard",
+  "Members Directory",
+  "Notice Board",
+  "Savings & Contributions",
+  "Loans",
+  "Support",
+  "Settings",
+] as const;
+
 /** "Invited" is a real backend state now — a super admin invited them by email but they
  * haven't accepted yet, so they can't log in. Never produced by the mock. */
 export type PlatformUserStatus = "Active" | "Inactive" | "Invited";

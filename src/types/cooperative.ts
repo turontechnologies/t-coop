@@ -16,6 +16,10 @@ export interface CooperativeSummary {
   city: string;
   status: "Active" | "Disabled";
   currency: string;
+  withdrawalFeePercent: number;
+  bankCode: string | null;
+  accountNumber: string | null;
+  accountName: string | null;
   memberCount: number;
   savingsTypeCount: number;
   loanTypeCount: number;

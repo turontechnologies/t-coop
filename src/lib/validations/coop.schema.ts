@@ -33,6 +33,14 @@ export const editCooperativeSchema = z.object({
   country: z.string().min(1, "Select a country"),
   state: z.string().trim().min(1, "Select a state"),
   city: z.string().trim().min(1, "Select a city"),
+  // Only ever set by an admin editing their own co-op (see AdminCooperativeSettingsTab) — the
+  // super admin's own "Edit Cooperative" form never sends these, so they stay optional here.
+  currency: z.string().trim().optional(),
+  withdrawalFeePercent: z
+    .number()
+    .min(0, "Enter a percentage of 0 or more")
+    .max(100, "Enter a percentage of 100 or less")
+    .optional(),
 });
 
 export type EditCooperativeFormValues = z.infer<typeof editCooperativeSchema>;

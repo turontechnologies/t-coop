@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
@@ -9,20 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useProfile } from "@/hooks/use-profile";
+import { useUpdateCooperative } from "@/hooks/use-update-cooperative";
 import {
   withdrawalFeeSchema,
   type WithdrawalFeeFormValues,
 } from "@/lib/validations/admin-settings.schema";
-import { useAdminSettingsStore } from "@/store/admin-settings.store";
+import { useAuthStore } from "@/store/auth.store";
 
 export function WithdrawalFeeForm() {
-  const withdrawalFeePercent = useAdminSettingsStore(
-    (state) => state.withdrawalFeePercent,
-  );
-  const updateWithdrawalFeePercent = useAdminSettingsStore(
-    (state) => state.updateWithdrawalFeePercent,
-  );
-  const [saving, setSaving] = useState(false);
+  const member = useAuthStore((state) => state.member);
+  const coopId = member?.id;
+  const { data: coop, isLoading } = useCooperative(coopId);
+  const { data: profile } = useProfile(coopId);
+  const updateCooperative = useUpdateCooperative(coopId ?? "");
   const feeId = useId();
 
   const {
@@ -32,17 +33,45 @@ export function WithdrawalFeeForm() {
     formState: { errors, isDirty },
   } = useForm<WithdrawalFeeFormValues>({
     resolver: zodResolver(withdrawalFeeSchema),
-    defaultValues: { withdrawalFeePercent },
+    values: coop
+      ? { withdrawalFeePercent: coop.withdrawalFeePercent }
+      : undefined,
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    updateWithdrawalFeePercent(values.withdrawalFeePercent);
-    setSaving(false);
-    reset(values);
-    toast.success("Withdrawal fee updated");
+    if (!coop || !profile) return;
+    try {
+      await updateCooperative.mutateAsync({
+        name: coop.name,
+        adminFirstName: profile.firstName,
+        adminLastName: profile.lastName,
+        contactEmail: coop.contactEmail,
+        contactPhone: coop.contactPhone,
+        address: coop.address,
+        country: coop.country,
+        state: coop.state,
+        city: coop.city,
+        withdrawalFeePercent: values.withdrawalFeePercent,
+      });
+      reset(values);
+      toast.success("Withdrawal fee updated");
+    } catch (error) {
+      toast.error("Couldn't update withdrawal fee", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
+
+  if (isLoading || !coop) {
+    return (
+      <Card>
+        <CardContent>
+          <div className="h-20 animate-pulse rounded-lg bg-muted" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -68,14 +97,18 @@ export function WithdrawalFeeForm() {
                 inputMode="decimal"
                 placeholder="Enter percentage"
                 className="h-11 w-32"
+                disabled={updateCooperative.isPending}
                 aria-invalid={!!errors.withdrawalFeePercent}
                 {...register("withdrawalFeePercent", {
                   valueAsNumber: true,
                 })}
               />
             </div>
-            <Button type="submit" disabled={saving || !isDirty}>
-              {saving ? (
+            <Button
+              type="submit"
+              disabled={updateCooperative.isPending || !isDirty}
+            >
+              {updateCooperative.isPending ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : (
                 "Save"

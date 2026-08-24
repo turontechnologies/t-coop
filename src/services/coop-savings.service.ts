@@ -4,6 +4,7 @@ import {
   findCooperative,
   type CoopSavingsRecord,
 } from "@/lib/coop-data";
+import type { SavingsTypeSettingFormValues } from "@/lib/validations/admin-settings.schema";
 import { useCoopStore } from "@/store/coop.store";
 import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
 
@@ -47,6 +48,41 @@ export const coopSavingsService = {
     if (USE_MOCK()) return mockGetSavingsRecord(recordId);
     const { data } = await apiClient.get<CoopSavingsRecord>(
       `/savings/${recordId}`,
+    );
+    return data;
+  },
+
+  async createSavingsType(
+    coopId: string,
+    values: SavingsTypeSettingFormValues,
+  ): Promise<CoopSavingsTypeSummary> {
+    const { data } = await apiClient.post<CoopSavingsTypeSummary>(
+      `/cooperatives/${coopId}/savings/types`,
+      { name: values.name, minAmount: values.min, maxAmount: values.max },
+    );
+    return data;
+  },
+
+  async updateSavingsType(
+    coopId: string,
+    typeId: string,
+    values: SavingsTypeSettingFormValues,
+  ): Promise<CoopSavingsTypeSummary> {
+    const { data } = await apiClient.patch<CoopSavingsTypeSummary>(
+      `/cooperatives/${coopId}/savings/types/${typeId}`,
+      { name: values.name, minAmount: values.min, maxAmount: values.max },
+    );
+    return data;
+  },
+
+  async updateSavingsTypeStatus(
+    coopId: string,
+    typeId: string,
+    status: "Active" | "Inactive",
+  ): Promise<CoopSavingsTypeSummary> {
+    const { data } = await apiClient.patch<CoopSavingsTypeSummary>(
+      `/cooperatives/${coopId}/savings/types/${typeId}/status`,
+      { status },
     );
     return data;
   },

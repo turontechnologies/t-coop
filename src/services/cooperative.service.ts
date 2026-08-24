@@ -9,6 +9,7 @@ import type {
   AddCooperativeFormValues,
   EditCooperativeFormValues,
 } from "@/lib/validations/coop.schema";
+import type { CoopBankAccountFormValues } from "@/lib/validations/admin-settings.schema";
 
 const USE_MOCK = () => process.env.NEXT_PUBLIC_USE_MOCK_COOPERATIVES === "true";
 
@@ -25,6 +26,10 @@ function toSummary(coop: Cooperative): CooperativeSummary {
     city: coop.city,
     status: coop.status,
     currency: coop.currency,
+    withdrawalFeePercent: 0,
+    bankCode: null,
+    accountNumber: null,
+    accountName: null,
     memberCount: coop.members.length,
     savingsTypeCount: SAVINGS_TYPES.length,
     loanTypeCount: LOAN_TYPES.length,
@@ -79,6 +84,17 @@ export const cooperativeService = {
     const { data } = await apiClient.patch<CooperativeSummary>(
       `/cooperatives/${id}/status`,
       { status },
+    );
+    return data;
+  },
+
+  async updateBankAccount(
+    id: string,
+    values: CoopBankAccountFormValues,
+  ): Promise<CooperativeSummary> {
+    const { data } = await apiClient.patch<CooperativeSummary>(
+      `/cooperatives/${id}/bank-account`,
+      { ...values, accountName: values.accountName ?? "" },
     );
     return data;
   },

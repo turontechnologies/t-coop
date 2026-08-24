@@ -10,144 +10,153 @@ import {
   TabsPanel,
   TabsTab,
 } from "@/components/ui/tabs";
-import { CreateRoleModal } from "@/components/features/settings/create-role-modal";
-import { EditUserModal } from "@/components/features/settings/edit-user-modal";
-import { InviteUserModal } from "@/components/features/settings/invite-user-modal";
-import { PlatformRolesTable } from "@/components/features/settings/platform-roles-table";
-import { PlatformUsersTable } from "@/components/features/settings/platform-users-table";
-import { logActivity } from "@/lib/audit-log";
-import type { PlatformRole, PlatformUser } from "@/lib/settings-data";
-import type {
-  CreateRoleFormValues,
-  InviteUserFormValues,
-} from "@/lib/validations/settings.schema";
-import { useSettingsStore } from "@/store/settings.store";
+import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import { AssignCoopUserModal } from "@/components/features/settings/assign-coop-user-modal";
+import { CoopRolesTable } from "@/components/features/settings/coop-roles-table";
+import { CoopUsersTable } from "@/components/features/settings/coop-users-table";
+import { CreateCoopRoleModal } from "@/components/features/settings/create-coop-role-modal";
+import { EditCoopUserModal } from "@/components/features/settings/edit-coop-user-modal";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import {
+  useCoopRoles,
+  useCoopStaffMutations,
+  useCoopUsers,
+} from "@/hooks/use-coop-staff";
+import type { AssignCoopRoleFormValues } from "@/lib/validations/admin-settings.schema";
+import type { CreateRoleFormValues } from "@/lib/validations/settings.schema";
+import { useAuthStore } from "@/store/auth.store";
+import type { CoopRole, CoopUser } from "@/services/coop-staff.service";
 
 type UserManagementTab = "users" | "roles";
 
+/**
+ * Admin's own Settings -> User Management, scoped entirely to their own co-op. Mirrors
+ * SuperAdminUserManagementTab's shape (users/roles sub-tabs, same table/modal split) but with one
+ * key difference: a "user" here is never created fresh — the admin assigns a CoopRole to an
+ * EXISTING member (see Members Directory for adding a person in the first place), so they keep
+ * logging in with their existing membership ID and password. Real backend only
+ * (CoopRoleController / CoopUserController).
+ */
 export function SettingsUserManagementTab() {
+  const member = useAuthStore((state) => state.member);
+  const coopId = member?.id;
+
   const [activeTab, setActiveTab] = useState<UserManagementTab>("users");
-  const platformUsers = useSettingsStore((state) => state.platformUsers);
-  const platformRoles = useSettingsStore((state) => state.platformRoles);
-  const inviteUser = useSettingsStore((state) => state.inviteUser);
-  const updatePlatformUserRole = useSettingsStore(
-    (state) => state.updatePlatformUserRole,
-  );
-  const setPlatformUserStatus = useSettingsStore(
-    (state) => state.setPlatformUserStatus,
-  );
-  const removePlatformUser = useSettingsStore(
-    (state) => state.removePlatformUser,
-  );
-  const createRole = useSettingsStore((state) => state.createRole);
-  const updatePlatformRole = useSettingsStore(
-    (state) => state.updatePlatformRole,
-  );
-  const setPlatformRoleStatus = useSettingsStore(
-    (state) => state.setPlatformRoleStatus,
-  );
-  const removePlatformRole = useSettingsStore(
-    (state) => state.removePlatformRole,
-  );
+  const membersQuery = useCoopMembers(coopId);
+  const usersQuery = useCoopUsers(coopId);
+  const rolesQuery = useCoopRoles(coopId);
+  const members = membersQuery.data ?? [];
+  const users = usersQuery.data ?? [];
+  const roles = rolesQuery.data ?? [];
+  const mutations = useCoopStaffMutations(coopId ?? "");
 
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<PlatformUser | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<CoopUser | null>(null);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<PlatformRole | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [editingRole, setEditingRole] = useState<CoopRole | null>(null);
 
-  const handleInvite = async (values: InviteUserFormValues) => {
-    setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    const user: PlatformUser = {
-      id: `usr-${Date.now()}`,
-      name: values.email.split("@")[0],
-      email: values.email,
-      role: values.role,
-      dateAdded: new Date().toISOString().slice(0, 10),
-      status: "Active",
-    };
-    inviteUser(user);
-    setBusy(false);
-    setInviteOpen(false);
-    toast.success("User invited", {
-      description: `${values.email} was added as ${values.role}.`,
-    });
+  const busy =
+    mutations.assignRole.isPending ||
+    mutations.createRole.isPending ||
+    mutations.updateRole.isPending;
+
+  const handleAssign = async (values: AssignCoopRoleFormValues) => {
+    try {
+      await mutations.assignRole.mutateAsync(values);
+      setAssignOpen(false);
+      toast.success("Role assigned");
+    } catch (error) {
+      toast.error("Couldn't assign role", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
-  const handleSaveUser = async (userId: string, role: string) => {
-    setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    updatePlatformUserRole(userId, role);
-    setBusy(false);
-    setEditingUser(null);
-    toast.success("User updated");
+  const handleSaveUser = async (memberId: string, roleId: string) => {
+    try {
+      await mutations.assignRole.mutateAsync({ memberId, roleId });
+      setEditingUser(null);
+      toast.success("Role updated");
+    } catch (error) {
+      toast.error("Couldn't update role", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
-  const handleToggleUserStatus = async (user: PlatformUser) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    const next = user.status === "Active" ? "Inactive" : "Active";
-    setPlatformUserStatus(user.id, next);
-    toast.success(
-      next === "Active" ? `${user.name} activated` : `${user.name} disabled`,
-    );
-  };
-
-  const handleRemoveUser = (user: PlatformUser) => {
-    removePlatformUser(user.id);
-    toast.success(`${user.name} removed`);
+  const handleRemoveUser = async (user: CoopUser) => {
+    try {
+      await mutations.removeUser.mutateAsync(user.id);
+      toast.success(`${user.name}'s role was removed`);
+    } catch (error) {
+      toast.error("Couldn't remove role", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   const handleRoleSubmit = async (values: CreateRoleFormValues) => {
-    setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    if (editingRole) {
-      updatePlatformRole(editingRole.id, {
-        name: values.roleName,
-        permissions: values.permissions,
-      });
-      toast.success("Role updated", { description: values.roleName });
-    } else {
-      const role: PlatformRole = {
-        id: `role-${Date.now()}`,
-        name: values.roleName,
-        permissions: values.permissions,
-        dateAdded: new Date().toISOString().slice(0, 10),
-        status: "Active",
-      };
-      createRole(role);
-      toast.success("Role created", { description: values.roleName });
+    try {
+      if (editingRole) {
+        await mutations.updateRole.mutateAsync({
+          id: editingRole.id,
+          name: values.roleName,
+          permissions: values.permissions,
+        });
+        toast.success("Role updated", { description: values.roleName });
+      } else {
+        await mutations.createRole.mutateAsync({
+          name: values.roleName,
+          permissions: values.permissions,
+        });
+        toast.success("Role created", { description: values.roleName });
+      }
+      setRoleModalOpen(false);
+      setEditingRole(null);
+    } catch (error) {
+      toast.error(
+        editingRole ? "Couldn't update role" : "Couldn't create role",
+        {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        },
+      );
     }
-    setBusy(false);
-    setRoleModalOpen(false);
-    setEditingRole(null);
   };
 
-  const handleToggleRoleStatus = async (role: PlatformRole) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+  const handleToggleRoleStatus = async (role: CoopRole) => {
     const next = role.status === "Active" ? "Inactive" : "Active";
-    setPlatformRoleStatus(role.id, next);
-    toast.success(
-      next === "Active" ? `${role.name} activated` : `${role.name} disabled`,
-    );
+    try {
+      await mutations.updateRoleStatus.mutateAsync({
+        id: role.id,
+        status: next,
+      });
+      toast.success(
+        next === "Active" ? `${role.name} activated` : `${role.name} disabled`,
+      );
+    } catch (error) {
+      toast.error("Couldn't update role", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
-  const handleRemoveRole = (role: PlatformRole) => {
-    const inUse = platformUsers.some((user) => user.role === role.name);
-    if (inUse) {
-      logActivity({
-        module: "Users",
-        action: "Delete",
-        resource: role.name,
-        status: "Failed",
-      });
+  const handleRemoveRole = async (role: CoopRole) => {
+    try {
+      await mutations.deleteRole.mutateAsync(role.id);
+      toast.success(`${role.name} removed`);
+    } catch (error) {
       toast.error("Can't remove that role", {
-        description: `${role.name} is still assigned to at least one user — reassign them first.`,
+        description:
+          error instanceof Error
+            ? error.message
+            : `${role.name} is still assigned to at least one user — reassign them first.`,
       });
-      return;
     }
-    removePlatformRole(role.id);
-    toast.success(`${role.name} removed`);
   };
 
   return (
@@ -163,7 +172,12 @@ export function SettingsUserManagementTab() {
             <TabsIndicator />
           </TabsList>
           {activeTab === "users" ? (
-            <Button onClick={() => setInviteOpen(true)}>Invite Users</Button>
+            <Button
+              onClick={() => setAssignOpen(true)}
+              disabled={roles.length === 0}
+            >
+              Assign Role
+            </Button>
           ) : (
             <Button
               onClick={() => {
@@ -177,44 +191,67 @@ export function SettingsUserManagementTab() {
         </div>
 
         <TabsPanel value="users">
-          <PlatformUsersTable
-            users={platformUsers}
-            onEdit={setEditingUser}
-            onToggleStatus={handleToggleUserStatus}
-            onRemove={handleRemoveUser}
-          />
+          <QueryBoundary
+            isLoading={usersQuery.isLoading}
+            isError={usersQuery.isError}
+            error={usersQuery.error}
+            onRetry={() => usersQuery.refetch()}
+            isRetrying={usersQuery.isFetching}
+          >
+            {roles.length === 0 && users.length === 0 ? (
+              <p className="rounded-lg bg-muted px-3 py-2.5 text-sm text-muted-foreground">
+                Create a role first, then assign it to one of your members.
+              </p>
+            ) : (
+              <CoopUsersTable
+                users={users}
+                onEdit={setEditingUser}
+                onRemove={handleRemoveUser}
+              />
+            )}
+          </QueryBoundary>
         </TabsPanel>
         <TabsPanel value="roles">
-          <PlatformRolesTable
-            roles={platformRoles}
-            users={platformUsers}
-            onEdit={(role) => {
-              setEditingRole(role);
-              setRoleModalOpen(true);
-            }}
-            onToggleStatus={handleToggleRoleStatus}
-            onRemove={handleRemoveRole}
-          />
+          <QueryBoundary
+            isLoading={rolesQuery.isLoading}
+            isError={rolesQuery.isError}
+            error={rolesQuery.error}
+            onRetry={() => rolesQuery.refetch()}
+            isRetrying={rolesQuery.isFetching}
+          >
+            <CoopRolesTable
+              roles={roles}
+              users={users}
+              onEdit={(role) => {
+                setEditingRole(role);
+                setRoleModalOpen(true);
+              }}
+              onToggleStatus={handleToggleRoleStatus}
+              onRemove={handleRemoveRole}
+            />
+          </QueryBoundary>
         </TabsPanel>
       </Tabs>
 
-      <InviteUserModal
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        roles={platformRoles}
+      <AssignCoopUserModal
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+        members={members}
+        users={users}
+        roles={roles}
         busy={busy}
-        onInvite={handleInvite}
+        onAssign={handleAssign}
       />
-      <EditUserModal
+      <EditCoopUserModal
         user={editingUser}
         onOpenChange={(open) => {
           if (!open) setEditingUser(null);
         }}
-        roles={platformRoles}
+        roles={roles}
         busy={busy}
         onSave={handleSaveUser}
       />
-      <CreateRoleModal
+      <CreateCoopRoleModal
         open={roleModalOpen}
         onOpenChange={(open) => {
           setRoleModalOpen(open);

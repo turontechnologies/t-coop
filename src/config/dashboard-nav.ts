@@ -78,15 +78,23 @@ export function getRoleLabel(role: UserRole): string {
   return ROLE_LABEL[role];
 }
 
-/** `permissionModules` only matters for role "support" — every other role's nav is fixed,
- * ignoring whatever's passed. Null/undefined for a support user (shouldn't normally happen —
- * every real invite carries a role) means "no modules," not "all modules." */
+/** `permissionModules` matters for role "support" (platform staff, filtered against
+ * super_admin's own module set) and for role "member" when `permissionModules` is non-null — a
+ * co-op-scoped staff member invited via Settings -> User Management (see CoopRole/CoopUser on
+ * the backend). A co-op can only have one "admin" (the row whose id equals the co-op's own id),
+ * so this kind of staff stays role "member" structurally but is filtered against admin's nav
+ * instead of the plain member nav. Every other case is fixed, ignoring whatever's passed. */
 export function getNavItems(
   role: UserRole,
   permissionModules?: string[] | null,
 ): NavItem[] {
-  const items = NAV_ITEMS[role];
-  if (role !== "support") return items;
-  const allowed = new Set(permissionModules ?? []);
-  return items.filter((item) => allowed.has(item.label));
+  if (role === "support") {
+    const allowed = new Set(permissionModules ?? []);
+    return NAV_ITEMS.support.filter((item) => allowed.has(item.label));
+  }
+  if (role === "member" && permissionModules != null) {
+    const allowed = new Set(permissionModules);
+    return NAV_ITEMS.admin.filter((item) => allowed.has(item.label));
+  }
+  return NAV_ITEMS[role];
 }

@@ -12,6 +12,7 @@ import { AdminCooperativeSettingsTab } from "@/components/features/admin-setting
 import { AdminLoanSettingsTab } from "@/components/features/admin-settings/admin-loan-settings-tab";
 import { AdminSavingsSettingsTab } from "@/components/features/admin-settings/admin-savings-settings-tab";
 import { AdminSettingsProfileTab } from "@/components/features/admin-settings/admin-settings-profile-tab";
+import { MemberSettingsTab } from "@/components/features/settings/member-settings-tab";
 import { SettingsIntegrationsTab } from "@/components/features/settings/settings-integrations-tab";
 import { SettingsLogsTab } from "@/components/features/settings/settings-logs-tab";
 import { SettingsPaymentTab } from "@/components/features/settings/settings-payment-tab";
@@ -25,21 +26,22 @@ export default function SettingsPage() {
   if (!member) return null;
 
   if (member.role === "member" || member.role === "support") {
-    // Platform staff (support) have no co-operative of their own — same single-tab Profile
+    // Platform staff (support) have no co-operative of their own — same single-tab Settings
     // view as a member, not the co-op-scoped Savings/Loans/Co-operative/User Management tabs
-    // the admin branch below renders.
+    // the admin branch below renders. Personal details (name, address, bank account, etc.) live
+    // on /profile already — this tab only covers settings-specific concerns (password change).
     return (
       <div className="pt-6">
         <Card>
           <CardContent>
-            <Tabs defaultValue="profile">
+            <Tabs defaultValue="account">
               <TabsList>
-                <TabsTab value="profile">Profile</TabsTab>
+                <TabsTab value="account">Account</TabsTab>
                 <TabsIndicator />
               </TabsList>
 
-              <TabsPanel value="profile">
-                <AdminSettingsProfileTab member={member} />
+              <TabsPanel value="account">
+                <MemberSettingsTab member={member} />
               </TabsPanel>
             </Tabs>
           </CardContent>

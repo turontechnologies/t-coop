@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   coopSavingsService,
   type CoopSavingsRecordFilters,
 } from "@/services/coop-savings.service";
+import type { SavingsTypeSettingFormValues } from "@/lib/validations/admin-settings.schema";
 
 export function useCoopSavingsTypes(coopId: string | undefined) {
   return useQuery({
@@ -33,4 +34,42 @@ export function useCoopSavingsRecord(recordId: string | undefined) {
     enabled: Boolean(recordId),
     staleTime: 30_000,
   });
+}
+
+export function useCoopSavingsTypeMutations(coopId: string) {
+  const queryClient = useQueryClient();
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: ["coop-savings", coopId, "types"],
+    });
+
+  const createType = useMutation({
+    mutationFn: (values: SavingsTypeSettingFormValues) =>
+      coopSavingsService.createSavingsType(coopId, values),
+    onSuccess: invalidate,
+  });
+
+  const updateType = useMutation({
+    mutationFn: ({
+      typeId,
+      values,
+    }: {
+      typeId: string;
+      values: SavingsTypeSettingFormValues;
+    }) => coopSavingsService.updateSavingsType(coopId, typeId, values),
+    onSuccess: invalidate,
+  });
+
+  const updateTypeStatus = useMutation({
+    mutationFn: ({
+      typeId,
+      status,
+    }: {
+      typeId: string;
+      status: "Active" | "Inactive";
+    }) => coopSavingsService.updateSavingsTypeStatus(coopId, typeId, status),
+    onSuccess: invalidate,
+  });
+
+  return { createType, updateType, updateTypeStatus };
 }

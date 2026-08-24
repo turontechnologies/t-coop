@@ -1,43 +1,61 @@
 "use client";
 
-import { Pencil, Power } from "lucide-react";
+import { Pencil, Power, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import {
   MobileRecordCard,
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
-import { useCurrency } from "@/components/providers/currency-provider";
-import { formatMoney } from "@/lib/format";
+import { formatDateLong } from "@/lib/format";
+import { COOP_PERMISSION_MODULES } from "@/lib/settings-data";
+import type { CoopRole, CoopUser } from "@/services/coop-staff.service";
 import { cn } from "@/lib/utils";
-import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
 
-interface SavingsTypeSettingsTableProps {
-  settings: CoopSavingsTypeSummary[];
-  onEdit: (setting: CoopSavingsTypeSummary) => void;
-  onToggleStatus: (setting: CoopSavingsTypeSummary) => void;
+interface CoopRolesTableProps {
+  roles: CoopRole[];
+  users: CoopUser[];
+  onEdit: (role: CoopRole) => void;
+  onToggleStatus: (role: CoopRole) => void;
+  onRemove: (role: CoopRole) => void;
 }
 
-export function SavingsTypeSettingsTable({
-  settings,
+function permissionsLabel(permissions: string[]): string {
+  if (permissions.length >= COOP_PERMISSION_MODULES.length) return "All access";
+  if (permissions.length === 1) return permissions[0];
+  return `${permissions.length} modules`;
+}
+
+export function CoopRolesTable({
+  roles,
+  users,
   onEdit,
   onToggleStatus,
-}: SavingsTypeSettingsTableProps) {
-  const currency = useCurrency();
+  onRemove,
+}: CoopRolesTableProps) {
   return (
     <div className="space-y-4">
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
-        <table className="w-full min-w-[600px] text-left text-sm">
+        <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-border bg-accent/60">
+              <th className="px-4 py-2.5 font-medium text-foreground">Role</th>
               <th className="px-4 py-2.5 font-medium text-foreground">
-                Savings Type
+                Permissions
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
-                Minimum Amount
-              </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
-                Maximum Amount
+                Date Added
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
                 Status
@@ -48,47 +66,48 @@ export function SavingsTypeSettingsTable({
             </tr>
           </thead>
           <tbody>
-            {settings.length === 0 ? (
+            {roles.length === 0 ? (
               <tr>
                 <td
                   colSpan={5}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
-                  No savings types yet.
+                  No roles created yet.
                 </td>
               </tr>
             ) : (
-              settings.map((setting) => {
-                const isActive = setting.status === "Active";
+              roles.map((role) => {
+                const isActive = role.status === "Active";
+                const inUse = users.some((user) => user.role === role.name);
                 return (
                   <tr
-                    key={setting.id}
+                    key={role.id}
                     className="border-b border-border last:border-0"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {setting.name}
+                      {role.name}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatMoney(setting.min, currency)}
+                      {permissionsLabel(role.permissions)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {formatMoney(setting.max, currency)}
+                      {formatDateLong(new Date(role.dateAdded))}
                     </td>
                     <td className="px-4 py-3">
                       <Badge
                         variant={isActive ? "secondary" : "destructive"}
                         className={cn(isActive && "bg-success/15 text-success")}
                       >
-                        {setting.status}
+                        {role.status}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => onEdit(setting)}
+                          onClick={() => onEdit(role)}
                           className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          aria-label={`Edit ${setting.name}`}
+                          aria-label={`Edit ${role.name}`}
                         >
                           <Pencil className="size-3.5" aria-hidden="true" />
                         </button>
@@ -99,18 +118,23 @@ export function SavingsTypeSettingsTable({
                               className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                               aria-label={
                                 isActive
-                                  ? `Disable ${setting.name}`
-                                  : `Activate ${setting.name}`
+                                  ? `Disable ${role.name}`
+                                  : `Activate ${role.name}`
                               }
                             />
                           }
-                          entityLabel="Savings Type"
-                          name={setting.name}
+                          entityLabel="Role"
+                          name={role.name}
                           isActive={isActive}
-                          onConfirm={() => onToggleStatus(setting)}
+                          onConfirm={() => onToggleStatus(role)}
                         >
                           <Power className="size-3.5" aria-hidden="true" />
                         </ConfirmToggleDialog>
+                        <RemoveRoleDialog
+                          role={role}
+                          inUse={inUse}
+                          onRemove={onRemove}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -122,40 +146,41 @@ export function SavingsTypeSettingsTable({
       </div>
 
       <MobileRecordList
-        isEmpty={settings.length === 0}
-        emptyMessage="No savings types yet."
+        isEmpty={roles.length === 0}
+        emptyMessage="No roles created yet."
       >
-        {settings.map((setting) => {
-          const isActive = setting.status === "Active";
+        {roles.map((role) => {
+          const isActive = role.status === "Active";
+          const inUse = users.some((user) => user.role === role.name);
           return (
             <MobileRecordCard
-              key={setting.id}
-              title={setting.name}
+              key={role.id}
+              title={role.name}
               badge={
                 <Badge
                   variant={isActive ? "secondary" : "destructive"}
                   className={cn(isActive && "bg-success/15 text-success")}
                 >
-                  {setting.status}
+                  {role.status}
                 </Badge>
               }
               fields={[
                 {
-                  label: "Minimum Amount",
-                  value: formatMoney(setting.min, currency),
+                  label: "Permissions",
+                  value: permissionsLabel(role.permissions),
                 },
                 {
-                  label: "Maximum Amount",
-                  value: formatMoney(setting.max, currency),
+                  label: "Date Added",
+                  value: formatDateLong(new Date(role.dateAdded)),
                 },
               ]}
               actions={
                 <>
                   <button
                     type="button"
-                    onClick={() => onEdit(setting)}
+                    onClick={() => onEdit(role)}
                     className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    aria-label={`Edit ${setting.name}`}
+                    aria-label={`Edit ${role.name}`}
                   >
                     <Pencil className="size-3.5" aria-hidden="true" />
                   </button>
@@ -166,18 +191,23 @@ export function SavingsTypeSettingsTable({
                         className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         aria-label={
                           isActive
-                            ? `Disable ${setting.name}`
-                            : `Activate ${setting.name}`
+                            ? `Disable ${role.name}`
+                            : `Activate ${role.name}`
                         }
                       />
                     }
-                    entityLabel="Savings Type"
-                    name={setting.name}
+                    entityLabel="Role"
+                    name={role.name}
                     isActive={isActive}
-                    onConfirm={() => onToggleStatus(setting)}
+                    onConfirm={() => onToggleStatus(role)}
                   >
                     <Power className="size-3.5" aria-hidden="true" />
                   </ConfirmToggleDialog>
+                  <RemoveRoleDialog
+                    role={role}
+                    inUse={inUse}
+                    onRemove={onRemove}
+                  />
                 </>
               }
             />
@@ -185,5 +215,55 @@ export function SavingsTypeSettingsTable({
         })}
       </MobileRecordList>
     </div>
+  );
+}
+
+function RemoveRoleDialog({
+  role,
+  inUse,
+  onRemove,
+}: {
+  role: CoopRole;
+  inUse: boolean;
+  onRemove: (role: CoopRole) => void;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger
+        render={
+          <button
+            type="button"
+            disabled={inUse}
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-40"
+            aria-label={
+              inUse
+                ? `Can't remove ${role.name} — still assigned to a user`
+                : `Remove ${role.name}`
+            }
+            title={inUse ? "Reassign or remove its users first" : undefined}
+          />
+        }
+      >
+        <Trash2 className="size-3.5" aria-hidden="true" />
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove role</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the &quot;{role.name}&quot; role. This can&apos;t be
+            undone from here.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => onRemove(role)}
+          >
+            Remove
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
