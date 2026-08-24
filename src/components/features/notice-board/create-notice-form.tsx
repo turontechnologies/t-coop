@@ -43,19 +43,17 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { TimePicker, formatTimeLabel } from "@/components/ui/time-picker";
 import { formatDateLong } from "@/lib/format";
-import {
-  MAX_ATTACHMENT_BYTES,
-  readFileAsDataUrl,
-} from "@/lib/file-to-data-url";
 import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
-import type { Notice } from "@/lib/notice-data";
+import type { NoticeAttachment } from "@/types/notice";
 import {
   createNoticeSchema,
   type CreateNoticeFormValues,
 } from "@/lib/validations/notice.schema";
-import { useCoopStore } from "@/store/coop.store";
-import { useNoticeStore } from "@/store/notice.store";
+import { useCooperatives } from "@/hooks/use-cooperatives";
+import { useNoticeMutations } from "@/hooks/use-notices";
 import type { AuthenticatedMember } from "@/types/auth";
+
+const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
 
 interface CreateNoticeFormProps {
   member: AuthenticatedMember;
@@ -63,13 +61,14 @@ interface CreateNoticeFormProps {
 
 export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
   const router = useRouter();
-  const addNotice = useNoticeStore((state) => state.addNotice);
-  const cooperatives = useCoopStore((state) => state.cooperatives);
+  const { data: cooperatives = [] } = useCooperatives();
+  const { create, uploadAttachment } = useNoticeMutations();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
   const isSuperAdmin = member.role === "super_admin";
+  const isSubmitting = create.isPending || uploadAttachment.isPending;
 
   const titleId = useId();
   const messageId = useId();
@@ -83,7 +82,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
     handleSubmit,
     control,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<CreateNoticeFormValues>({
     resolver: zodResolver(createNoticeSchema),
     defaultValues: {
@@ -93,8 +92,10 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
       recipient: "All Members",
       medium: "Email",
       schedule: "now",
-      // Admins only ever manage one co-op, so it's picked implicitly and
-      // never shown as a field; super admin must choose explicitly below.
+      // Admins only ever manage one co-op, so it's picked implicitly and never shown as a
+      // field; the backend enforces this server-side too (it ignores this value for anyone
+      // but a super admin), so it's really just a placeholder to satisfy the "pick at least
+      // one" validation for a field this role never sees.
       targetCoopIds: isSuperAdmin ? [] : [ADMIN_DIRECTORY_COOP_ID],
     },
   });
@@ -117,18 +118,14 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
   };
 
   const onSubmit = handleSubmit(async (values) => {
-    let attachment: Notice["attachment"];
+    let attachment: NoticeAttachment | undefined;
     if (attachedFile) {
       try {
-        const dataUrl = await readFileAsDataUrl(attachedFile);
-        attachment = {
-          name: attachedFile.name,
-          dataUrl,
-          size: attachedFile.size,
-        };
-      } catch {
+        attachment = await uploadAttachment.mutateAsync(attachedFile);
+      } catch (error) {
         toast.error("Couldn't attach that file", {
-          description: "Please try a different file.",
+          description:
+            error instanceof Error ? error.message : "Please try a different file.",
         });
         return;
       }
@@ -141,41 +138,41 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
             `${values.scheduleDate}T${values.scheduleTime}`,
           ).toISOString();
 
-    const notice: Notice = {
-      id: `notice-${Date.now()}`,
-      type: values.type,
-      title: values.title.trim(),
-      message: values.message.trim(),
-      recipient: values.recipient,
-      medium: values.medium,
-      meetingDate: values.meetingDate,
-      attachment,
-      sendAt,
-      createdByName: member.name,
-      createdByRole: member.role,
-      createdAt: new Date().toISOString(),
-      targetCoopIds: values.targetCoopIds,
-    };
+    try {
+      const notice = await create.mutateAsync({
+        type: values.type,
+        title: values.title.trim(),
+        message: values.message.trim(),
+        recipient: values.recipient,
+        medium: values.medium,
+        meetingDate: values.meetingDate,
+        attachment,
+        sendAt,
+        targetCoopIds: values.targetCoopIds,
+      });
 
-    await new Promise((resolve) => setTimeout(resolve, 900));
-
-    addNotice(notice);
-    const coopNames = values.targetCoopIds
-      .map((id) => cooperatives.find((coop) => coop.id === id)?.name ?? id)
-      .join(", ");
-    const audience = isSuperAdmin
-      ? `${values.recipient} at ${coopNames}`
-      : values.recipient;
-    toast.success(
-      values.schedule === "now" ? "Notice sent" : "Notice scheduled",
-      {
+      const coopNames = values.targetCoopIds
+        .map((id) => cooperatives.find((coop) => coop.id === id)?.name ?? id)
+        .join(", ");
+      const audience = isSuperAdmin
+        ? `${values.recipient} at ${coopNames}`
+        : values.recipient;
+      toast.success(
+        values.schedule === "now" ? "Notice sent" : "Notice scheduled",
+        {
+          description:
+            values.schedule === "now"
+              ? `Delivered to ${audience} via ${values.medium}.`
+              : `Will go out to ${audience} via ${values.medium} on ${formatDateLong(new Date(sendAt))}.`,
+        },
+      );
+      router.push(`/notice-board/${notice.id}`);
+    } catch (error) {
+      toast.error("Couldn't send that notice", {
         description:
-          values.schedule === "now"
-            ? `Delivered to ${audience} via ${values.medium}.`
-            : `Will go out to ${audience} via ${values.medium} on ${formatDateLong(new Date(sendAt))}.`,
-      },
-    );
-    router.push(`/notice-board/${notice.id}`);
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   });
 
   return (
@@ -311,6 +308,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                   onClick={() => setAttachedFile(null)}
                   className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                   aria-label="Remove attachment"
+                  disabled={isSubmitting}
                 >
                   <X className="size-4" aria-hidden="true" />
                 </button>
@@ -461,8 +459,9 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
               )}
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Email and SMS delivery are simulated in this demo — no real
-              messages are sent.
+              Every recipient also gets an in-app notification regardless of
+              medium; real Email/SMS delivery for this medium selection isn&apos;t
+              wired up yet.
             </p>
           </div>
 

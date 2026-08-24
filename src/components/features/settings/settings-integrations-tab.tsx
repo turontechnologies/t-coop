@@ -73,6 +73,7 @@ function SettingsIntegrationsForm({
   const paystackEnabled = watch("paystackEnabled");
   const flutterwaveEnabled = watch("flutterwaveEnabled");
   const opayEnabled = watch("opayEnabled");
+  const smsEnabled = watch("smsEnabled");
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -89,6 +90,9 @@ function SettingsIntegrationsForm({
         opayPublicKey: values.opayPublicKey ?? "",
         opaySecretKey: values.opaySecretKey ?? "",
         opayMerchantId: values.opayMerchantId ?? "",
+        smsEnabled: values.smsEnabled,
+        smsApiKey: values.smsApiKey ?? "",
+        smsSenderId: values.smsSenderId ?? "",
       });
       reset(values);
       toast.success("Integrations saved");
@@ -211,6 +215,42 @@ function SettingsIntegrationsForm({
             </>
           }
         />
+
+        <GatewayCard
+          name="SMS (Termii)"
+          description="Setup your Termii SMS credentials"
+          enabled={smsEnabled}
+          control={control}
+          enabledField="smsEnabled"
+          disabled={saving}
+          fields={[
+            {
+              label: "API Key",
+              type: "password",
+              registration: register("smsApiKey"),
+            },
+            {
+              label: "Sender ID",
+              registration: register("smsSenderId"),
+            },
+          ]}
+          caveat={
+            <>
+              Powers the SMS option on Notice Board announcements. Get a free
+              trial API key at{" "}
+              <a
+                href="https://termii.com"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                termii.com
+              </a>{" "}
+              — Sender ID is the registered &quot;from&quot; name recipients
+              see (defaults to &quot;N-Alert&quot; if left blank).
+            </>
+          }
+        />
       </div>
 
       <div className="flex justify-end gap-3">
@@ -249,7 +289,11 @@ interface GatewayCardProps {
   enabled: boolean;
   disabled: boolean;
   control: ReturnType<typeof useForm<IntegrationsFormValues>>["control"];
-  enabledField: "paystackEnabled" | "flutterwaveEnabled" | "opayEnabled";
+  enabledField:
+    | "paystackEnabled"
+    | "flutterwaveEnabled"
+    | "opayEnabled"
+    | "smsEnabled";
   fields: GatewayField[];
   caveat: React.ReactNode;
 }

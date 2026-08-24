@@ -5,13 +5,27 @@ file under `documentation/` into one place — those files still exist and go
 deeper on any one topic, but this is the single-file version.
 
 **A real Java backend now exists** ([t-coop-backend](https://github.com/turontechnologies/t-coop-backend),
-sibling repo) and is wired up for **login/logout and the dashboard
-summary** — see [Backend Integration](#backend-integration) below. Every
-other flow still runs against hardcoded mock data / in-memory Zustand
-stores, **except** Paystack (payments, bank verification, payouts) and
-Cloudinary (photo upload), which are genuinely real, working integrations
-already. See [API contracts](./api-contracts.md) for the endpoints the
-backend still needs to expose.
+sibling repo) — see [Backend Integration](#backend-integration) below. As of
+2026-08-23, real backend coverage is much broader than the table below used
+to say: auth, profile, co-operatives (full CRUD), co-op-detail
+Members/Savings/Loans oversight (read-only), subscriptions (both super-admin
+recording and admin self-service checkout via Paystack/Flutterwave/OPay),
+platform settings, audit log, and platform staff/user management are all
+real. What's still mock is narrower and specific: the admin's own **Members
+Directory** page (`/members`), and the **member-facing write flows** for
+Savings (Upload Teller, deposit, withdrawal requests) and Loans (request a
+loan, guarantor response, approve/disburse) — the backend simply doesn't
+expose those write endpoints yet. See [API contracts](./api-contracts.md)
+for the endpoint-by-endpoint "built" vs "not yet built" breakdown, which is
+kept current on the backend side.
+
+**Note on this file:** the sections below (Feature Areas, per-page detail)
+were written before the co-operatives/subscriptions/platform-staff work
+landed and, in places, still describe the old mock-only behavior for those
+pages — only the summary above and the table immediately below have been
+verified and corrected against the actual code as of 2026-08-23. Treat any
+per-feature section below that says "mocked" for Co-operatives, Subscriptions,
+or Settings → User Management as stale until it's rewritten.
 
 ---
 
@@ -71,7 +85,16 @@ has no working password-reset endpoint yet (see Auth above).
 | Profile (view/edit, all roles) — `/profile` and `/settings` → Profile tab | **Real** — `GET`/`PATCH /profile` + `POST /profile/password`                 | `src/services/profile.service.ts`                             |
 | Payment Settings + Integrations (super admin)                             | **Real** — `GET`/`PATCH /settings/{fees,collection-account,integrations}`    | `src/services/platform-settings.service.ts`                   |
 | Audit log — Settings' Logs tab (super admin)                              | **Real** — `GET /audit-log`; covers Authentication + Settings actions so far | `src/services/audit-log.service.ts`                           |
-| Everything else (members, savings/loan records, notices, subscriptions)   | **Mocked** — in-memory only, resets on reload                                | `src/lib/*-data.ts`, `src/store/*.store.ts`                   |
+| Co-operatives (list/create/edit/enable-disable, super admin)              | **Real** — full CRUD                                                         | `src/services/cooperative.service.ts`, `hooks/use-cooperative(s).ts` |
+| Co-op detail → Members/Savings/Loans oversight tabs (super admin)         | **Real**, read-only                                                          | `coop-member/coop-savings/coop-loan.service.ts`, `co-operatives/[id]/**` |
+| Subscriptions (super-admin recording + admin self-service checkout)       | **Real** — Paystack (live-tested), Flutterwave (built, untested), OPay (sandbox-verified) | `src/services/subscription(-plan).service.ts`      |
+| Platform settings (fees, collection account, integrations)                | **Real**                                                                     | `src/services/platform-settings.service.ts`                   |
+| User Management / platform staff (super admin's Settings tab)             | **Real** — create roles, invite by email, accept-invite, `support` role      | `src/services/platform-staff.service.ts`, `platform-invite.service.ts` |
+| Members Directory (`/members`, admin's own "add a member" page)           | **Mocked** — hardcoded to one co-op ID, not wired to the real member-add endpoint yet | `src/store/coop.store.ts`, `ADMIN_DIRECTORY_COOP_ID`  |
+| Savings — admin/member self-service writes (Upload Teller, deposit, withdrawal requests) | **Mocked** — backend has no write endpoints for these yet     | `src/store/savings.store.ts`                                   |
+| Loans — member-facing writes (request a loan, guarantor response, admin decision) | **Mocked** — backend has no write endpoints for these yet             | `src/store/loans.store.ts`                                     |
+| Notices (Notice Board)                                                     | **Real backend**, tenant-isolated (2026-08-24) — was previously a per-browser `localStorage` mock only, corrected this session | (see [notice-board-page.md](./notice-board-page.md))           |
+| Notifications (bell + `/notifications` page)                              | **Real backend, built 2026-08-24** — subscription lifecycle, Notice Board, co-op/member/staff events, all tenant-isolated | `src/services/notification.service.ts`, `src/hooks/use-notifications.ts` |
 
 Two known real-world constraints discovered while building the payout
 integration (not app bugs): Paystack's test mode caps real-bank-account
@@ -228,12 +251,16 @@ real auth/session data should replace that once a backend exists.
 ### Notice Board (`/notice-board`, all roles)
 
 Create a notice (General / Meeting Notice with a date / Meeting Minutes
-with a PDF attachment), choose recipients (All Members / All Admins /
-All Members & Admins) and medium (Email / SMS / both, simulated), send
-now or schedule. Real cross-tab real-time sync via the browser `storage`
-event (not a server push — works across tabs in the same browser only,
-not across devices/users, since there's no backend). Reply thread, live
-notification bell, resend, delete.
+with a PDF/image attachment), choose recipients (All Members / All Admins /
+All Members & Admins) and medium (Email / SMS / both — stored but not yet
+wired to real delivery; every recipient gets a real in-app notification
+regardless), send now or schedule. **Real backend as of 2026-08-24**
+(`t-coop-backend`'s `notice` module) — replaced an earlier per-browser
+`localStorage`-only version that never reached a second user or device; see
+[notice-board-page.md](./notice-board-page.md) for the full story. Reply
+thread (real, live-resolved author), resend, delete, and a real
+[Notifications](#backend-integration) feed instead of the old per-notice
+read-marker scheme.
 
 ### Subscriptions (`/subscriptions`, super admin only)
 
@@ -291,9 +318,10 @@ searchable, platform-wide audit trail. **Now backed by the real backend**
 (`GET /audit-log`, super-admin-only, 403s for anyone else — enforced
 server-side, not just hidden in the UI) via `useAuditLog()`, with a loading
 skeleton and retry-able error state, viewable in full via a slide-in
-Activity Details panel. Only real actions show up here now: logins/logouts
-and profile updates. Co-operatives/Members/Savings/Loans/Subscriptions/
-Notices actions are still mock-only (still write to the local
+Activity Details panel. Real actions show up here now: logins/logouts,
+profile updates, Co-operatives create/update/status, Members create/update/
+status, Subscriptions payments, and Notices create/update/delete/reply.
+Savings/Loans actions are still mock-only (still write to the local
 `logActivity()`/`useAuditLogStore` used before this cutover) and won't
 appear in this real log until those features get their own backend
 cutover. `MODULE_ICONS`/`ACTION_ICONS`/`STATUS_STYLES` are indexed via
@@ -632,7 +660,9 @@ src/
       tabs are all real backend now — Members tab's Edit/Disable are real
       writes too, not a placeholder)
 - [x] Members Directory (admin: list, add w/ bank verification, bulk import, export, edit, disable/activate)
-- [x] Notice Board (all roles, real cross-tab real-time)
+- [x] Notice Board (all roles, real backend, tenant-isolated) — real Notifications feed
+      (`/notifications` + topbar bell) built alongside it, covering subscription lifecycle,
+      co-op/member/staff events too, not just notices
 - [x] Real Paystack Transfers, bank verification, live bank list, live Country/State/City
 - [x] Subscriptions (super admin: all co-ops' standing, revenue, manual payment upload picked
       from the Subscription Plans catalog, per-co-op history — all real backend now) — plus the
@@ -699,6 +729,8 @@ NEXT_PUBLIC_USE_MOCK_DASHBOARD=false            # false = hit the real backend
 NEXT_PUBLIC_USE_MOCK_PROFILE=false              # false = hit the real backend
 NEXT_PUBLIC_USE_MOCK_AUDIT_LOG=false            # false = hit the real backend
 NEXT_PUBLIC_USE_MOCK_SETTINGS=false             # false = hit the real backend
+NEXT_PUBLIC_USE_MOCK_COOPERATIVES=false         # false = hit the real backend (co-ops, oversight tabs)
+NEXT_PUBLIC_USE_MOCK_SUBSCRIPTIONS=false        # false = hit the real backend
 NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_...     # savings deposit checkout
 PAYSTACK_SECRET_KEY=sk_test_...                 # bank verification + real payouts
 CLOUDINARY_CLOUD_NAME=...

@@ -67,6 +67,9 @@ export const integrationsSchema = z.object({
   opayPublicKey: z.string().trim().optional(),
   opaySecretKey: z.string().trim().optional(),
   opayMerchantId: z.string().trim().optional(),
+  smsEnabled: z.boolean(),
+  smsApiKey: z.string().trim().optional(),
+  smsSenderId: z.string().trim().optional(),
 });
 
 export type IntegrationsFormValues = z.infer<typeof integrationsSchema>;

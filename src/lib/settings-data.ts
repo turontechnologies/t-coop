@@ -47,6 +47,9 @@ export interface IntegrationSettings {
   opayPublicKey: string;
   opaySecretKey: string;
   opayMerchantId: string;
+  smsEnabled: boolean;
+  smsApiKey: string;
+  smsSenderId: string;
 }
 
 export const INITIAL_INTEGRATIONS: IntegrationSettings = {
@@ -62,6 +65,9 @@ export const INITIAL_INTEGRATIONS: IntegrationSettings = {
   opayPublicKey: "",
   opaySecretKey: "",
   opayMerchantId: "",
+  smsEnabled: false,
+  smsApiKey: "",
+  smsSenderId: "",
 };
 
 export const PERMISSION_MODULES = [

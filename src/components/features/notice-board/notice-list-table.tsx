@@ -34,24 +34,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Cooperative } from "@/lib/coop-data";
+import type { CooperativeSummary } from "@/types/cooperative";
 import { formatDateLong } from "@/lib/format";
-import {
-  getNoticeStatus,
-  noticeExcerpt,
-  type Notice,
-  type NoticeType,
-} from "@/lib/notice-data";
-import { useNoticeStore } from "@/store/notice.store";
+import { noticeExcerpt, type Notice, type NoticeType } from "@/types/notice";
+import { useNoticeMutations } from "@/hooks/use-notices";
 import { cn } from "@/lib/utils";
 
 function resolveTargetLabel(
   notice: Notice,
-  cooperatives: Cooperative[],
+  cooperatives: CooperativeSummary[],
 ): string {
-  if (!notice.targetCoopIds || notice.targetCoopIds.length === 0) {
-    return "All co-operatives";
-  }
   return notice.targetCoopIds
     .map((id) => cooperatives.find((coop) => coop.id === id)?.name ?? id)
     .join(", ");
@@ -82,7 +74,7 @@ const PAGE_SIZE = 5;
 
 interface NoticeListTableProps {
   notices: Notice[];
-  cooperatives: Cooperative[];
+  cooperatives: CooperativeSummary[];
 }
 
 export function NoticeListTable({
@@ -90,8 +82,7 @@ export function NoticeListTable({
   cooperatives,
 }: NoticeListTableProps) {
   const router = useRouter();
-  const resendNotice = useNoticeStore((state) => state.resendNotice);
-  const deleteNotice = useNoticeStore((state) => state.deleteNotice);
+  const { resend, remove } = useNoticeMutations();
 
   const [month, setMonth] = useState<string>("All months");
   const [year, setYear] = useState<string>("All years");
@@ -122,8 +113,7 @@ export function NoticeListTable({
       const matchesType =
         typeFilter === "All types" || notice.type === typeFilter;
       const matchesStatus =
-        statusFilter === "All statuses" ||
-        getNoticeStatus(notice) === statusFilter;
+        statusFilter === "All statuses" || notice.status === statusFilter;
       return matchesMonth && matchesYear && matchesType && matchesStatus;
     });
   }, [notices, month, year, typeFilter, statusFilter]);
@@ -166,19 +156,30 @@ export function NoticeListTable({
       return;
     }
     setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    selected.forEach((id) => resendNotice(id));
-    setBusy(false);
-    toast.success(
-      selected.size === 1 ? "Notice resent" : `${selected.size} notices resent`,
-    );
-    setSelected(new Set());
+    try {
+      await Promise.all([...selected].map((id) => resend.mutateAsync(id)));
+      toast.success(
+        selected.size === 1 ? "Notice resent" : `${selected.size} notices resent`,
+      );
+      setSelected(new Set());
+    } catch (error) {
+      toast.error("Couldn't resend", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleDelete = async () => {
     setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    selected.forEach((id) => deleteNotice(id));
+    try {
+      await Promise.all([...selected].map((id) => remove.mutateAsync(id)));
+    } catch (error) {
+      toast.error("Couldn't delete", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
     setBusy(false);
     setDeleteOpen(false);
     toast.success(
@@ -394,7 +395,7 @@ export function NoticeListTable({
               </tr>
             ) : (
               pageNotices.map((notice) => {
-                const status = getNoticeStatus(notice);
+                const status = notice.status;
                 return (
                   <tr
                     key={notice.id}
@@ -450,7 +451,7 @@ export function NoticeListTable({
         emptyMessage="No notices match your filters."
       >
         {pageNotices.map((notice) => {
-          const status = getNoticeStatus(notice);
+          const status = notice.status;
           return (
             <MobileRecordCard
               key={notice.id}

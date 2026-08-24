@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getInitials } from "@/lib/format";
-import type { NoticeReply } from "@/lib/notice-data";
-import { useNoticeStore } from "@/store/notice.store";
+import { useNoticeMutations, useNoticeReplies } from "@/hooks/use-notices";
 import type { AuthenticatedMember } from "@/types/auth";
 
 function Avatar({
@@ -18,7 +17,7 @@ function Avatar({
   emphasized = false,
 }: {
   name: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   emphasized?: boolean;
 }) {
   if (avatarUrl) {
@@ -61,57 +60,40 @@ function formatTimestamp(iso: string): string {
 }
 
 export function ReplyThread({ noticeId, member }: ReplyThreadProps) {
-  const replies = useNoticeStore((state) => state.replies);
-  const addReply = useNoticeStore((state) => state.addReply);
+  const { data: replies = [] } = useNoticeReplies(noticeId);
+  const { addReply } = useNoticeMutations();
   const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const threadReplies = useMemo(
-    () =>
-      replies
-        .filter((reply) => reply.noticeId === noticeId)
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-    [replies, noticeId],
-  );
 
   const handleSend = async () => {
     const trimmed = message.trim();
     if (!trimmed) return;
 
-    setBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
-    const reply: NoticeReply = {
-      id: `reply-${Date.now()}`,
-      noticeId,
-      authorId: member.id,
-      authorName: member.name,
-      authorRole: member.role,
-      authorAvatarUrl: member.avatarUrl,
-      message: trimmed,
-      createdAt: new Date().toISOString(),
-    };
-    addReply(reply);
-    setMessage("");
-    setBusy(false);
-    toast.success("Reply sent");
+    try {
+      await addReply.mutateAsync({ noticeId, message: trimmed });
+      setMessage("");
+      toast.success("Reply sent");
+    } catch (error) {
+      toast.error("Couldn't send that reply", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
-          Feedback {threadReplies.length > 0 ? `(${threadReplies.length})` : ""}
+          Feedback {replies.length > 0 ? `(${replies.length})` : ""}
         </h3>
       </div>
 
       <div className="space-y-4">
-        {threadReplies.length === 0 ? (
+        {replies.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
             No replies yet. Be the first to respond.
           </p>
         ) : (
-          threadReplies.map((reply) => (
+          replies.map((reply) => (
             <div key={reply.id} className="flex gap-3">
               <Avatar
                 name={reply.authorName}
@@ -150,7 +132,7 @@ export function ReplyThread({ noticeId, member }: ReplyThreadProps) {
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Write a reply…"
             rows={2}
-            disabled={busy}
+            disabled={addReply.isPending}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -163,9 +145,9 @@ export function ReplyThread({ noticeId, member }: ReplyThreadProps) {
               type="button"
               size="sm"
               onClick={handleSend}
-              disabled={busy || !message.trim()}
+              disabled={addReply.isPending || !message.trim()}
             >
-              {busy ? (
+              {addReply.isPending ? (
                 <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
               ) : (
                 <Send className="size-3.5" aria-hidden="true" />
