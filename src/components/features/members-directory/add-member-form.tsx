@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -24,6 +24,7 @@ import { LocationFields } from "@/components/features/shared/location-fields";
 import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { useAddCoopMember } from "@/hooks/use-coop-members";
+import { useNextMemberId } from "@/hooks/use-next-id";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
   addMemberSchema,
@@ -53,6 +54,8 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const router = useRouter();
   const addMember = useAddCoopMember(coopId);
   const { banks, loading: banksLoading } = useBankList();
+  const { data: nextMemberId, isLoading: loadingNextId } =
+    useNextMemberId(coopId);
 
   const bankId = useId();
   const accountNumberId = useId();
@@ -104,6 +107,13 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const bankCode = watch("bankCode");
   const accountNumber = watch("accountNumber");
   const verified = !!accountName;
+
+  // Auto-generated per this co-op's own configured format (Settings -> Co-operative -> Member ID
+  // Format) — read-only here, not something the admin types per member.
+  useEffect(() => {
+    if (nextMemberId)
+      setValue("membershipId", nextMemberId, { shouldValidate: true });
+  }, [nextMemberId, setValue]);
 
   const { verifying } = useAutoVerifyBankAccount({
     bankCode,
@@ -366,12 +376,15 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
             <Label htmlFor={membershipIdId}>Membership ID</Label>
             <Input
               id={membershipIdId}
-              placeholder="Enter membership ID"
-              disabled={isSubmitting}
+              placeholder={loadingNextId ? "Generating…" : undefined}
+              disabled
               aria-invalid={!!errors.membershipId}
               className="h-11"
               {...register("membershipId")}
             />
+            <p className="text-xs text-muted-foreground">
+              Auto-generated — change the format in Settings.
+            </p>
             <FieldError message={errors.membershipId?.message} />
           </div>
           <div className="space-y-2">

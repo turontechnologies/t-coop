@@ -30,6 +30,8 @@ function toSummary(coop: Cooperative): CooperativeSummary {
     bankCode: null,
     accountNumber: null,
     accountName: null,
+    memberIdPrefix: "MB",
+    memberIdPadding: 4,
     memberCount: coop.members.length,
     savingsTypeCount: SAVINGS_TYPES.length,
     loanTypeCount: LOAN_TYPES.length,
@@ -97,6 +99,20 @@ export const cooperativeService = {
       { ...values, accountName: values.accountName ?? "" },
     );
     return data;
+  },
+
+  async getNextCoopId(): Promise<string> {
+    const { data } = await apiClient.get<{ nextId: string }>(
+      "/cooperatives/next-id",
+    );
+    return data.nextId;
+  },
+
+  async getNextMemberId(coopId: string): Promise<string> {
+    const { data } = await apiClient.get<{ nextId: string }>(
+      `/cooperatives/${coopId}/members/next-id`,
+    );
+    return data.nextId;
   },
 };
 

@@ -29,6 +29,8 @@ export function CooperativeDetailsForm() {
   const addressId = useId();
   const emailId = useId();
   const phoneId = useId();
+  const memberIdPrefixId = useId();
+  const memberIdPaddingId = useId();
 
   const {
     register,
@@ -55,6 +57,8 @@ export function CooperativeDetailsForm() {
       city: coop.city,
       currency: coop.currency,
       withdrawalFeePercent: coop.withdrawalFeePercent,
+      memberIdPrefix: coop.memberIdPrefix,
+      memberIdPadding: coop.memberIdPadding,
     });
   }, [coop, profile, reset]);
 
@@ -172,6 +176,46 @@ export function CooperativeDetailsForm() {
         </div>
       </div>
 
+      <div className="h-px bg-border" />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Member ID Format
+          </p>
+          <p className="text-xs text-muted-foreground">
+            How Members Directory auto-generates the next membership ID for this
+            co-op — new members get an ID automatically.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-start gap-3">
+          <div className="space-y-2">
+            <Label htmlFor={memberIdPrefixId}>Prefix</Label>
+            <Input
+              id={memberIdPrefixId}
+              placeholder="MB"
+              disabled={busy}
+              aria-invalid={!!errors.memberIdPrefix}
+              className="h-11 w-32"
+              {...register("memberIdPrefix")}
+            />
+            <FieldError message={errors.memberIdPrefix?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={memberIdPaddingId}>Digits</Label>
+            <Input
+              id={memberIdPaddingId}
+              type="number"
+              disabled={busy}
+              aria-invalid={!!errors.memberIdPadding}
+              className="h-11 w-24"
+              {...register("memberIdPadding", { valueAsNumber: true })}
+            />
+            <FieldError message={errors.memberIdPadding?.message} />
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-end gap-3">
         <Button
           type="button"
@@ -189,6 +233,8 @@ export function CooperativeDetailsForm() {
               city: coop.city,
               currency: coop.currency,
               withdrawalFeePercent: coop.withdrawalFeePercent,
+              memberIdPrefix: coop.memberIdPrefix,
+              memberIdPadding: coop.memberIdPadding,
             })
           }
           disabled={busy}

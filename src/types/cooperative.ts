@@ -20,6 +20,8 @@ export interface CooperativeSummary {
   bankCode: string | null;
   accountNumber: string | null;
   accountName: string | null;
+  memberIdPrefix: string;
+  memberIdPadding: number;
   memberCount: number;
   savingsTypeCount: number;
   loanTypeCount: number;

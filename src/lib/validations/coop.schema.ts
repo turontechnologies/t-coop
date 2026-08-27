@@ -15,6 +15,7 @@ export const addCooperativeSchema = z.object({
   country: z.string().min(1, "Select a country"),
   state: z.string().trim().min(1, "Select a state"),
   city: z.string().trim().min(1, "Select a city"),
+  currency: z.string().trim().min(1, "Select a currency"),
 });
 
 export type AddCooperativeFormValues = z.infer<typeof addCooperativeSchema>;
@@ -40,6 +41,19 @@ export const editCooperativeSchema = z.object({
     .number()
     .min(0, "Enter a percentage of 0 or more")
     .max(100, "Enter a percentage of 100 or less")
+    .optional(),
+  memberIdPrefix: z
+    .string()
+    .trim()
+    .regex(
+      /^[A-Za-z0-9]{1,20}$/,
+      "Letters and numbers only, up to 20 characters",
+    )
+    .optional(),
+  memberIdPadding: z
+    .number()
+    .min(1, "Enter at least 1 digit")
+    .max(10, "Enter at most 10 digits")
     .optional(),
 });
 

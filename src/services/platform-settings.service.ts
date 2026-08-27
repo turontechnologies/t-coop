@@ -92,7 +92,27 @@ export const platformSettingsService = {
     );
     return data;
   },
+
+  async getCoopIdFormat(): Promise<CoopIdFormat> {
+    const { data } = await apiClient.get<CoopIdFormat>(
+      "/settings/coop-id-format",
+    );
+    return data;
+  },
+
+  async updateCoopIdFormat(values: CoopIdFormat): Promise<CoopIdFormat> {
+    const { data } = await apiClient.patch<CoopIdFormat>(
+      "/settings/coop-id-format",
+      values,
+    );
+    return data;
+  },
 };
+
+export interface CoopIdFormat {
+  prefix: string;
+  padding: number;
+}
 
 // Kept for local demoing without a backend running at all — flip
 // NEXT_PUBLIC_USE_MOCK_SETTINGS back to "true" to use this instead.

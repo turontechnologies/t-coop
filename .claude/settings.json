@@ -57,7 +57,19 @@
       "Bash(curl -s -X POST http://localhost:8080/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"membershipId\":\"AD-001\",\"password\":\"admin123\"}')",
       "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT m.id, m.role, m.status, m.coop_role_id, r.name as role_name FROM tcoopdb.dbo.members m LEFT JOIN tcoopdb.dbo.coop_roles r ON m.coop_role_id = r.id WHERE m.coop_role_id IS NOT NULL\")",
       "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT id, cooperative_id, name, status FROM tcoopdb.dbo.coop_roles\")",
-      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 1156 -Force\")"
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 1156 -Force\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT id, role, status, platform_role_id FROM tcoopdb.dbo.members WHERE role = 'support'\")",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"membershipId\":\"SA-0001\",\"password\":\"admin123\"}')",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT invite_token FROM tcoopdb.dbo.members WHERE id = 'SUP-0001'\")",
+      "Bash(curl -s -X POST http://localhost:8080/api/v1/platform-invites/accept -H 'Content-Type: application/json' -d '{\"token\":\"ywFrnAAPGrByawO54OzgLl-_fhlA01sTLEnjOp1uJIc\",\"firstName\":\"E2E\",\"lastName\":\"Test\",\"password\":\"testpass123\"}')",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT COUNT\\(*\\) FROM tcoopdb.dbo.audit_log WHERE actor_id = 'SUP-0001'; SELECT COUNT\\(*\\) FROM tcoopdb.dbo.notifications WHERE recipient_member_id = 'SUP-0001'\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"DELETE FROM tcoopdb.dbo.audit_log WHERE actor_id = 'SUP-0001'; DELETE FROM tcoopdb.dbo.members WHERE id = 'SUP-0001'; DELETE FROM tcoopdb.dbo.platform_roles WHERE id = 'd345e0ef-e672-4736-9c00-95d1b5799588';\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SET QUOTED_IDENTIFIER ON; DELETE FROM tcoopdb.dbo.audit_log WHERE actor_id = 'SUP-0001'; DELETE FROM tcoopdb.dbo.members WHERE id = 'SUP-0001'; DELETE FROM tcoopdb.dbo.platform_roles WHERE id = 'd345e0ef-e672-4736-9c00-95d1b5799588';\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT COUNT\\(*\\) FROM tcoopdb.dbo.members WHERE id='SUP-0001'; SELECT COUNT\\(*\\) FROM tcoopdb.dbo.platform_roles\")",
+      "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Local-Dev-Passw0rd!' -C -Q \"SELECT id, name FROM tcoopdb.dbo.platform_roles\")",
+      "Bash(where curl *)",
+      "Bash(where docker *)",
+      "Bash(export PATH=\"/c/Program Files/Git/usr/bin:/c/Program Files/Git/bin:/c/Program Files/Git/cmd:/c/Program Files/Git/mingw64/bin:/c/Program Files/nodejs:/c/Users/HomePC/AppData/Roaming/npm:/c/Users/HomePC/AppData/Local/Programs/DockerDesktop/resources/bin:/c/WINDOWS/system32:/c/WINDOWS:/c/WINDOWS/System32/Wbem:/c/WINDOWS/System32/WindowsPowerShell/v1.0\")"
     ]
   }
 }

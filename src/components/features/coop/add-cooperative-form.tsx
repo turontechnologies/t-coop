@@ -1,9 +1,9 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CurrencyCombobox } from "@/components/features/admin-settings/currency-combobox";
 import { LocationFields } from "@/components/features/shared/location-fields";
 import { useCreateCooperative } from "@/hooks/use-create-cooperative";
+import { useNextCoopId } from "@/hooks/use-next-id";
 import {
   addCooperativeSchema,
   type AddCooperativeFormValues,
@@ -22,6 +24,7 @@ import {
 export function AddCooperativeForm() {
   const router = useRouter();
   const createCooperative = useCreateCooperative();
+  const { data: nextCoopId, isLoading: loadingNextId } = useNextCoopId();
 
   const coopIdId = useId();
   const coopNameId = useId();
@@ -32,6 +35,7 @@ export function AddCooperativeForm() {
   const addressId = useId();
 
   const {
+    control,
     register,
     handleSubmit,
     watch,
@@ -51,8 +55,15 @@ export function AddCooperativeForm() {
       country: "",
       state: "",
       city: "",
+      currency: "NGN",
     },
   });
+
+  // Auto-generated per the super admin's own configured format (Settings -> Payment Settings ->
+  // Fees & Charges -> Co-op ID Format) — read-only here, not something typed in per co-op.
+  useEffect(() => {
+    if (nextCoopId) setValue("coopId", nextCoopId, { shouldValidate: true });
+  }, [nextCoopId, setValue]);
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -101,13 +112,35 @@ export function AddCooperativeForm() {
             <Label htmlFor={coopIdId}>Co-op ID</Label>
             <Input
               id={coopIdId}
-              placeholder="e.g. COOP-0004"
-              disabled={busy}
+              placeholder={loadingNextId ? "Generating…" : undefined}
+              disabled
               className="h-11"
               aria-invalid={!!errors.coopId}
               {...register("coopId")}
             />
+            <p className="text-xs text-muted-foreground">
+              Auto-generated — change the format in Settings.
+            </p>
             <FieldError message={errors.coopId?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label>Currency</Label>
+            <Controller
+              control={control}
+              name="currency"
+              render={({ field }) => (
+                <CurrencyCombobox
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={busy}
+                />
+              )}
+            />
+            <p className="text-xs text-muted-foreground">
+              The co-op&apos;s admin can change this later from their own
+              Settings.
+            </p>
+            <FieldError message={errors.currency?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor={coopNameId}>Co-operative Name</Label>
