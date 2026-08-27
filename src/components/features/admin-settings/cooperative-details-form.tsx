@@ -2,16 +2,27 @@
 
 import { useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LocationFields } from "@/components/features/shared/location-fields";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useProfile } from "@/hooks/use-profile";
 import { useUpdateCooperative } from "@/hooks/use-update-cooperative";
+import {
+  ID_GENERATION_TYPE_OPTIONS,
+  previewGeneratedId,
+} from "@/lib/id-format-preview";
 import {
   editCooperativeSchema,
   type EditCooperativeFormValues,
@@ -31,8 +42,10 @@ export function CooperativeDetailsForm() {
   const phoneId = useId();
   const memberIdPrefixId = useId();
   const memberIdPaddingId = useId();
+  const memberIdTypeId = useId();
 
   const {
+    control,
     register,
     handleSubmit,
     watch,
@@ -59,6 +72,7 @@ export function CooperativeDetailsForm() {
       withdrawalFeePercent: coop.withdrawalFeePercent,
       memberIdPrefix: coop.memberIdPrefix,
       memberIdPadding: coop.memberIdPadding,
+      memberIdType: coop.memberIdType,
     });
   }, [coop, profile, reset]);
 
@@ -202,7 +216,32 @@ export function CooperativeDetailsForm() {
             <FieldError message={errors.memberIdPrefix?.message} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={memberIdPaddingId}>Digits</Label>
+            <Label htmlFor={memberIdTypeId}>Character Type</Label>
+            <Controller
+              control={control}
+              name="memberIdType"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? "NUMERIC"}
+                  onValueChange={(value) => field.onChange(value ?? "NUMERIC")}
+                  disabled={busy}
+                >
+                  <SelectTrigger id={memberIdTypeId} className="h-11 w-56">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ID_GENERATION_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={memberIdPaddingId}>Length</Label>
             <Input
               id={memberIdPaddingId}
               type="number"
@@ -212,6 +251,16 @@ export function CooperativeDetailsForm() {
               {...register("memberIdPadding", { valueAsNumber: true })}
             />
             <FieldError message={errors.memberIdPadding?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label>Next ID would look like</Label>
+            <p className="flex h-11 items-center text-sm font-medium text-foreground">
+              {previewGeneratedId(
+                watch("memberIdPrefix") || "MB",
+                watch("memberIdType") || "NUMERIC",
+                watch("memberIdPadding") || 4,
+              )}
+            </p>
           </div>
         </div>
       </div>
@@ -235,6 +284,7 @@ export function CooperativeDetailsForm() {
               withdrawalFeePercent: coop.withdrawalFeePercent,
               memberIdPrefix: coop.memberIdPrefix,
               memberIdPadding: coop.memberIdPadding,
+              memberIdType: coop.memberIdType,
             })
           }
           disabled={busy}

@@ -55,6 +55,7 @@ export const editCooperativeSchema = z.object({
     .min(1, "Enter at least 1 digit")
     .max(10, "Enter at most 10 digits")
     .optional(),
+  memberIdType: z.enum(["NUMERIC", "ALPHA", "ALPHANUMERIC"]).optional(),
 });
 
 export type EditCooperativeFormValues = z.infer<typeof editCooperativeSchema>;

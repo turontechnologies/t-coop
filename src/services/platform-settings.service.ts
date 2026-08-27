@@ -6,6 +6,7 @@ import type {
   IntegrationSettings,
 } from "@/lib/settings-data";
 import { useSettingsStore } from "@/store/settings.store";
+import type { IdGenerationType } from "@/types/cooperative";
 
 const USE_MOCK = () => process.env.NEXT_PUBLIC_USE_MOCK_SETTINGS === "true";
 
@@ -112,6 +113,7 @@ export const platformSettingsService = {
 export interface CoopIdFormat {
   prefix: string;
   padding: number;
+  type: IdGenerationType;
 }
 
 // Kept for local demoing without a backend running at all — flip

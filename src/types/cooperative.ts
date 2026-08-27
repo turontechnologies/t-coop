@@ -1,3 +1,9 @@
+/** What character set an auto-generated id's suffix is made of — NUMERIC (0-9), ALPHA (A-Z), or
+ * ALPHANUMERIC (0-9 then A-Z). Shared by co-op ids (platform-wide, super admin's own setting)
+ * and member ids (per-co-op, that co-op's own admin's setting) — see CoopIdFormat and this
+ * interface's memberIdType. */
+export type IdGenerationType = "NUMERIC" | "ALPHA" | "ALPHANUMERIC";
+
 /**
  * The real backend's co-operative shape — leaner than the legacy mock
  * `Cooperative` type in `src/lib/coop-data.ts` (no members/savings/loans
@@ -22,6 +28,7 @@ export interface CooperativeSummary {
   accountName: string | null;
   memberIdPrefix: string;
   memberIdPadding: number;
+  memberIdType: IdGenerationType;
   memberCount: number;
   savingsTypeCount: number;
   loanTypeCount: number;

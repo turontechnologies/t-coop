@@ -32,6 +32,7 @@ function toSummary(coop: Cooperative): CooperativeSummary {
     accountName: null,
     memberIdPrefix: "MB",
     memberIdPadding: 4,
+    memberIdType: "NUMERIC",
     memberCount: coop.members.length,
     savingsTypeCount: SAVINGS_TYPES.length,
     loanTypeCount: LOAN_TYPES.length,

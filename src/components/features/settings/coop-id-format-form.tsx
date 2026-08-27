@@ -2,7 +2,7 @@
 
 import { useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -10,11 +10,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import {
   useCoopIdFormat,
   useUpdateCoopIdFormat,
 } from "@/hooks/use-coop-id-format";
+import {
+  ID_GENERATION_TYPE_OPTIONS,
+  previewGeneratedId,
+} from "@/lib/id-format-preview";
 
 const coopIdFormatSchema = z.object({
   prefix: z
@@ -28,13 +39,15 @@ const coopIdFormatSchema = z.object({
     .number()
     .min(1, "Enter at least 1 digit")
     .max(10, "Enter at most 10 digits"),
+  type: z.enum(["NUMERIC", "ALPHA", "ALPHANUMERIC"]),
 });
 
 type CoopIdFormatFormValues = z.infer<typeof coopIdFormatSchema>;
 
-/** How "Add Co-operative" auto-generates the next co-op id — e.g. prefix "COOP", padding 4 ->
- * the next co-op created gets "COOP-0005" (computed from the highest existing numeric suffix,
- * not a running count, so it's safe against gaps left by pre-existing manually-typed ids). */
+/** How "Add Co-operative" auto-generates the next co-op id — e.g. prefix "COOP", type NUMERIC,
+ * padding 4 -> the next co-op created gets "COOP-0005" (computed from the highest existing
+ * suffix, not a running count, so it's safe against gaps left by pre-existing manually-typed
+ * ids). */
 export function CoopIdFormatForm() {
   const {
     data: format,
@@ -67,8 +80,10 @@ function CoopIdFormatFormBody({ format }: { format: CoopIdFormatFormValues }) {
   const updateFormat = useUpdateCoopIdFormat();
   const prefixId = useId();
   const paddingId = useId();
+  const typeId = useId();
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
@@ -81,9 +96,10 @@ function CoopIdFormatFormBody({ format }: { format: CoopIdFormatFormValues }) {
 
   useEffect(() => reset(format), [format, reset]);
 
-  const prefix = (watch("prefix") || "COOP").toUpperCase();
+  const prefix = watch("prefix") || "COOP";
   const padding = watch("padding") || 4;
-  const preview = `${prefix}-${"0".repeat(Math.max(0, padding - 1))}1`;
+  const type = watch("type") || "NUMERIC";
+  const preview = previewGeneratedId(prefix, type, padding);
 
   const onSubmit = handleSubmit(async (values) => {
     try {
@@ -122,7 +138,32 @@ function CoopIdFormatFormBody({ format }: { format: CoopIdFormatFormValues }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={paddingId}>Digits</Label>
+          <Label htmlFor={typeId}>Character Type</Label>
+          <Controller
+            control={control}
+            name="type"
+            render={({ field }) => (
+              <Select
+                value={field.value}
+                onValueChange={(value) => field.onChange(value ?? "NUMERIC")}
+                disabled={saving}
+              >
+                <SelectTrigger id={typeId} className="h-11 w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ID_GENERATION_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={paddingId}>Length</Label>
           <Input
             id={paddingId}
             type="number"
