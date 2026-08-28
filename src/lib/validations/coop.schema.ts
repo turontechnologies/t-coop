@@ -37,11 +37,11 @@ export const editCooperativeSchema = z.object({
   // Only ever set by an admin editing their own co-op (see AdminCooperativeSettingsTab) — the
   // super admin's own "Edit Cooperative" form never sends these, so they stay optional here.
   currency: z.string().trim().optional(),
-  withdrawalFeePercent: z
+  withdrawalFeeAmount: z
     .number()
-    .min(0, "Enter a percentage of 0 or more")
-    .max(100, "Enter a percentage of 100 or less")
+    .min(0, "Enter an amount of 0 or more")
     .optional(),
+  withdrawalFeeType: z.enum(["Fixed", "Percentage"]).optional(),
   memberIdPrefix: z
     .string()
     .trim()
@@ -56,6 +56,11 @@ export const editCooperativeSchema = z.object({
     .max(10, "Enter at most 10 digits")
     .optional(),
   memberIdType: z.enum(["NUMERIC", "ALPHA", "ALPHANUMERIC"]).optional(),
+  minGuarantors: z
+    .number()
+    .min(1, "Enter at least 1 guarantor")
+    .max(10, "Enter at most 10 guarantors")
+    .optional(),
 });
 
 export type EditCooperativeFormValues = z.infer<typeof editCooperativeSchema>;
@@ -79,3 +84,16 @@ export const editMemberSchema = z.object({
 });
 
 export type EditMemberFormValues = z.infer<typeof editMemberSchema>;
+
+export const transferAdminSchema = z.object({
+  newFirstName: z.string().trim().min(1, "Enter the new admin's first name"),
+  newLastName: z.string().trim().min(1, "Enter the new admin's last name"),
+  newEmail: z.email("Enter a valid email address"),
+  newPhone: z
+    .string()
+    .trim()
+    .min(7, "Enter a valid phone number")
+    .regex(/^[\d+\s-]+$/, "Enter a valid phone number"),
+});
+
+export type TransferAdminFormValues = z.infer<typeof transferAdminSchema>;

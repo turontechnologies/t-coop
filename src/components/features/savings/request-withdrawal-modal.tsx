@@ -48,6 +48,22 @@ interface RequestWithdrawalModalProps {
 
 const PERCENT_OPTIONS = [5, 10, 25, 50, 75, 100];
 
+function feeFor(
+  type: "Fixed" | "Percentage",
+  amount: number,
+  withdrawalAmount: number,
+): number {
+  return type === "Fixed" ? amount : withdrawalAmount * (amount / 100);
+}
+
+function formatFee(
+  type: "Fixed" | "Percentage",
+  amount: number,
+  currency: string,
+): string {
+  return type === "Fixed" ? formatMoney(amount, currency) : `${amount}%`;
+}
+
 export function RequestWithdrawalModal({
   open,
   onOpenChange,
@@ -71,13 +87,16 @@ export function RequestWithdrawalModal({
     [savingsTypeSettings],
   );
 
-  const coopFeePercent = useAdminSettingsStore(
-    (state) => state.withdrawalFeePercent,
+  const coopFeeType = useAdminSettingsStore((state) => state.withdrawalFeeType);
+  const coopFeeAmount = useAdminSettingsStore(
+    (state) => state.withdrawalFeeAmount,
   );
-  const platformFeePercent = useSettingsStore(
-    (state) => state.feeSettings.withdrawalFeePercent,
+  const platformFeeType = useSettingsStore(
+    (state) => state.feeSettings.withdrawalFeeType,
   );
-  const totalFeePercent = coopFeePercent + platformFeePercent;
+  const platformFeeAmount = useSettingsStore(
+    (state) => state.feeSettings.withdrawalFeeAmount,
+  );
 
   const balanceByType = useMemo(() => {
     const balances = new Map<string, number>();
@@ -101,8 +120,13 @@ export function RequestWithdrawalModal({
       : (balanceByType.get(savingsType) ?? 0);
 
   const amountNumber = Number(amount);
-  const feeAmount =
-    amountNumber > 0 ? amountNumber * (totalFeePercent / 100) : 0;
+  const coopFeeValue =
+    amountNumber > 0 ? feeFor(coopFeeType, coopFeeAmount, amountNumber) : 0;
+  const platformFeeValue =
+    amountNumber > 0
+      ? feeFor(platformFeeType, platformFeeAmount, amountNumber)
+      : 0;
+  const feeAmount = coopFeeValue + platformFeeValue;
   const netAmount = amountNumber - feeAmount;
 
   const isValid =
@@ -223,8 +247,9 @@ export function RequestWithdrawalModal({
               </div>
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>
-                  Withdrawal fee ({totalFeePercent.toFixed(2)}% — co-op{" "}
-                  {coopFeePercent}% + platform {platformFeePercent}%)
+                  Withdrawal fee — co-op{" "}
+                  {formatFee(coopFeeType, coopFeeAmount, currency)} + platform{" "}
+                  {formatFee(platformFeeType, platformFeeAmount, currency)}
                 </span>
                 <span className="text-destructive">
                   -{formatMoney(feeAmount, currency)}
@@ -267,7 +292,10 @@ export function RequestWithdrawalModal({
                 savingsType,
                 amount: amountNumber,
                 note: note.trim(),
-                feePercent: totalFeePercent,
+                // The effective percentage this fee worked out to — downstream displays
+                // ("X% fee") don't distinguish Fixed vs Percentage, only the resulting rate.
+                feePercent:
+                  amountNumber > 0 ? (feeAmount / amountNumber) * 100 : 0,
                 feeAmount,
                 netAmount,
               })

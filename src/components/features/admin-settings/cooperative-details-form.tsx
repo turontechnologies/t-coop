@@ -43,6 +43,7 @@ export function CooperativeDetailsForm() {
   const memberIdPrefixId = useId();
   const memberIdPaddingId = useId();
   const memberIdTypeId = useId();
+  const minGuarantorsId = useId();
 
   const {
     control,
@@ -69,10 +70,12 @@ export function CooperativeDetailsForm() {
       state: coop.state,
       city: coop.city,
       currency: coop.currency,
-      withdrawalFeePercent: coop.withdrawalFeePercent,
+      withdrawalFeeAmount: coop.withdrawalFeeAmount,
+      withdrawalFeeType: coop.withdrawalFeeType,
       memberIdPrefix: coop.memberIdPrefix,
       memberIdPadding: coop.memberIdPadding,
       memberIdType: coop.memberIdType,
+      minGuarantors: coop.minGuarantors,
     });
   }, [coop, profile, reset]);
 
@@ -265,6 +268,32 @@ export function CooperativeDetailsForm() {
         </div>
       </div>
 
+      <div className="h-px bg-border" />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Membership Rules
+          </p>
+          <p className="text-xs text-muted-foreground">
+            How many guarantors a new member needs — at least one always has to
+            be an existing member of this co-op, the rest can be anyone.
+          </p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={minGuarantorsId}>Minimum Guarantors</Label>
+          <Input
+            id={minGuarantorsId}
+            type="number"
+            disabled={busy}
+            aria-invalid={!!errors.minGuarantors}
+            className="h-11 w-24"
+            {...register("minGuarantors", { valueAsNumber: true })}
+          />
+          <FieldError message={errors.minGuarantors?.message} />
+        </div>
+      </div>
+
       <div className="flex justify-end gap-3">
         <Button
           type="button"
@@ -281,10 +310,12 @@ export function CooperativeDetailsForm() {
               state: coop.state,
               city: coop.city,
               currency: coop.currency,
-              withdrawalFeePercent: coop.withdrawalFeePercent,
+              withdrawalFeeAmount: coop.withdrawalFeeAmount,
+              withdrawalFeeType: coop.withdrawalFeeType,
               memberIdPrefix: coop.memberIdPrefix,
               memberIdPadding: coop.memberIdPadding,
               memberIdType: coop.memberIdType,
+              minGuarantors: coop.minGuarantors,
             })
           }
           disabled={busy}

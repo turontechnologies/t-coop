@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { getRoleLabel } from "@/config/dashboard-nav";
 import { getInitials } from "@/lib/format";
+import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
 import type { AuthenticatedMember } from "@/types/auth";
 
@@ -52,16 +53,8 @@ export function ProfileHeaderCard({ member }: ProfileHeaderCardProps) {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Upload failed");
-
-      setAvatarUrl(data.url);
+      const avatarUrl = await uploadService.uploadAvatar(file);
+      setAvatarUrl(avatarUrl);
       toast.success("Profile photo updated");
     } catch (error) {
       toast.error("Couldn't upload photo", {

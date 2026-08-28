@@ -52,7 +52,11 @@ export default function MembersDirectoryPage() {
           email: row.email,
           phone: row.phone,
           role: row.role,
-          guarantor: row.guarantor,
+          // Bulk import only captures one guarantor NAME per row (the CSV template has no
+          // guarantor email/phone columns), and every guarantor now needs both to receive their
+          // accept invite — these rows will fail the same validation Add Member goes through;
+          // they just count toward `failed` below, same as any other incomplete row.
+          guarantors: [{ name: row.guarantor, email: "", phone: "" }],
           country: row.country,
           state: row.state,
           // Bulk import doesn't capture bank details or city — the admin adds these later via

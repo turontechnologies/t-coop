@@ -12,10 +12,8 @@ export const coopBankAccountSchema = z.object({
 export type CoopBankAccountFormValues = z.infer<typeof coopBankAccountSchema>;
 
 export const withdrawalFeeSchema = z.object({
-  withdrawalFeePercent: z
-    .number()
-    .min(0, "Enter a percentage of 0 or more")
-    .max(100, "Enter a percentage of 100 or less"),
+  withdrawalFeeType: z.enum(["Fixed", "Percentage"]),
+  withdrawalFeeAmount: z.number().min(0, "Enter an amount of 0 or more"),
 });
 
 export type WithdrawalFeeFormValues = z.infer<typeof withdrawalFeeSchema>;
@@ -34,16 +32,24 @@ export type SavingsTypeSettingFormValues = z.infer<
 >;
 
 // Matches LoanTypeCreateRequest exactly — no approver/terms fields, same reasoning as above.
-export const loanTypeSettingSchema = z.object({
-  name: z.string().trim().min(1, "Enter a loan type name"),
-  eligibilityPercent: z.number().min(1, "Enter an eligibility percentage"),
-  durationMonths: z.number().min(1, "Select a duration"),
-  maxAmount: z.number().min(1, "Enter a maximum loan amount"),
-  repaymentInterval: z.enum(["Weekly", "Monthly", "Quarterly"]),
-  numberOfInstallments: z.number().min(1, "Enter the number of installments"),
-  interestType: z.enum(["Percentage", "Fixed"]),
-  interestAmount: z.number().min(0, "Enter an interest amount"),
-});
+// interestAmount only matters when interestType isn't "NoInterest" — a genuinely interest-free
+// loan needs nothing entered there at all.
+export const loanTypeSettingSchema = z
+  .object({
+    name: z.string().trim().min(1, "Enter a loan type name"),
+    eligibilityPercent: z.number().min(1, "Enter an eligibility percentage"),
+    durationMonths: z.number().min(1, "Select a duration"),
+    maxAmount: z.number().min(1, "Enter a maximum loan amount"),
+    repaymentInterval: z.enum(["Weekly", "Monthly", "Quarterly"]),
+    numberOfInstallments: z.number().min(1, "Enter the number of installments"),
+    interestType: z.enum(["Percentage", "Fixed", "NoInterest"]),
+    interestAmount: z.number().min(0, "Enter an interest amount").optional(),
+  })
+  .refine(
+    (values) =>
+      values.interestType === "NoInterest" || values.interestAmount != null,
+    { message: "Enter an interest amount", path: ["interestAmount"] },
+  );
 
 export type LoanTypeSettingFormValues = z.infer<typeof loanTypeSettingSchema>;
 

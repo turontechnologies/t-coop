@@ -2,7 +2,7 @@
  * server-side (eligibility/duration/interest from the co-op's own configured loan_types row,
  * earnings aggregated live from loan_records). */
 export type RepaymentInterval = "Weekly" | "Monthly" | "Quarterly";
-export type InterestType = "Percentage" | "Fixed";
+export type InterestType = "Percentage" | "Fixed" | "NoInterest";
 
 export interface CoopLoanTypeSummary {
   id: string;

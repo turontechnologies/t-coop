@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Switch } from "@/components/ui/switch";
+import { CoopIdFormatForm } from "@/components/features/settings/coop-id-format-form";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import {
   useIntegrationSettings,
@@ -107,173 +108,176 @@ function SettingsIntegrationsForm({
   const saving = updateIntegrations.isPending;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-6">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">
-          Third party Integrations
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Enable either gateway, or both — members will be able to pay with
-          whichever ones are turned on.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <CoopIdFormatForm />
+      <form onSubmit={onSubmit} noValidate className="space-y-6">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Third party Integrations
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Enable either gateway, or both — members will be able to pay with
+            whichever ones are turned on.
+          </p>
+        </div>
 
-      <div className="max-w-xl space-y-4">
-        <GatewayCard
-          name="Paystack"
-          description="Setup your paystack credentials"
-          enabled={paystackEnabled}
-          control={control}
-          enabledField="paystackEnabled"
-          disabled={saving}
-          fields={[
-            {
-              label: "Public Key",
-              registration: register("paystackPublicKey"),
-            },
-            {
-              label: "Secret Key",
-              type: "password",
-              registration: register("paystackSecretKey"),
-            },
-            {
-              label: "Webhook secret",
-              type: "password",
-              registration: register("paystackWebhookSecret"),
-            },
-          ]}
-          caveat={
-            <>
-              These are read live for subscription checkout (Support page). The
-              separate bank payout routes still read from the server&apos;s{" "}
-              <code>PAYSTACK_SECRET_KEY</code> environment variable, not from
-              values saved here.
-            </>
-          }
-        />
+        <div className="max-w-xl space-y-4">
+          <GatewayCard
+            name="Paystack"
+            description="Setup your paystack credentials"
+            enabled={paystackEnabled}
+            control={control}
+            enabledField="paystackEnabled"
+            disabled={saving}
+            fields={[
+              {
+                label: "Public Key",
+                registration: register("paystackPublicKey"),
+              },
+              {
+                label: "Secret Key",
+                type: "password",
+                registration: register("paystackSecretKey"),
+              },
+              {
+                label: "Webhook secret",
+                type: "password",
+                registration: register("paystackWebhookSecret"),
+              },
+            ]}
+            caveat={
+              <>
+                These are read live for subscription checkout (Support page).
+                The separate bank payout routes still read from the
+                server&apos;s <code>PAYSTACK_SECRET_KEY</code> environment
+                variable, not from values saved here.
+              </>
+            }
+          />
 
-        <GatewayCard
-          name="Flutterwave"
-          description="Setup your flutterwave credentials"
-          enabled={flutterwaveEnabled}
-          control={control}
-          enabledField="flutterwaveEnabled"
-          disabled={saving}
-          fields={[
-            {
-              label: "Public Key",
-              registration: register("flutterwavePublicKey"),
-            },
-            {
-              label: "Secret Key",
-              type: "password",
-              registration: register("flutterwaveSecretKey"),
-            },
-            {
-              label: "Encryption Key",
-              type: "password",
-              registration: register("flutterwaveEncryptionKey"),
-            },
-          ]}
-          caveat={
-            <>
-              These are read live for subscription checkout (Support page) —
-              there&apos;s no separate bank payout route for Flutterwave yet,
-              unlike Paystack.
-            </>
-          }
-        />
+          <GatewayCard
+            name="Flutterwave"
+            description="Setup your flutterwave credentials"
+            enabled={flutterwaveEnabled}
+            control={control}
+            enabledField="flutterwaveEnabled"
+            disabled={saving}
+            fields={[
+              {
+                label: "Public Key",
+                registration: register("flutterwavePublicKey"),
+              },
+              {
+                label: "Secret Key",
+                type: "password",
+                registration: register("flutterwaveSecretKey"),
+              },
+              {
+                label: "Encryption Key",
+                type: "password",
+                registration: register("flutterwaveEncryptionKey"),
+              },
+            ]}
+            caveat={
+              <>
+                These are read live for subscription checkout (Support page) —
+                there&apos;s no separate bank payout route for Flutterwave yet,
+                unlike Paystack.
+              </>
+            }
+          />
 
-        <GatewayCard
-          name="OPay"
-          description="Setup your OPay credentials"
-          enabled={opayEnabled}
-          control={control}
-          enabledField="opayEnabled"
-          disabled={saving}
-          fields={[
-            {
-              label: "Public Key",
-              registration: register("opayPublicKey"),
-            },
-            {
-              label: "Secret Key",
-              type: "password",
-              registration: register("opaySecretKey"),
-            },
-            {
-              label: "Merchant ID",
-              registration: register("opayMerchantId"),
-            },
-          ]}
-          caveat={
-            <>
-              These are read live on every subscription payment — a co-op admin
-              choosing OPay at checkout is redirected to a real OPay-hosted
-              cashier page, and the payment is verified server-side against OPay
-              before it&apos;s recorded.
-            </>
-          }
-        />
+          <GatewayCard
+            name="OPay"
+            description="Setup your OPay credentials"
+            enabled={opayEnabled}
+            control={control}
+            enabledField="opayEnabled"
+            disabled={saving}
+            fields={[
+              {
+                label: "Public Key",
+                registration: register("opayPublicKey"),
+              },
+              {
+                label: "Secret Key",
+                type: "password",
+                registration: register("opaySecretKey"),
+              },
+              {
+                label: "Merchant ID",
+                registration: register("opayMerchantId"),
+              },
+            ]}
+            caveat={
+              <>
+                These are read live on every subscription payment — a co-op
+                admin choosing OPay at checkout is redirected to a real
+                OPay-hosted cashier page, and the payment is verified
+                server-side against OPay before it&apos;s recorded.
+              </>
+            }
+          />
 
-        <GatewayCard
-          name="SMS (Termii)"
-          description="Setup your Termii SMS credentials"
-          enabled={smsEnabled}
-          control={control}
-          enabledField="smsEnabled"
-          disabled={saving}
-          fields={[
-            {
-              label: "API Key",
-              type: "password",
-              registration: register("smsApiKey"),
-            },
-            {
-              label: "Sender ID",
-              registration: register("smsSenderId"),
-            },
-          ]}
-          caveat={
-            <>
-              Powers the SMS option on Notice Board announcements. Get a free
-              trial API key at{" "}
-              <a
-                href="https://termii.com"
-                target="_blank"
-                rel="noreferrer"
-                className="underline"
-              >
-                termii.com
-              </a>{" "}
-              — Sender ID is the registered &quot;from&quot; name recipients
-              see (defaults to &quot;N-Alert&quot; if left blank).
-            </>
-          }
-        />
-      </div>
+          <GatewayCard
+            name="SMS (Termii)"
+            description="Setup your Termii SMS credentials"
+            enabled={smsEnabled}
+            control={control}
+            enabledField="smsEnabled"
+            disabled={saving}
+            fields={[
+              {
+                label: "API Key",
+                type: "password",
+                registration: register("smsApiKey"),
+              },
+              {
+                label: "Sender ID",
+                registration: register("smsSenderId"),
+              },
+            ]}
+            caveat={
+              <>
+                Powers the SMS option on Notice Board announcements. Get a free
+                trial API key at{" "}
+                <a
+                  href="https://termii.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  termii.com
+                </a>{" "}
+                — Sender ID is the registered &quot;from&quot; name recipients
+                see (defaults to &quot;N-Alert&quot; if left blank).
+              </>
+            }
+          />
+        </div>
 
-      <div className="flex justify-end gap-3">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => reset(integrations)}
-          disabled={saving}
-        >
-          Reset
-        </Button>
-        <Button type="submit" disabled={saving || !isDirty}>
-          {saving ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Saving…
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
-      </div>
-    </form>
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => reset(integrations)}
+            disabled={saving}
+          >
+            Reset
+          </Button>
+          <Button type="submit" disabled={saving || !isDirty}>
+            {saving ? (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Saving…
+              </>
+            ) : (
+              "Save Changes"
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -290,10 +294,7 @@ interface GatewayCardProps {
   disabled: boolean;
   control: ReturnType<typeof useForm<IntegrationsFormValues>>["control"];
   enabledField:
-    | "paystackEnabled"
-    | "flutterwaveEnabled"
-    | "opayEnabled"
-    | "smsEnabled";
+    "paystackEnabled" | "flutterwaveEnabled" | "opayEnabled" | "smsEnabled";
   fields: GatewayField[];
   caveat: React.ReactNode;
 }

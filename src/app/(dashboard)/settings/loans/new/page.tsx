@@ -33,7 +33,11 @@ const REPAYMENT_INTERVALS: RepaymentInterval[] = [
   "Monthly",
   "Quarterly",
 ];
-const INTEREST_TYPES: InterestType[] = ["Percentage", "Fixed"];
+const INTEREST_TYPES: { value: InterestType; label: string }[] = [
+  { value: "Percentage", label: "Percentage" },
+  { value: "Fixed", label: "Fixed Amount" },
+  { value: "NoInterest", label: "No Interest (Interest-Free Loan)" },
+];
 
 function defaultInstallments(
   durationMonths: number,
@@ -105,6 +109,8 @@ export default function LoanTypeCreationPage() {
 
   const durationMonths = watch("durationMonths");
   const repaymentInterval = watch("repaymentInterval");
+  const interestType = watch("interestType");
+  const isNoInterest = interestType === "NoInterest";
 
   const busy = mutations.createType.isPending || mutations.updateType.isPending;
 
@@ -287,18 +293,24 @@ export default function LoanTypeCreationPage() {
                   render={({ field }) => (
                     <Select
                       value={field.value}
-                      onValueChange={(value) =>
-                        field.onChange(value as InterestType)
-                      }
+                      onValueChange={(value) => {
+                        const nextType = value as InterestType;
+                        field.onChange(nextType);
+                        if (nextType === "NoInterest") {
+                          setValue("interestAmount", undefined, {
+                            shouldValidate: true,
+                          });
+                        }
+                      }}
                       disabled={busy}
                     >
                       <SelectTrigger className="h-11 w-full">
-                        <SelectValue placeholder="Select % or fixed" />
+                        <SelectValue placeholder="Select an interest type" />
                       </SelectTrigger>
                       <SelectContent>
                         {INTEREST_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -306,19 +318,28 @@ export default function LoanTypeCreationPage() {
                   )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor={interestAmountId}>Interest Amount</Label>
-                <Input
-                  id={interestAmountId}
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="Enter value"
-                  disabled={busy}
-                  aria-invalid={!!errors.interestAmount}
-                  className="h-11"
-                  {...register("interestAmount", { valueAsNumber: true })}
-                />
-              </div>
+              {isNoInterest ? (
+                <div className="flex items-end">
+                  <p className="rounded-lg bg-muted px-3 py-2.5 text-xs text-muted-foreground">
+                    No interest amount needed — members repay exactly what they
+                    borrowed.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor={interestAmountId}>Interest Amount</Label>
+                  <Input
+                    id={interestAmountId}
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="Enter value"
+                    disabled={busy}
+                    aria-invalid={!!errors.interestAmount}
+                    className="h-11"
+                    {...register("interestAmount", { valueAsNumber: true })}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -166,9 +166,10 @@ export const INITIAL_COOP_BANK_ACCOUNT: CoopBankAccountSettings = {
 };
 
 /**
- * Real, functional co-op-level fee — a percentage taken off every member
- * withdrawal from this co-op, stacked with the platform's own withdrawal
- * fee (`FeeSettings.withdrawalFeePercent`, set by super admin). Locked in
- * on the request at the moment a member submits it.
+ * Real, functional co-op-level fee — taken off every member withdrawal from
+ * this co-op, stacked with the platform's own withdrawal fee
+ * (`FeeSettings.withdrawalFeeAmount`/`withdrawalFeeType`, set by super
+ * admin). Locked in on the request at the moment a member submits it.
  */
-export const INITIAL_WITHDRAWAL_FEE_PERCENT = 1;
+export const INITIAL_WITHDRAWAL_FEE_TYPE: "Fixed" | "Percentage" = "Percentage";
+export const INITIAL_WITHDRAWAL_FEE_AMOUNT = 1;

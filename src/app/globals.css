@@ -138,12 +138,43 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
+
+  table th,
+  table td {
+    white-space: nowrap;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--border);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+  }
+
   ::selection {
     @apply bg-primary/20 text-foreground;
   }
@@ -170,6 +201,7 @@
     transition-duration: 150ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   button:not(:disabled, [role="menuitem"], [data-disabled="true"]):active {
     transform: scale(0.97);
   }
@@ -183,15 +215,18 @@
     from {
       background-position: 0 0;
     }
+
     to {
       background-position: -200% 0;
     }
   }
+
   @keyframes fade-in {
     from {
       opacity: 0;
       transform: translateY(4px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);

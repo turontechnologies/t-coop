@@ -387,6 +387,20 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                       align="start"
                       className="w-(--anchor-width) min-w-56"
                     >
+                      <DropdownMenuCheckboxItem
+                        closeOnClick={false}
+                        checked={
+                          cooperatives.length > 0 &&
+                          field.value.length === cooperatives.length
+                        }
+                        onCheckedChange={(checked) =>
+                          field.onChange(
+                            checked ? cooperatives.map((coop) => coop.id) : [],
+                          )
+                        }
+                      >
+                        Select all
+                      </DropdownMenuCheckboxItem>
                       {cooperatives.map((coop) => (
                         <DropdownMenuCheckboxItem
                           key={coop.id}

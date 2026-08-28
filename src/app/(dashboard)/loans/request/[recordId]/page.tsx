@@ -35,13 +35,11 @@ import {
   type CoopLoanRecord,
   type CoopMember,
 } from "@/lib/coop-data";
-import {
-  MAX_ATTACHMENT_BYTES,
-  readFileAsDataUrl,
-} from "@/lib/file-to-data-url";
+import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
 import { formatDateLong, formatMoney, getInitials } from "@/lib/format";
 import { getDirectoryCoop } from "@/lib/member-directory";
 import { initiateTransfer } from "@/lib/paystack-transfer";
+import { uploadService } from "@/services/upload.service";
 import { useCoopStore } from "@/store/coop.store";
 import { cn } from "@/lib/utils";
 
@@ -346,12 +344,21 @@ function AcceptGuarantorDialog({
 
   const handleConfirm = async () => {
     setBusy(true);
-    const documentUrl = file ? await readFileAsDataUrl(file) : undefined;
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await onConfirm(documentUrl);
-    setBusy(false);
-    setOpen(false);
-    setFile(null);
+    try {
+      const documentUrl = file
+        ? await uploadService.uploadAttachment(file)
+        : undefined;
+      await onConfirm(documentUrl);
+      setOpen(false);
+      setFile(null);
+    } catch (error) {
+      toast.error("Couldn't upload document", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

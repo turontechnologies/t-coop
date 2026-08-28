@@ -125,7 +125,7 @@ function CoopIdFormatFormBody({ format }: { format: CoopIdFormatFormValues }) {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[8rem_14rem_6rem_minmax(10rem,1fr)]">
         <div className="space-y-2">
           <Label htmlFor={prefixId}>Prefix</Label>
           <Input

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { motion } from "framer-motion";
-import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
+import { BadgeCheck, Loader2, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { LocationFields } from "@/components/features/shared/location-fields";
 import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { useAddCoopMember } from "@/hooks/use-coop-members";
+import { useCooperative } from "@/hooks/use-cooperative";
 import { useNextMemberId } from "@/hooks/use-next-id";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
@@ -56,6 +57,8 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const { banks, loading: banksLoading } = useBankList();
   const { data: nextMemberId, isLoading: loadingNextId } =
     useNextMemberId(coopId);
+  const { data: coop } = useCooperative(coopId);
+  const minGuarantors = coop?.minGuarantors ?? 2;
 
   const bankId = useId();
   const accountNumberId = useId();
@@ -71,6 +74,11 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const guarantorId = useId();
   const roleId = useId();
   const twitterId = useId();
+  const nextOfKinNameId = useId();
+  const nextOfKinPhoneId = useId();
+  const nextOfKinEmailId = useId();
+  const nextOfKinRelationshipId = useId();
+  const nextOfKinAuthorityLevelId = useId();
 
   const {
     register,
@@ -97,7 +105,12 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
       city: "",
       facebook: "",
       membershipId: "",
-      guarantor: "",
+      guarantors: [{ name: "", email: "", phone: "" }],
+      nextOfKinName: "",
+      nextOfKinPhone: "",
+      nextOfKinEmail: "",
+      nextOfKinRelationship: "",
+      nextOfKinAuthorityLevel: "",
       role: "Member",
       twitter: "",
     },
@@ -107,6 +120,7 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const bankCode = watch("bankCode");
   const accountNumber = watch("accountNumber");
   const verified = !!accountName;
+  const guarantors = watch("guarantors");
 
   // Auto-generated per this co-op's own configured format (Settings -> Co-operative -> Member ID
   // Format) — read-only here, not something the admin types per member.
@@ -114,6 +128,41 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
     if (nextMemberId)
       setValue("membershipId", nextMemberId, { shouldValidate: true });
   }, [nextMemberId, setValue]);
+
+  // This co-op's own configured minimum (Settings -> Co-operative -> Membership Rules) — pad the
+  // list out to that many rows once it's known, without clobbering anything already typed in.
+  useEffect(() => {
+    if (guarantors.length < minGuarantors) {
+      setValue("guarantors", [
+        ...guarantors,
+        ...Array.from({ length: minGuarantors - guarantors.length }, () => ({
+          name: "",
+          email: "",
+          phone: "",
+        })),
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minGuarantors]);
+
+  const addGuarantorRow = () =>
+    setValue("guarantors", [...guarantors, { name: "", email: "", phone: "" }]);
+  const removeGuarantorRow = (index: number) =>
+    setValue(
+      "guarantors",
+      guarantors.filter((_, i) => i !== index),
+      { shouldValidate: true },
+    );
+  const updateGuarantorRow = (
+    index: number,
+    field: "name" | "email" | "phone",
+    value: string,
+  ) =>
+    setValue(
+      "guarantors",
+      guarantors.map((g, i) => (i === index ? { ...g, [field]: value } : g)),
+      { shouldValidate: true },
+    );
 
   const { verifying } = useAutoVerifyBankAccount({
     bankCode,
@@ -387,28 +436,177 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
             </p>
             <FieldError message={errors.membershipId?.message} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor={guarantorId}>Select Guarantor</Label>
-            <Controller
-              control={control}
-              name="guarantor"
-              render={({ field }) => (
-                <Combobox
-                  id={guarantorId}
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                  options={existingMembers.map((member) => ({
-                    value: coopMemberFullName(member),
-                    label: coopMemberFullName(member),
-                  }))}
-                  placeholder="Select guarantor"
-                  searchPlaceholder="Search members…"
-                  disabled={isSubmitting}
-                  ariaInvalid={!!errors.guarantor}
-                />
-              )}
+          <div className="space-y-2 sm:col-span-2">
+            <Label>
+              Guarantors (at least {minGuarantors}, one must be an existing
+              member) — each gets an email invite and has to accept it
+            </Label>
+            <div className="space-y-3">
+              {guarantors.map((guarantor, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-1 gap-2 rounded-md border border-border p-3 sm:grid-cols-[1fr_1fr_1fr_auto]"
+                >
+                  {index === 0 ? (
+                    <Combobox
+                      id={guarantorId}
+                      value={guarantor.name}
+                      onValueChange={(value) => {
+                        const member = existingMembers.find(
+                          (m) => coopMemberFullName(m) === value,
+                        );
+                        setValue(
+                          "guarantors",
+                          guarantors.map((g, i) =>
+                            i === 0
+                              ? {
+                                  name: value,
+                                  email: member?.email ?? g.email,
+                                  phone: member?.phone ?? g.phone,
+                                }
+                              : g,
+                          ),
+                          { shouldValidate: true },
+                        );
+                      }}
+                      options={existingMembers.map((member) => ({
+                        value: coopMemberFullName(member),
+                        label: coopMemberFullName(member),
+                      }))}
+                      placeholder="Select an existing member"
+                      searchPlaceholder="Search members…"
+                      disabled={isSubmitting}
+                      ariaInvalid={!!errors.guarantors?.[index]?.name}
+                    />
+                  ) : (
+                    <Input
+                      value={guarantor.name}
+                      onChange={(event) =>
+                        updateGuarantorRow(index, "name", event.target.value)
+                      }
+                      placeholder="Guarantor's full name"
+                      disabled={isSubmitting}
+                      aria-invalid={!!errors.guarantors?.[index]?.name}
+                      className="h-11"
+                    />
+                  )}
+                  <Input
+                    type="email"
+                    value={guarantor.email}
+                    onChange={(event) =>
+                      updateGuarantorRow(index, "email", event.target.value)
+                    }
+                    placeholder="Guarantor's email"
+                    disabled={isSubmitting}
+                    aria-invalid={!!errors.guarantors?.[index]?.email}
+                    className="h-11"
+                  />
+                  <Input
+                    type="tel"
+                    value={guarantor.phone}
+                    onChange={(event) =>
+                      updateGuarantorRow(index, "phone", event.target.value)
+                    }
+                    placeholder="Guarantor's phone"
+                    disabled={isSubmitting}
+                    aria-invalid={!!errors.guarantors?.[index]?.phone}
+                    className="h-11"
+                  />
+                  {guarantors.length > minGuarantors ? (
+                    <button
+                      type="button"
+                      onClick={() => removeGuarantorRow(index)}
+                      disabled={isSubmitting}
+                      className="flex size-9 shrink-0 items-center justify-center justify-self-end rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      aria-label="Remove this guarantor"
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addGuarantorRow}
+              disabled={isSubmitting}
+            >
+              <Plus className="size-3.5" aria-hidden="true" />
+              Add another guarantor
+            </Button>
+            <FieldError
+              message={
+                errors.guarantors?.message ??
+                (Array.isArray(errors.guarantors)
+                  ? errors.guarantors
+                      .map(
+                        (e) =>
+                          e?.name?.message ??
+                          e?.email?.message ??
+                          e?.phone?.message,
+                      )
+                      .find(Boolean)
+                  : undefined)
+              }
             />
-            <FieldError message={errors.guarantor?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={nextOfKinNameId}>Next of Kin Name</Label>
+            <Input
+              id={nextOfKinNameId}
+              placeholder="Enter next of kin's name"
+              disabled={isSubmitting}
+              className="h-11"
+              {...register("nextOfKinName")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={nextOfKinPhoneId}>Next of Kin Phone</Label>
+            <Input
+              id={nextOfKinPhoneId}
+              type="tel"
+              placeholder="Enter next of kin's phone"
+              disabled={isSubmitting}
+              className="h-11"
+              {...register("nextOfKinPhone")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={nextOfKinEmailId}>Next of Kin Email</Label>
+            <Input
+              id={nextOfKinEmailId}
+              type="email"
+              placeholder="Enter next of kin's email"
+              disabled={isSubmitting}
+              className="h-11"
+              {...register("nextOfKinEmail")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={nextOfKinRelationshipId}>
+              Next of Kin Relationship
+            </Label>
+            <Input
+              id={nextOfKinRelationshipId}
+              placeholder="e.g. Spouse, Parent, Sibling"
+              disabled={isSubmitting}
+              className="h-11"
+              {...register("nextOfKinRelationship")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={nextOfKinAuthorityLevelId}>
+              Next of Kin Authority Level
+            </Label>
+            <Input
+              id={nextOfKinAuthorityLevelId}
+              placeholder="e.g. Primary, Secondary contact"
+              disabled={isSubmitting}
+              className="h-11"
+              {...register("nextOfKinAuthorityLevel")}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor={roleId}>User Access</Label>

@@ -22,13 +22,15 @@ export interface CooperativeSummary {
   city: string;
   status: "Active" | "Disabled";
   currency: string;
-  withdrawalFeePercent: number;
+  withdrawalFeeAmount: number;
+  withdrawalFeeType: "Fixed" | "Percentage";
   bankCode: string | null;
   accountNumber: string | null;
   accountName: string | null;
   memberIdPrefix: string;
   memberIdPadding: number;
   memberIdType: IdGenerationType;
+  minGuarantors: number;
   memberCount: number;
   savingsTypeCount: number;
   loanTypeCount: number;

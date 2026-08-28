@@ -1,6 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cooperativeService } from "@/services/cooperative.service";
-import type { EditCooperativeFormValues } from "@/lib/validations/coop.schema";
+import type {
+  EditCooperativeFormValues,
+  TransferAdminFormValues,
+} from "@/lib/validations/coop.schema";
 import type { CoopBankAccountFormValues } from "@/lib/validations/admin-settings.schema";
 
 export function useUpdateCooperative(id: string) {
@@ -24,5 +27,12 @@ export function useUpdateCooperativeBankAccount(id: string) {
       queryClient.invalidateQueries({ queryKey: ["cooperatives"] });
       queryClient.invalidateQueries({ queryKey: ["cooperatives", id] });
     },
+  });
+}
+
+export function useTransferAdmin(id: string) {
+  return useMutation({
+    mutationFn: (values: TransferAdminFormValues) =>
+      cooperativeService.transferAdmin(id, values),
   });
 }

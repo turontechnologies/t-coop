@@ -6,12 +6,14 @@ export interface FeeSettings {
   loansChargeType: ChargeType;
   loansChargeAmount: number;
   /**
-   * Real, functional platform fee — a percentage taken off every member
-   * withdrawal (see documentation/savings-page.md). Unlike the charges
-   * above, this one actually affects what a member receives; combined
-   * with the co-op admin's own withdrawal fee at withdrawal time.
+   * Real, functional platform fee — taken off every member withdrawal (see
+   * documentation/savings-page.md), fixed or a percentage per
+   * withdrawalFeeType. Unlike the charges above, this one actually affects
+   * what a member receives; combined with the co-op admin's own withdrawal
+   * fee at withdrawal time.
    */
-  withdrawalFeePercent: number;
+  withdrawalFeeType: ChargeType;
+  withdrawalFeeAmount: number;
 }
 
 export const INITIAL_FEE_SETTINGS: FeeSettings = {
@@ -19,7 +21,8 @@ export const INITIAL_FEE_SETTINGS: FeeSettings = {
   savingsChargeAmount: 0.25,
   loansChargeType: "Percentage",
   loansChargeAmount: 1,
-  withdrawalFeePercent: 1,
+  withdrawalFeeType: "Percentage",
+  withdrawalFeeAmount: 1,
 };
 
 export interface CollectionAccountSettings {

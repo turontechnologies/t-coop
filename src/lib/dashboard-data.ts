@@ -123,6 +123,16 @@ export function getSummaryCards(role: UserRole): SummaryCard[] {
       tone: "violet",
       icon: TrendingUp,
     },
+    ...(role === "admin"
+      ? [
+          {
+            label: "Total Members",
+            value: "0",
+            tone: "sky" as const,
+            icon: Users,
+          },
+        ]
+      : []),
   ];
 }
 

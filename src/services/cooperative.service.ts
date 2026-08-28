@@ -8,6 +8,7 @@ import type { CooperativeSummary } from "@/types/cooperative";
 import type {
   AddCooperativeFormValues,
   EditCooperativeFormValues,
+  TransferAdminFormValues,
 } from "@/lib/validations/coop.schema";
 import type { CoopBankAccountFormValues } from "@/lib/validations/admin-settings.schema";
 
@@ -26,13 +27,15 @@ function toSummary(coop: Cooperative): CooperativeSummary {
     city: coop.city,
     status: coop.status,
     currency: coop.currency,
-    withdrawalFeePercent: 0,
+    withdrawalFeeAmount: 0,
+    withdrawalFeeType: "Percentage",
     bankCode: null,
     accountNumber: null,
     accountName: null,
     memberIdPrefix: "MB",
     memberIdPadding: 4,
     memberIdType: "NUMERIC",
+    minGuarantors: 2,
     memberCount: coop.members.length,
     savingsTypeCount: SAVINGS_TYPES.length,
     loanTypeCount: LOAN_TYPES.length,
@@ -114,6 +117,17 @@ export const cooperativeService = {
       `/cooperatives/${coopId}/members/next-id`,
     );
     return data.nextId;
+  },
+
+  async transferAdmin(
+    coopId: string,
+    values: TransferAdminFormValues,
+  ): Promise<CooperativeSummary> {
+    const { data } = await apiClient.post<CooperativeSummary>(
+      `/cooperatives/${coopId}/transfer-admin`,
+      values,
+    );
+    return data;
   },
 };
 

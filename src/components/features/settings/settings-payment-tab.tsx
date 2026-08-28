@@ -8,7 +8,6 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { CollectionAccountForm } from "@/components/features/settings/collection-account-form";
-import { CoopIdFormatForm } from "@/components/features/settings/coop-id-format-form";
 import { FeesChargesForm } from "@/components/features/settings/fees-charges-form";
 import { SettingsSubscriptionPlansTab } from "@/components/features/settings/settings-subscription-plans-tab";
 
@@ -23,7 +22,6 @@ export function SettingsPaymentTab() {
       </TabsList>
 
       <TabsPanel value="fees" className="space-y-6">
-        <CoopIdFormatForm />
         <FeesChargesForm />
       </TabsPanel>
       <TabsPanel value="account">

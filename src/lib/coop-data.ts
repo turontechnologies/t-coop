@@ -30,6 +30,11 @@ export interface CoopMember {
   facebook?: string;
   twitter?: string;
   avatarUrl?: string;
+  nextOfKinName?: string;
+  nextOfKinPhone?: string;
+  nextOfKinEmail?: string;
+  nextOfKinRelationship?: string;
+  nextOfKinAuthorityLevel?: string;
 }
 
 export type CoopSavingsStatus = "Success" | "Pending" | "Failed";

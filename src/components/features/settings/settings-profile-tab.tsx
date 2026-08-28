@@ -25,6 +25,7 @@ import { useUpdateProfile } from "@/hooks/use-update-profile";
 import { logActivity } from "@/lib/audit-log";
 import { getInitials } from "@/lib/format";
 import type { ProfileRecord } from "@/lib/profile-data";
+import { uploadService } from "@/services/upload.service";
 import {
   settingsProfileSchema,
   type SettingsProfileFormValues,
@@ -182,15 +183,8 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Upload failed");
-      setAvatarUrl(data.url);
+      const avatarUrl = await uploadService.uploadAvatar(file);
+      setAvatarUrl(avatarUrl);
       logActivity({
         module: "Settings",
         action: "Update",

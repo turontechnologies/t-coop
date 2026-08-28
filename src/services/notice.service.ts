@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/axios";
+import { uploadService } from "@/services/upload.service";
 import type { Notice, NoticeAttachment, NoticeReply } from "@/types/notice";
 import type { CreateNoticeFormValues } from "@/lib/validations/notice.schema";
 
@@ -63,12 +64,7 @@ export const noticeService = {
   /** Uploads a notice attachment to Cloudinary via the real backend, returning a hosted URL —
    * replaces the old approach of inlining the file as base64 directly into the notice record. */
   async uploadAttachment(file: File): Promise<NoticeAttachment> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const { data } = await apiClient.post<NoticeAttachment>(
-      "/uploads/attachment",
-      formData,
-    );
-    return data;
+    const url = await uploadService.uploadAttachment(file);
+    return { url, name: file.name, size: file.size };
   },
 };

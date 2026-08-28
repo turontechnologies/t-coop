@@ -33,10 +33,8 @@ export const feeChargesSchema = z.object({
   savingsChargeAmount: z.number().min(0, "Enter an amount of 0 or more"),
   loansChargeType: z.enum(["Fixed", "Percentage"]),
   loansChargeAmount: z.number().min(0, "Enter an amount of 0 or more"),
-  withdrawalFeePercent: z
-    .number()
-    .min(0, "Enter a percentage of 0 or more")
-    .max(100, "Enter a percentage of 100 or less"),
+  withdrawalFeeType: z.enum(["Fixed", "Percentage"]),
+  withdrawalFeeAmount: z.number().min(0, "Enter an amount of 0 or more"),
 });
 
 export type FeeChargesFormValues = z.infer<typeof feeChargesSchema>;

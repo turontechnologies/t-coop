@@ -56,13 +56,15 @@ function FeesChargesFormBody({
   const updateFeeSettings = useUpdateFeeSettings();
   const savingsTypeId = useId();
   const loansTypeId = useId();
-  const withdrawalFeeId = useId();
+  const withdrawalFeeTypeId = useId();
+  const withdrawalFeeAmountId = useId();
 
   const {
     control,
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isDirty },
   } = useForm<FeeChargesFormValues>({
     resolver: zodResolver(feeChargesSchema),
@@ -194,18 +196,48 @@ function FeesChargesFormBody({
             before they confirm.
           </p>
         </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor={withdrawalFeeId}>Platform Fee %</Label>
+        <div className="space-y-2">
+          <Label htmlFor={withdrawalFeeTypeId}>Fee Type</Label>
+          <Controller
+            control={control}
+            name="withdrawalFeeType"
+            render={({ field }) => (
+              <Select
+                value={field.value}
+                onValueChange={(value) =>
+                  field.onChange(value as (typeof CHARGE_TYPES)[number])
+                }
+              >
+                <SelectTrigger id={withdrawalFeeTypeId} className="h-11 w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHARGE_TYPES.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={withdrawalFeeAmountId}>
+            {watch("withdrawalFeeType") === "Fixed"
+              ? "Platform Fee Amount"
+              : "Platform Fee %"}
+          </Label>
           <Input
-            id={withdrawalFeeId}
+            id={withdrawalFeeAmountId}
             type="number"
             inputMode="decimal"
-            placeholder="Enter percentage"
+            placeholder="Enter amount"
             className="h-11 w-32"
-            aria-invalid={!!errors.withdrawalFeePercent}
-            {...register("withdrawalFeePercent", { valueAsNumber: true })}
+            aria-invalid={!!errors.withdrawalFeeAmount}
+            {...register("withdrawalFeeAmount", { valueAsNumber: true })}
           />
-          <FieldError message={errors.withdrawalFeePercent?.message} />
+          <FieldError message={errors.withdrawalFeeAmount?.message} />
         </div>
       </div>
 

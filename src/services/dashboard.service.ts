@@ -45,6 +45,7 @@ const SCOPED_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon" | "action">> =
     { tone: "brand", icon: PiggyBank, action: "Top up" },
     { tone: "amber", icon: Landmark, action: "Loan" },
     { tone: "violet", icon: TrendingUp, action: "Save" },
+    { tone: "sky", icon: Users },
   ];
 
 function toSummaryCards(

@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useRef, useState } from "react";
 import { Loader2, Paperclip, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -21,12 +22,10 @@ import {
 } from "@/components/ui/select";
 import { activeSavingsTypeDefs } from "@/lib/admin-settings-data";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
-import {
-  MAX_ATTACHMENT_BYTES,
-  readFileAsDataUrl,
-} from "@/lib/file-to-data-url";
+import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
+import { uploadService } from "@/services/upload.service";
 import { useAdminSettingsStore } from "@/store/admin-settings.store";
 
 export interface UploadTellerPayload {
@@ -107,11 +106,18 @@ export function UploadTellerModal({
   };
 
   const handleUpload = async () => {
-    let receiptUrl: string | undefined;
-    if (receiptFile) {
-      receiptUrl = await readFileAsDataUrl(receiptFile);
+    try {
+      let receiptUrl: string | undefined;
+      if (receiptFile) {
+        receiptUrl = await uploadService.uploadAttachment(receiptFile);
+      }
+      onUpload({ memberId, savingsType, amount: amountNumber, receiptUrl });
+    } catch (error) {
+      toast.error("Couldn't upload receipt", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
     }
-    onUpload({ memberId, savingsType, amount: amountNumber, receiptUrl });
   };
 
   return (

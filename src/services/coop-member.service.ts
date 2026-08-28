@@ -16,6 +16,11 @@ interface CoopMemberDto {
   role: "admin" | "member" | "super_admin";
   status: "Active" | "Inactive";
   guarantor: string | null;
+  nextOfKinName: string | null;
+  nextOfKinPhone: string | null;
+  nextOfKinEmail: string | null;
+  nextOfKinRelationship: string | null;
+  nextOfKinAuthorityLevel: string | null;
   country: string | null;
   state: string | null;
   city: string | null;
@@ -45,6 +50,11 @@ function fromDto(dto: CoopMemberDto): CoopMember {
     role: toRole(dto.role),
     status: dto.status,
     guarantor: dto.guarantor ?? "",
+    nextOfKinName: dto.nextOfKinName ?? "",
+    nextOfKinPhone: dto.nextOfKinPhone ?? "",
+    nextOfKinEmail: dto.nextOfKinEmail ?? "",
+    nextOfKinRelationship: dto.nextOfKinRelationship ?? "",
+    nextOfKinAuthorityLevel: dto.nextOfKinAuthorityLevel ?? "",
     country: dto.country ?? "",
     state: dto.state ?? "",
     city: dto.city ?? "",
@@ -74,6 +84,8 @@ export const coopMemberService = {
     coopId: string,
     values: AddMemberFormValues,
   ): Promise<CoopMember> {
+    // Each guarantor gets a real email invite server-side (MemberGuarantor) — the backend takes
+    // the {name, email, phone} list as-is, not a joined string.
     const { data } = await apiClient.post<CoopMemberDto>(
       `/cooperatives/${coopId}/members`,
       values,

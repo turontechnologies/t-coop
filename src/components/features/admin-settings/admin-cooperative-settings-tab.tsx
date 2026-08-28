@@ -10,6 +10,7 @@ import {
 import { CooperativeDetailsForm } from "@/components/features/admin-settings/cooperative-details-form";
 import { CoopBankAccountForm } from "@/components/features/admin-settings/coop-bank-account-form";
 import { CoopCurrencyForm } from "@/components/features/admin-settings/coop-currency-form";
+import { TransferAdminForm } from "@/components/features/admin-settings/transfer-admin-form";
 
 export function AdminCooperativeSettingsTab() {
   return (
@@ -17,6 +18,7 @@ export function AdminCooperativeSettingsTab() {
       <TabsList>
         <TabsTab value="coop">Co-operative</TabsTab>
         <TabsTab value="bank">Bank Accounts</TabsTab>
+        <TabsTab value="transfer">Transfer Admin</TabsTab>
         <TabsIndicator />
       </TabsList>
 
@@ -26,6 +28,9 @@ export function AdminCooperativeSettingsTab() {
       </TabsPanel>
       <TabsPanel value="bank">
         <CoopBankAccountForm />
+      </TabsPanel>
+      <TabsPanel value="transfer">
+        <TransferAdminForm />
       </TabsPanel>
     </Tabs>
   );
