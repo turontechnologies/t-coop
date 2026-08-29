@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CooperativeLogoUploader } from "@/components/features/admin-settings/cooperative-logo-uploader";
 import { LocationFields } from "@/components/features/shared/location-fields";
 import { useUpdateCooperative } from "@/hooks/use-update-cooperative";
 import {
@@ -102,6 +103,12 @@ export function EditCooperativeModal({
         </DialogHeader>
 
         <form onSubmit={onSubmit} noValidate className="space-y-4">
+          <CooperativeLogoUploader
+            coopId={coop.id}
+            logoUrl={coop.logoUrl}
+            name={coop.name}
+          />
+
           <div className="space-y-2">
             <Label htmlFor={nameId}>Co-operative Name</Label>
             <Input

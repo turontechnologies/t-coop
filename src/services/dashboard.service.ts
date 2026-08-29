@@ -2,6 +2,7 @@ import {
   Building2,
   Landmark,
   type LucideIcon,
+  Percent,
   PiggyBank,
   TrendingUp,
   Users,
@@ -40,12 +41,22 @@ const SUPER_ADMIN_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon">> = [
   { tone: "amber", icon: Landmark },
 ];
 
-const SCOPED_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon" | "action">> =
+// Admin's 4th card is "Total Members" (a count); member's is "Loan Eligibility" (an amount) —
+// same three leading cards (Savings/Loans/Dividends), different last one, so these only diverge
+// at index 3.
+const ADMIN_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon" | "action">> = [
+  { tone: "brand", icon: PiggyBank, action: "Top up" },
+  { tone: "amber", icon: Landmark, action: "Loan" },
+  { tone: "violet", icon: TrendingUp, action: "Save" },
+  { tone: "sky", icon: Users },
+];
+
+const MEMBER_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon" | "action">> =
   [
     { tone: "brand", icon: PiggyBank, action: "Top up" },
     { tone: "amber", icon: Landmark, action: "Loan" },
     { tone: "violet", icon: TrendingUp, action: "Save" },
-    { tone: "sky", icon: Users },
+    { tone: "sky", icon: Percent },
   ];
 
 function toSummaryCards(
@@ -53,7 +64,11 @@ function toSummaryCards(
   cards: DashboardSummaryResponse["cards"],
 ): SummaryCard[] {
   const style =
-    role === "super_admin" ? SUPER_ADMIN_CARD_STYLE : SCOPED_CARD_STYLE;
+    role === "super_admin"
+      ? SUPER_ADMIN_CARD_STYLE
+      : role === "admin"
+        ? ADMIN_CARD_STYLE
+        : MEMBER_CARD_STYLE;
   return cards.map((card, index) => {
     const presentation = style[index] ?? {
       tone: "brand" as const,

@@ -68,6 +68,7 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const genderId = useId();
   const phoneId = useId();
   const emailId = useId();
+  const ninId = useId();
   const homeAddressId = useId();
   const facebookId = useId();
   const membershipIdId = useId();
@@ -99,6 +100,7 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
       otherName: "",
       phone: "",
       email: "",
+      nin: "",
       homeAddress: "",
       country: "",
       state: "",
@@ -371,6 +373,18 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
                 {...register("email")}
               />
               <FieldError message={errors.email?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={ninId}>NIN</Label>
+              <Input
+                id={ninId}
+                placeholder="Enter NIN"
+                disabled={isSubmitting}
+                aria-invalid={!!errors.nin}
+                className="h-11"
+                {...register("nin")}
+              />
+              <FieldError message={errors.nin?.message} />
             </div>
           </div>
         </CardContent>

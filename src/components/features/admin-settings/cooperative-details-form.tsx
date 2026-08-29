@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CooperativeLogoUploader } from "@/components/features/admin-settings/cooperative-logo-uploader";
 import { LocationFields } from "@/components/features/shared/location-fields";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useProfile } from "@/hooks/use-profile";
@@ -40,6 +41,7 @@ export function CooperativeDetailsForm() {
   const addressId = useId();
   const emailId = useId();
   const phoneId = useId();
+  const ninId = useId();
   const memberIdPrefixId = useId();
   const memberIdPaddingId = useId();
   const memberIdTypeId = useId();
@@ -63,6 +65,7 @@ export function CooperativeDetailsForm() {
       name: coop.name,
       adminFirstName: profile.firstName,
       adminLastName: profile.lastName,
+      adminNin: profile.nin ?? "",
       contactEmail: coop.contactEmail,
       contactPhone: coop.contactPhone,
       address: coop.address,
@@ -100,6 +103,22 @@ export function CooperativeDetailsForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">Branding</p>
+          <p className="text-xs text-muted-foreground">
+            What members see confirming which co-operative they belong to.
+          </p>
+        </div>
+        <CooperativeLogoUploader
+          coopId={coopId as string}
+          logoUrl={coop.logoUrl}
+          name={coop.name}
+        />
+      </div>
+
+      <div className="h-px bg-border" />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">
@@ -159,6 +178,18 @@ export function CooperativeDetailsForm() {
                 {...register("contactPhone")}
               />
               <FieldError message={errors.contactPhone?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={ninId}>Contact Person&apos;s NIN</Label>
+              <Input
+                id={ninId}
+                placeholder="Enter NIN"
+                disabled={busy}
+                aria-invalid={!!errors.adminNin}
+                className="h-11"
+                {...register("adminNin")}
+              />
+              <FieldError message={errors.adminNin?.message} />
             </div>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -303,6 +334,7 @@ export function CooperativeDetailsForm() {
               name: coop.name,
               adminFirstName: profile.firstName,
               adminLastName: profile.lastName,
+              adminNin: profile.nin ?? "",
               contactEmail: coop.contactEmail,
               contactPhone: coop.contactPhone,
               address: coop.address,

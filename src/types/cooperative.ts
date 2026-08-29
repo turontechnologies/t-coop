@@ -27,6 +27,7 @@ export interface CooperativeSummary {
   bankCode: string | null;
   accountNumber: string | null;
   accountName: string | null;
+  logoUrl: string | null;
   memberIdPrefix: string;
   memberIdPadding: number;
   memberIdType: IdGenerationType;
@@ -36,4 +37,12 @@ export interface CooperativeSummary {
   loanTypeCount: number;
   totalSavings: number;
   totalLoans: number;
+}
+
+/** GET /api/v1/cooperatives/{id}/branding — the lean shape any member (not just admin/coop
+ * staff) can fetch for their own co-op, to show its name/logo on their dashboard. */
+export interface CooperativeBranding {
+  id: string;
+  name: string;
+  logoUrl: string | null;
 }

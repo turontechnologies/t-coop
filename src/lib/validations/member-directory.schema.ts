@@ -19,6 +19,11 @@ export const addMemberSchema = z.object({
     .min(7, "Enter a valid phone number")
     .regex(/^[\d+\s-]+$/, "Enter a valid phone number"),
   email: z.email("Enter a valid email address"),
+  nin: z
+    .string()
+    .trim()
+    .regex(/^$|^\d{11}$/, "NIN must be 11 digits")
+    .optional(),
   homeAddress: z.string().trim().optional(),
   country: z.string().min(1, "Select a country"),
   state: z.string().trim().optional(),

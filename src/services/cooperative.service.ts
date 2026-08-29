@@ -4,7 +4,10 @@ import { useCoopStore } from "@/store/coop.store";
 import type { Cooperative } from "@/lib/coop-data";
 import { LOAN_TYPES } from "@/lib/loans-data";
 import { SAVINGS_TYPES } from "@/lib/savings-data";
-import type { CooperativeSummary } from "@/types/cooperative";
+import type {
+  CooperativeBranding,
+  CooperativeSummary,
+} from "@/types/cooperative";
 import type {
   AddCooperativeFormValues,
   EditCooperativeFormValues,
@@ -32,6 +35,7 @@ function toSummary(coop: Cooperative): CooperativeSummary {
     bankCode: null,
     accountNumber: null,
     accountName: null,
+    logoUrl: null,
     memberIdPrefix: "MB",
     memberIdPadding: 4,
     memberIdType: "NUMERIC",
@@ -128,6 +132,26 @@ export const cooperativeService = {
       values,
     );
     return data;
+  },
+
+  /** Just name + logo — every role (admin, member, super admin) can call this for their own
+   * co-op, unlike getCooperative which is admin/super-admin only. */
+  async getBranding(coopId: string): Promise<CooperativeBranding> {
+    const { data } = await apiClient.get<CooperativeBranding>(
+      `/cooperatives/${coopId}/branding`,
+    );
+    return data;
+  },
+
+  async uploadLogo(coopId: string, file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const { data } = await apiClient.post<{ url: string }>(
+      `/cooperatives/${coopId}/logo`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return data.url;
   },
 };
 

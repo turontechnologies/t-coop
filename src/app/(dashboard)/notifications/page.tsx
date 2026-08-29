@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import { NotificationDetailModal } from "@/components/layouts/notification-detail-modal";
 import { formatTimeAgo } from "@/lib/format";
 import {
   useNotificationMutations,
@@ -12,10 +13,11 @@ import {
   useUnreadNotificationCount,
 } from "@/hooks/use-notifications";
 import type { AppNotification } from "@/types/notification";
+import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 
 export default function NotificationsPage() {
-  const router = useRouter();
+  const member = useAuthStore((state) => state.member);
   const {
     data: notifications = [],
     isLoading,
@@ -26,11 +28,14 @@ export default function NotificationsPage() {
   } = useNotifications();
   const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const { markRead, markAllRead } = useNotificationMutations();
+  const [selected, setSelected] = useState<AppNotification | null>(null);
 
   const open = (notification: AppNotification) => {
     if (!notification.read) markRead.mutate(notification.id);
-    if (notification.link) router.push(notification.link);
+    setSelected(notification);
   };
+
+  if (!member) return null;
 
   return (
     <div className="space-y-6 pt-6">
@@ -59,7 +64,10 @@ export default function NotificationsPage() {
         {notifications.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-              <Bell className="size-6 text-muted-foreground" aria-hidden="true" />
+              <Bell
+                className="size-6 text-muted-foreground"
+                aria-hidden="true"
+              />
               <p className="text-sm font-medium text-foreground">
                 You&apos;re all caught up
               </p>
@@ -111,6 +119,15 @@ export default function NotificationsPage() {
           </Card>
         )}
       </QueryBoundary>
+
+      <NotificationDetailModal
+        notification={selected}
+        member={member}
+        open={selected !== null}
+        onOpenChange={(next) => {
+          if (!next) setSelected(null);
+        }}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import {
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
+import { MemberAvatar } from "@/components/features/coop/member-avatar";
 import {
   useUpdateCoopMember,
   useUpdateCoopMemberStatus,
@@ -98,6 +99,9 @@ export function MembersDirectoryTable({
           <thead>
             <tr className="border-b border-border bg-accent/60">
               <th className="px-4 py-2.5 font-medium text-foreground">
+                <span className="sr-only">Photo</span>
+              </th>
+              <th className="px-4 py-2.5 font-medium text-foreground">
                 Members Id
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
@@ -121,7 +125,7 @@ export function MembersDirectoryTable({
             {pageMembers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No members match your search.
@@ -136,6 +140,12 @@ export function MembersDirectoryTable({
                     onClick={() => router.push(`/members/${member.id}`)}
                     className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                   >
+                    <td className="px-4 py-3">
+                      <MemberAvatar
+                        avatarUrl={member.avatarUrl}
+                        name={coopMemberFullName(member)}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground">
                       {member.id}
                     </td>
@@ -181,7 +191,16 @@ export function MembersDirectoryTable({
             <MobileRecordCard
               key={member.id}
               onClick={() => router.push(`/members/${member.id}`)}
-              title={coopMemberFullName(member)}
+              title={
+                <span className="flex items-center gap-2">
+                  <MemberAvatar
+                    avatarUrl={member.avatarUrl}
+                    name={coopMemberFullName(member)}
+                    className="size-6"
+                  />
+                  {coopMemberFullName(member)}
+                </span>
+              }
               badge={
                 <Badge
                   variant={isActive ? "secondary" : "outline"}

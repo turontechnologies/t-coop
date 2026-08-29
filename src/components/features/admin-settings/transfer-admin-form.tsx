@@ -41,6 +41,7 @@ export function TransferAdminForm() {
 
   const firstNameId = useId();
   const lastNameId = useId();
+  const ninId = useId();
   const emailId = useId();
   const phoneId = useId();
 
@@ -57,6 +58,7 @@ export function TransferAdminForm() {
     defaultValues: {
       newFirstName: "",
       newLastName: "",
+      newNin: "",
       newEmail: "",
       newPhone: "",
     },
@@ -113,6 +115,18 @@ export function TransferAdminForm() {
             {...register("newLastName")}
           />
           <FieldError message={errors.newLastName?.message} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={ninId}>New Admin&apos;s NIN</Label>
+          <Input
+            id={ninId}
+            placeholder="Enter NIN"
+            disabled={busy}
+            aria-invalid={!!errors.newNin}
+            className="h-11"
+            {...register("newNin")}
+          />
+          <FieldError message={errors.newNin?.message} />
         </div>
         <div className="space-y-2">
           <Label htmlFor={emailId}>New Admin&apos;s Email</Label>

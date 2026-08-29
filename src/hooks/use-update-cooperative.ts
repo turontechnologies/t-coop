@@ -36,3 +36,13 @@ export function useTransferAdmin(id: string) {
       cooperativeService.transferAdmin(id, values),
   });
 }
+
+export function useUploadCooperativeLogo(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => cooperativeService.uploadLogo(id, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cooperatives"] });
+    },
+  });
+}

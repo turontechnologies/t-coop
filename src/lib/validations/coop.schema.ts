@@ -1,10 +1,19 @@
 import { z } from "zod";
 
+// Reused everywhere a co-op's admin/contact person's NIN is captured — optional (blank is fine),
+// but a value that's entered has to be exactly 11 digits or it's not a real NIN.
+const ninField = z
+  .string()
+  .trim()
+  .regex(/^$|^\d{11}$/, "NIN must be 11 digits")
+  .optional();
+
 export const addCooperativeSchema = z.object({
   coopId: z.string().trim().min(1, "Enter a co-op ID"),
   coopName: z.string().trim().min(1, "Enter the co-operative name"),
   adminFirstName: z.string().trim().min(1, "Enter the admin's first name"),
   adminLastName: z.string().trim().min(1, "Enter the admin's last name"),
+  adminNin: ninField,
   contactEmail: z.email("Enter a valid email address"),
   contactPhone: z
     .string()
@@ -24,6 +33,7 @@ export const editCooperativeSchema = z.object({
   name: z.string().trim().min(1, "Enter the co-operative name"),
   adminFirstName: z.string().trim().min(1, "Enter the admin's first name"),
   adminLastName: z.string().trim().min(1, "Enter the admin's last name"),
+  adminNin: ninField,
   contactEmail: z.email("Enter a valid email address"),
   contactPhone: z
     .string()
@@ -88,6 +98,7 @@ export type EditMemberFormValues = z.infer<typeof editMemberSchema>;
 export const transferAdminSchema = z.object({
   newFirstName: z.string().trim().min(1, "Enter the new admin's first name"),
   newLastName: z.string().trim().min(1, "Enter the new admin's last name"),
+  newNin: ninField,
   newEmail: z.email("Enter a valid email address"),
   newPhone: z
     .string()

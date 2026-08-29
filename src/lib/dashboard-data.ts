@@ -2,6 +2,7 @@ import {
   Building2,
   Landmark,
   type LucideIcon,
+  Percent,
   PiggyBank,
   TrendingUp,
   Users,
@@ -123,16 +124,19 @@ export function getSummaryCards(role: UserRole): SummaryCard[] {
       tone: "violet",
       icon: TrendingUp,
     },
-    ...(role === "admin"
-      ? [
-          {
-            label: "Total Members",
-            value: "0",
-            tone: "sky" as const,
-            icon: Users,
-          },
-        ]
-      : []),
+    role === "admin"
+      ? {
+          label: "Total Members",
+          value: "0",
+          tone: "sky" as const,
+          icon: Users,
+        }
+      : {
+          label: "Loan Eligibility",
+          value: "₦0",
+          tone: "sky" as const,
+          icon: Percent,
+        },
   ];
 }
 

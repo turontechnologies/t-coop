@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/mobile-record-card";
 import { ConfirmToggleDialog } from "@/components/features/coop/confirm-toggle-dialog";
 import { EditMemberModal } from "@/components/features/coop/edit-member-modal";
+import { MemberAvatar } from "@/components/features/coop/member-avatar";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
   useUpdateCoopMember,
@@ -82,6 +83,9 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
           <thead>
             <tr className="border-b border-border bg-accent/60">
               <th className="px-4 py-2.5 font-medium text-foreground">
+                <span className="sr-only">Photo</span>
+              </th>
+              <th className="px-4 py-2.5 font-medium text-foreground">
                 Members Id
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
@@ -106,7 +110,7 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No members match your search.
@@ -126,6 +130,12 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
                     }
                     className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                   >
+                    <td className="px-4 py-3">
+                      <MemberAvatar
+                        avatarUrl={member.avatarUrl}
+                        name={fullName}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium text-foreground">
                       {member.id}
                     </td>
@@ -205,7 +215,16 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
               onClick={() =>
                 router.push(`/co-operatives/${coopId}/members/${member.id}`)
               }
-              title={fullName}
+              title={
+                <span className="flex items-center gap-2">
+                  <MemberAvatar
+                    avatarUrl={member.avatarUrl}
+                    name={fullName}
+                    className="size-6"
+                  />
+                  {fullName}
+                </span>
+              }
               badge={
                 <Badge
                   variant={isActive ? "secondary" : "outline"}

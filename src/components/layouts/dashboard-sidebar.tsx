@@ -3,16 +3,19 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { LogOut, X } from "lucide-react";
+import { Building2, LogOut, X } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { getNavItems } from "@/config/dashboard-nav";
+import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/types/auth";
 
 interface DashboardSidebarProps {
   role: UserRole;
+  /** Null for super_admin/support — see useCooperativeBranding. */
+  cooperativeId?: string | null;
   /** Only meaningful for role "support" — see getNavItems. */
   permissionModules?: string[] | null;
   mobileOpen: boolean;
@@ -22,6 +25,7 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({
   role,
+  cooperativeId,
   permissionModules,
   mobileOpen,
   onMobileClose,
@@ -29,6 +33,10 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const navItems = getNavItems(role, permissionModules);
+  const showCoopBranding = role === "admin" || role === "member";
+  const { data: branding } = useCooperativeBranding(
+    showCoopBranding ? cooperativeId : null,
+  );
 
   return (
     <>
@@ -53,7 +61,27 @@ export function DashboardSidebar({
         )}
       >
         <div className="flex items-center justify-between gap-2 px-5 py-6">
-          <Logo className="h-7 w-auto" />
+          {showCoopBranding && branding ? (
+            <div className="flex min-w-0 items-center gap-2.5">
+              {branding.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- arbitrary Cloudinary URL
+                <img
+                  src={branding.logoUrl}
+                  alt={branding.name}
+                  className="size-8 shrink-0 rounded-md object-cover"
+                />
+              ) : (
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-white">
+                  <Building2 className="size-4.5" aria-hidden="true" />
+                </span>
+              )}
+              <span className="truncate text-sm font-semibold text-white">
+                {branding.name}
+              </span>
+            </div>
+          ) : (
+            <Logo className="h-7 w-auto" />
+          )}
           <Button
             variant="ghost"
             size="icon-sm"
