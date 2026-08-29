@@ -1,9 +1,24 @@
-import { CheckCircle2, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RecentActivity } from "@/lib/dashboard-data";
+import { cn } from "@/lib/utils";
 
 interface RecentActivitiesProps {
   activities: RecentActivity[];
+}
+
+const SUCCESS_STATUSES = new Set([
+  "Success",
+  "Active",
+  "Completed",
+  "Approved",
+]);
+const FAILURE_STATUSES = new Set(["Failed", "Rejected", "Declined"]);
+
+function statusTone(status: string) {
+  if (SUCCESS_STATUSES.has(status)) return "success" as const;
+  if (FAILURE_STATUSES.has(status)) return "destructive" as const;
+  return "pending" as const;
 }
 
 export function RecentActivities({ activities }: RecentActivitiesProps) {
@@ -29,10 +44,26 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
                 <p className="truncate text-xs text-muted-foreground">
                   {activity.subtitle}
                 </p>
-                {activity.showStatus ? (
-                  <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-success">
-                    <CheckCircle2 className="size-3" aria-hidden="true" />
-                    Success
+                {activity.status ? (
+                  <p
+                    className={cn(
+                      "mt-0.5 flex items-center gap-1 text-xs font-medium",
+                      statusTone(activity.status) === "success" &&
+                        "text-success",
+                      statusTone(activity.status) === "destructive" &&
+                        "text-destructive",
+                      statusTone(activity.status) === "pending" &&
+                        "text-muted-foreground",
+                    )}
+                  >
+                    {statusTone(activity.status) === "success" ? (
+                      <CheckCircle2 className="size-3" aria-hidden="true" />
+                    ) : statusTone(activity.status) === "destructive" ? (
+                      <AlertCircle className="size-3" aria-hidden="true" />
+                    ) : (
+                      <Clock className="size-3" aria-hidden="true" />
+                    )}
+                    {activity.status}
                   </p>
                 ) : null}
               </div>

@@ -7,9 +7,11 @@ import { ArrowLeft, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getDirectoryCoop } from "@/lib/member-directory";
+import { useCoopSavingsRecord } from "@/hooks/use-coop-savings";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useCooperative } from "@/hooks/use-cooperative";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { useCoopStore } from "@/store/coop.store";
+import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 
 interface AdminSavingsRecordPageProps {
@@ -21,10 +23,19 @@ export default function AdminSavingsRecordPage({
 }: AdminSavingsRecordPageProps) {
   const { recordId } = use(params);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = getDirectoryCoop(cooperatives);
-  const record = coop?.savings.find((item) => item.id === recordId);
-  const member = coop?.members.find((item) => item.id === record?.memberId);
+  const authMember = useAuthStore((state) => state.member);
+  const coopId =
+    authMember?.role === "admin"
+      ? authMember.id
+      : (authMember?.cooperativeId ?? undefined);
+  const { data: coop } = useCooperative(coopId);
+  const { data: record, isLoading } = useCoopSavingsRecord(recordId);
+  const { data: members = [] } = useCoopMembers(coopId);
+  const member = members.find((item) => item.id === record?.memberId);
+
+  if (isLoading) {
+    return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
+  }
 
   if (!coop || !record) {
     return (

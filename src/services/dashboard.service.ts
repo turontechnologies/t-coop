@@ -44,24 +44,28 @@ const SUPER_ADMIN_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon">> = [
 // Admin's 4th card is "Total Members" (a count); member's is "Loan Eligibility" (an amount) —
 // same three leading cards (Savings/Loans/Dividends), different last one, so these only diverge
 // at index 3.
-const ADMIN_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon" | "action">> = [
-  { tone: "brand", icon: PiggyBank, action: "Top up" },
-  { tone: "amber", icon: Landmark, action: "Loan" },
-  { tone: "violet", icon: TrendingUp, action: "Save" },
+const ADMIN_CARD_STYLE: Array<
+  Pick<SummaryCard, "tone" | "icon" | "action" | "actionHref">
+> = [
+  { tone: "brand", icon: PiggyBank, action: "Top up", actionHref: "/savings" },
+  { tone: "amber", icon: Landmark, action: "Loan", actionHref: "/loans" },
+  { tone: "violet", icon: TrendingUp, action: "Save", actionHref: "/savings" },
   { tone: "sky", icon: Users },
 ];
 
-const MEMBER_CARD_STYLE: Array<Pick<SummaryCard, "tone" | "icon" | "action">> =
-  [
-    { tone: "brand", icon: PiggyBank, action: "Top up" },
-    { tone: "amber", icon: Landmark, action: "Loan" },
-    { tone: "violet", icon: TrendingUp, action: "Save" },
-    { tone: "sky", icon: Percent },
-  ];
+const MEMBER_CARD_STYLE: Array<
+  Pick<SummaryCard, "tone" | "icon" | "action" | "actionHref">
+> = [
+  { tone: "brand", icon: PiggyBank, action: "Top up", actionHref: "/savings" },
+  { tone: "amber", icon: Landmark, action: "Loan", actionHref: "/loans" },
+  { tone: "violet", icon: TrendingUp, action: "Save", actionHref: "/savings" },
+  { tone: "sky", icon: Percent },
+];
 
 function toSummaryCards(
   role: UserRole,
   cards: DashboardSummaryResponse["cards"],
+  currency: string,
 ): SummaryCard[] {
   const style =
     role === "super_admin"
@@ -78,7 +82,7 @@ function toSummaryCards(
       card.label.includes("Co-operatives") || card.label.includes("Members");
     return {
       label: card.label,
-      value: isCount ? String(card.value) : formatMoney(card.value),
+      value: isCount ? String(card.value) : formatMoney(card.value, currency),
       ...presentation,
     };
   });
@@ -95,22 +99,26 @@ function toActivityRate(cards: DashboardSummaryResponse["cards"]): number {
 function toRecentActivities(
   role: UserRole,
   activities: DashboardSummaryResponse["recentActivity"],
+  currency: string,
 ): RecentActivity[] {
   return activities.map((activity) => ({
     title: activity.title,
     subtitle: activity.subtitle,
-    amount: formatMoney(activity.amount),
+    amount: formatMoney(activity.amount, currency),
     date: new Date(activity.date).toLocaleDateString("en-GB", {
       day: "numeric",
       month: "long",
       year: "numeric",
     }),
-    showStatus: role !== "super_admin" && Boolean(activity.status),
+    status: role !== "super_admin" ? activity.status : null,
   }));
 }
 
 export const dashboardService = {
-  async getSummary(role: UserRole): Promise<DashboardSummary> {
+  async getSummary(
+    role: UserRole,
+    currency: string,
+  ): Promise<DashboardSummary> {
     if (process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD === "true") {
       return mockSummary(role);
     }
@@ -119,11 +127,11 @@ export const dashboardService = {
       await apiClient.get<DashboardSummaryResponse>("/dashboard/summary");
 
     return {
-      cards: toSummaryCards(role, data.cards),
+      cards: toSummaryCards(role, data.cards, currency),
       chart: data.chart,
       chartSeries: getChartSeries(role),
       activityRate: toActivityRate(data.cards),
-      recentActivity: toRecentActivities(role, data.recentActivity),
+      recentActivity: toRecentActivities(role, data.recentActivity, currency),
     };
   },
 };

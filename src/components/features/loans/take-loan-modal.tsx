@@ -19,31 +19,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  GUARANTORS,
-  computeEligibleAmount,
-  computeLoanTerms,
-} from "@/lib/loans-data";
-import { activeLoanTypeDefs } from "@/lib/admin-settings-data";
+import { computeEligibleAmount, computeLoanTerms } from "@/lib/loans-data";
+import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
+import { useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
-import { useAdminSettingsStore } from "@/store/admin-settings.store";
 import { cn } from "@/lib/utils";
 
 interface TakeLoanModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  coopId: string | undefined;
   busy: boolean;
-  memberName: string;
+  memberId: string;
+  members: CoopMember[];
   totalSavings: number;
-  onProceed: (loanType: string, amount: number, guarantorName: string) => void;
+  onProceed: (
+    loanTypeId: string,
+    amount: number,
+    guarantorMemberId: string,
+  ) => void;
 }
 
 export function TakeLoanModal({
   open,
   onOpenChange,
+  coopId,
   busy,
-  memberName,
+  memberId,
+  members,
   totalSavings,
   onProceed,
 }: TakeLoanModalProps) {
@@ -51,18 +55,16 @@ export function TakeLoanModal({
   const amountId = useId();
   const guarantorId = useId();
   const currency = useCurrency();
-  const [loanType, setLoanType] = useState("");
+  const [loanTypeId, setLoanTypeId] = useState("");
   const [amount, setAmount] = useState("");
-  const [guarantorName, setGuarantorName] = useState("");
+  const [guarantorMemberId, setGuarantorMemberId] = useState("");
 
-  const loanTypeSettings = useAdminSettingsStore(
-    (state) => state.loanTypeSettings,
-  );
+  const { data: types } = useCoopLoanTypes(coopId);
   const loanTypes = useMemo(
-    () => activeLoanTypeDefs(loanTypeSettings),
-    [loanTypeSettings],
+    () => (types ?? []).filter((type) => type.status === "Active"),
+    [types],
   );
-  const selectedType = loanTypes.find((type) => type.name === loanType);
+  const selectedType = loanTypes.find((type) => type.id === loanTypeId);
   const eligibleAmount = selectedType
     ? computeEligibleAmount(totalSavings, selectedType)
     : 0;
@@ -75,19 +77,19 @@ export function TakeLoanModal({
     [selectedType, amountNumber],
   );
 
-  const guarantorOptions = GUARANTORS.filter((name) => name !== memberName);
+  const guarantorOptions = members.filter((member) => member.id !== memberId);
 
   const isValid =
     !!selectedType &&
-    !!guarantorName &&
+    !!guarantorMemberId &&
     amountNumber > 0 &&
     amountNumber <= eligibleAmount;
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
-      setLoanType("");
+      setLoanTypeId("");
       setAmount("");
-      setGuarantorName("");
+      setGuarantorMemberId("");
     }
     onOpenChange(next);
   };
@@ -103,8 +105,8 @@ export function TakeLoanModal({
           <div className="space-y-2">
             <Label htmlFor={typeId}>Loan Type</Label>
             <Select
-              value={loanType}
-              onValueChange={(value) => setLoanType(value ?? "")}
+              value={loanTypeId}
+              onValueChange={(value) => setLoanTypeId(value ?? "")}
               disabled={busy}
             >
               <SelectTrigger id={typeId} className="h-11 w-full">
@@ -112,7 +114,7 @@ export function TakeLoanModal({
               </SelectTrigger>
               <SelectContent>
                 {loanTypes.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
+                  <SelectItem key={type.id} value={type.id}>
                     {type.name}
                   </SelectItem>
                 ))}
@@ -150,17 +152,17 @@ export function TakeLoanModal({
           <div className="space-y-2">
             <Label htmlFor={guarantorId}>Guarantor</Label>
             <Select
-              value={guarantorName}
-              onValueChange={(value) => setGuarantorName(value ?? "")}
+              value={guarantorMemberId}
+              onValueChange={(value) => setGuarantorMemberId(value ?? "")}
               disabled={busy}
             >
               <SelectTrigger id={guarantorId} className="h-11 w-full">
                 <SelectValue placeholder="Select a guarantor" />
               </SelectTrigger>
               <SelectContent>
-                {guarantorOptions.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
+                {guarantorOptions.map((member) => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {coopMemberFullName(member)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -175,7 +177,7 @@ export function TakeLoanModal({
               <dl className="grid grid-cols-2 gap-y-2 text-sm">
                 <dt className="text-muted-foreground">Loan Type</dt>
                 <dd className="text-right font-medium text-foreground">
-                  {loanType}
+                  {selectedType?.name}
                 </dd>
                 <dt className="text-muted-foreground">Duration</dt>
                 <dd className="text-right font-medium text-foreground">
@@ -218,7 +220,7 @@ export function TakeLoanModal({
             className={cn(busy && "pointer-events-none opacity-50")}
             onClick={() => {
               if (busy) return;
-              onProceed(loanType, amountNumber, guarantorName);
+              onProceed(loanTypeId, amountNumber, guarantorMemberId);
             }}
           >
             {busy ? (

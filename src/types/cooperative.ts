@@ -24,6 +24,10 @@ export interface CooperativeSummary {
   currency: string;
   withdrawalFeeAmount: number;
   withdrawalFeeType: "Fixed" | "Percentage";
+  savingsChargeAmount: number;
+  savingsChargeType: "Fixed" | "Percentage";
+  loansChargeAmount: number;
+  loansChargeType: "Fixed" | "Percentage";
   bankCode: string | null;
   accountNumber: string | null;
   accountName: string | null;
@@ -45,4 +49,5 @@ export interface CooperativeBranding {
   id: string;
   name: string;
   logoUrl: string | null;
+  currency: string;
 }

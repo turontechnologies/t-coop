@@ -37,10 +37,13 @@ import {
 } from "@/lib/coop-data";
 import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
 import { formatDateLong, formatMoney, getInitials } from "@/lib/format";
-import { getDirectoryCoop } from "@/lib/member-directory";
+import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useGuarantorResponse, useLoanDecision } from "@/hooks/use-loans-self";
 import { initiateTransfer } from "@/lib/paystack-transfer";
 import { uploadService } from "@/services/upload.service";
-import { useCoopStore } from "@/store/coop.store";
+import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 
 interface LoanRequestPageProps {
@@ -50,13 +53,21 @@ interface LoanRequestPageProps {
 export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   const { recordId } = use(params);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const respondToGuarantorRequest = useCoopStore(
-    (state) => state.respondToGuarantorRequest,
-  );
-  const resolveLoanRequest = useCoopStore((state) => state.resolveLoanRequest);
-  const coop = getDirectoryCoop(cooperatives);
-  const record = coop?.loans.find((item) => item.id === recordId);
+  const authMember = useAuthStore((state) => state.member);
+  const coopId =
+    authMember?.role === "admin"
+      ? authMember.id
+      : (authMember?.cooperativeId ?? undefined);
+
+  const { data: record, isLoading } = useCoopLoanRecord(recordId);
+  const { data: coop } = useCooperative(coopId);
+  const { data: members = [] } = useCoopMembers(coopId);
+  const guarantorResponse = useGuarantorResponse(coopId ?? "");
+  const loanDecision = useLoanDecision(coopId ?? "");
+
+  if (isLoading) {
+    return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
+  }
 
   if (!coop || !record) {
     return (
@@ -72,26 +83,47 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     );
   }
 
-  const guarantorMember = coop.members.find(
+  const guarantorMember = members.find(
     (m) => coopMemberFullName(m) === record.guarantorName,
   );
 
   const handleGuarantorAccept = async (documentUrl?: string) => {
-    respondToGuarantorRequest(coop.id, record.id, "Accepted", documentUrl);
-    toast.success("Guarantor accepted", {
-      description: `${record.guarantorName} has agreed to guarantee this loan — now awaiting your decision.`,
-    });
+    try {
+      await guarantorResponse.mutateAsync({
+        loanId: record.id,
+        decision: "Accepted",
+        documentUrl,
+      });
+      toast.success("Guarantor accepted", {
+        description: `${record.guarantorName} has agreed to guarantee this loan — now awaiting the admin's decision.`,
+      });
+    } catch (error) {
+      toast.error("Couldn't accept", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   const handleGuarantorReject = async () => {
-    respondToGuarantorRequest(coop.id, record.id, "Rejected");
-    toast.success("Guarantor request declined", {
-      description: `Recorded as declined for ${record.memberName}'s loan.`,
-    });
+    try {
+      await guarantorResponse.mutateAsync({
+        loanId: record.id,
+        decision: "Rejected",
+      });
+      toast.success("Guarantor request declined", {
+        description: `Recorded as declined for ${record.memberName}'s loan.`,
+      });
+    } catch (error) {
+      toast.error("Couldn't decline", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   const handleApprove = async () => {
-    const borrower = coop.members.find((m) => m.id === record.memberId);
+    const borrower = members.find((m) => m.id === record.memberId);
     if (!borrower?.accountNumber || !borrower?.bankCode) {
       toast.error("Can't disburse this loan", {
         description: `${record.memberName} hasn't verified their bank account yet.`,
@@ -99,14 +131,16 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
       return;
     }
 
+    let transferReference: string;
     try {
-      await initiateTransfer({
+      const transfer = await initiateTransfer({
         accountNumber: borrower.accountNumber,
         bankCode: borrower.bankCode,
         accountName: borrower.accountName || record.memberName,
         amount: record.amount,
         reason: `T-Coop loan disbursement — ${record.loanType}`,
       });
+      transferReference = transfer.reference;
     } catch (error) {
       toast.error("Disbursement failed", {
         description:
@@ -117,17 +151,39 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
       return;
     }
 
-    resolveLoanRequest(coop.id, record.id, "Approved");
-    toast.success("Loan approved and disbursed", {
-      description: `${formatMoney(record.amount, coop.currency)} paid out to ${record.memberName}.`,
-    });
+    try {
+      await loanDecision.mutateAsync({
+        loanId: record.id,
+        decision: "Approved",
+        transferReference,
+      });
+      toast.success("Loan approved and disbursed", {
+        description: `${formatMoney(record.amount, coop.currency)} paid out to ${record.memberName}.`,
+      });
+    } catch (error) {
+      toast.error("Couldn't record approval", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   const handleReject = async (reason: string) => {
-    resolveLoanRequest(coop.id, record.id, "Rejected", reason);
-    toast.success("Loan rejected", {
-      description: `${record.memberName} will see this reason: "${reason}"`,
-    });
+    try {
+      await loanDecision.mutateAsync({
+        loanId: record.id,
+        decision: "Rejected",
+        rejectionReason: reason,
+      });
+      toast.success("Loan rejected", {
+        description: `${record.memberName} will see this reason: "${reason}"`,
+      });
+    } catch (error) {
+      toast.error("Couldn't reject", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   const showGuarantorActions = record.status === "Awaiting Guarantor";
@@ -520,11 +576,10 @@ function ApproveLoanDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Approve and disburse loan</AlertDialogTitle>
           <AlertDialogDescription>
-            This marks {formatMoney(record.amount, currency)} as paid out to{" "}
-            {record.memberName} and sets the loan Active. This app has no real
-            payout capability (no backend/Transfers API) — this simulates the
-            disbursement honestly, the same way every other mock action here
-            does.
+            This sends a real Paystack transfer of{" "}
+            {formatMoney(record.amount, currency)} to {record.memberName}
+            &apos;s bank account and sets the loan Active. This can&apos;t be
+            undone from here.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

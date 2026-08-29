@@ -7,14 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopLoanTypeRecordsTable } from "@/components/features/coop/coop-loan-type-records-table";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
-import {
-  ADMIN_DIRECTORY_COOP_ID,
-  getDirectoryCoop,
-} from "@/lib/member-directory";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopLoanRecord } from "@/lib/coop-data";
-import { useCoopStore } from "@/store/coop.store";
+import { useAuthStore } from "@/store/auth.store";
 
 interface AdminLoanTypePageProps {
   params: Promise<{ type: string }>;
@@ -32,13 +30,16 @@ export default function AdminLoanTypePage({ params }: AdminLoanTypePageProps) {
   const { type } = use(params);
   const loanType = decodeURIComponent(type);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = getDirectoryCoop(cooperatives);
+  const authMember = useAuthStore((state) => state.member);
+  const coopId =
+    authMember?.role === "admin"
+      ? authMember.id
+      : (authMember?.cooperativeId ?? undefined);
+  const { data: coop } = useCooperative(coopId);
+  const { data: records = [] } = useCoopLoanRecords(coopId, {
+    type: loanType,
+  });
 
-  const records = useMemo(
-    () => coop?.loans.filter((record) => record.loanType === loanType) ?? [],
-    [coop, loanType],
-  );
   const total = useMemo(
     () => records.reduce((sum, record) => sum + record.amount, 0),
     [records],
@@ -96,7 +97,7 @@ export default function AdminLoanTypePage({ params }: AdminLoanTypePageProps) {
               <ExportImportMenu
                 rows={records}
                 columns={EXPORT_COLUMNS}
-                filenamePrefix={`${ADMIN_DIRECTORY_COOP_ID}-${loanType}`}
+                filenamePrefix={`${coop.id}-${loanType}`}
                 exportTitle={`${coop.name} — ${loanType}`}
               />
             </div>

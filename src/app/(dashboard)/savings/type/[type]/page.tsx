@@ -7,14 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopSavingsTypeRecordsTable } from "@/components/features/coop/coop-savings-type-records-table";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
-import {
-  ADMIN_DIRECTORY_COOP_ID,
-  getDirectoryCoop,
-} from "@/lib/member-directory";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
-import { useCoopStore } from "@/store/coop.store";
+import { useAuthStore } from "@/store/auth.store";
 
 interface AdminSavingsTypePageProps {
   params: Promise<{ type: string }>;
@@ -34,15 +32,16 @@ export default function AdminSavingsTypePage({
   const { type } = use(params);
   const savingsType = decodeURIComponent(type);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = getDirectoryCoop(cooperatives);
+  const authMember = useAuthStore((state) => state.member);
+  const coopId =
+    authMember?.role === "admin"
+      ? authMember.id
+      : (authMember?.cooperativeId ?? undefined);
+  const { data: coop } = useCooperative(coopId);
+  const { data: records = [] } = useCoopSavingsRecords(coopId, {
+    type: savingsType,
+  });
 
-  const records = useMemo(
-    () =>
-      coop?.savings.filter((record) => record.savingsType === savingsType) ??
-      [],
-    [coop, savingsType],
-  );
   const total = useMemo(
     () => records.reduce((sum, record) => sum + record.amount, 0),
     [records],
@@ -102,7 +101,7 @@ export default function AdminSavingsTypePage({
               <ExportImportMenu
                 rows={records}
                 columns={EXPORT_COLUMNS}
-                filenamePrefix={`${ADMIN_DIRECTORY_COOP_ID}-${savingsType}`}
+                filenamePrefix={`${coop.id}-${savingsType}`}
                 exportTitle={`${coop.name} — ${savingsType}`}
               />
             </div>

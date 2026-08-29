@@ -13,6 +13,7 @@ export interface SummaryCard {
   label: string;
   value: string;
   action?: string;
+  actionHref?: string;
   tone: "brand" | "violet" | "sky" | "amber";
   icon: LucideIcon;
 }
@@ -29,7 +30,7 @@ export interface RecentActivity {
   subtitle: string;
   amount: string;
   date: string;
-  showStatus: boolean;
+  status: string | null;
 }
 
 const CHART_DATA: ActivityPoint[] = [
@@ -51,28 +52,28 @@ const RECENT_ACTIVITIES: RecentActivity[] = [
     subtitle: "Yomidun Co-operative",
     amount: "₦30,000",
     date: "13th April 2021",
-    showStatus: false,
+    status: null,
   },
   {
     title: "Loan Disbursement",
     subtitle: "Turon Co-operative",
     amount: "₦50,000",
     date: "13th April 2021",
-    showStatus: false,
+    status: null,
   },
   {
     title: "Dividends",
     subtitle: "John Snow and Sons",
     amount: "₦150,000",
     date: "13th April 2021",
-    showStatus: false,
+    status: null,
   },
   {
     title: "Savings & Contribution",
     subtitle: "Turon Co-operative",
     amount: "₦350,000",
     date: "13th April 2021",
-    showStatus: false,
+    status: null,
   },
 ];
 
@@ -165,6 +166,6 @@ export function getChartSeries(
 }
 
 export function getRecentActivities(role: UserRole): RecentActivity[] {
-  const showStatus = role !== "super_admin";
-  return RECENT_ACTIVITIES.map((activity) => ({ ...activity, showStatus }));
+  const status = role !== "super_admin" ? "Success" : null;
+  return RECENT_ACTIVITIES.map((activity) => ({ ...activity, status }));
 }

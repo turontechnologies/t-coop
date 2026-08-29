@@ -52,6 +52,16 @@ export const editCooperativeSchema = z.object({
     .min(0, "Enter an amount of 0 or more")
     .optional(),
   withdrawalFeeType: z.enum(["Fixed", "Percentage"]).optional(),
+  savingsChargeAmount: z
+    .number()
+    .min(0, "Enter an amount of 0 or more")
+    .optional(),
+  savingsChargeType: z.enum(["Fixed", "Percentage"]).optional(),
+  loansChargeAmount: z
+    .number()
+    .min(0, "Enter an amount of 0 or more")
+    .optional(),
+  loansChargeType: z.enum(["Fixed", "Percentage"]).optional(),
   memberIdPrefix: z
     .string()
     .trim()

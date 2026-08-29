@@ -9,18 +9,16 @@ import { LoanRecordsTable } from "@/components/features/loans/loan-records-table
 import { LoanSuccessModal } from "@/components/features/loans/loan-success-modal";
 import { TakeLoanModal } from "@/components/features/loans/take-loan-modal";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
-import {
-  findLoanType,
-  computeLoanTerms,
-  type LoanRecord,
-} from "@/lib/loans-data";
+import type { CoopLoanRecord } from "@/lib/coop-data";
+import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
+import { useApplyForLoan } from "@/hooks/use-loans-self";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
-import { useLoansStore } from "@/store/loans.store";
-import { useSavingsStore } from "@/store/savings.store";
 
-const EXPORT_COLUMNS: ExportColumn<LoanRecord>[] = [
+const EXPORT_COLUMNS: ExportColumn<CoopLoanRecord>[] = [
   { header: "Loan Type", accessor: (record) => record.loanType },
   { header: "Loan Amount", accessor: (record) => record.amount },
   {
@@ -33,6 +31,7 @@ const EXPORT_COLUMNS: ExportColumn<LoanRecord>[] = [
 ];
 
 interface MemberLoansViewProps {
+  coopId: string;
   memberId: string;
   memberName: string;
   heading?: string;
@@ -44,6 +43,7 @@ interface MemberLoansViewProps {
 }
 
 export function MemberLoansView({
+  coopId,
   memberId,
   memberName,
   heading = "My Loan Record",
@@ -51,28 +51,28 @@ export function MemberLoansView({
   takeOpen: takeOpenProp,
   onTakeOpenChange,
 }: MemberLoansViewProps) {
-  const records = useLoansStore((state) => state.records);
-  const addRecord = useLoansStore((state) => state.addRecord);
-  const savingsRecords = useSavingsStore((state) => state.records);
+  const { data: memberRecords = [] } = useCoopLoanRecords(coopId, {
+    memberId,
+  });
+  const { data: savingsRecords = [] } = useCoopSavingsRecords(coopId, {
+    memberId,
+  });
+  const { data: members = [] } = useCoopMembers(coopId);
+  const applyForLoan = useApplyForLoan(coopId);
   const currency = useCurrency();
 
-  const memberRecords = useMemo(
-    () => records.filter((record) => record.memberId === memberId),
-    [records, memberId],
-  );
   const totalSavings = useMemo(
-    () =>
-      savingsRecords
-        .filter((record) => record.memberId === memberId)
-        .reduce((sum, record) => sum + record.amount, 0),
-    [savingsRecords, memberId],
+    () => savingsRecords.reduce((sum, record) => sum + record.amount, 0),
+    [savingsRecords],
   );
   const totalActive = useMemo(
     () =>
       memberRecords
         .filter(
           (record) =>
-            record.status === "Active" || record.status === "Awaiting Approval",
+            record.status === "Active" ||
+            record.status === "Awaiting Guarantor" ||
+            record.status === "Awaiting Admin",
         )
         .reduce((sum, record) => sum + record.amount, 0),
     [memberRecords],
@@ -86,40 +86,24 @@ export function MemberLoansView({
   const [lastAmount, setLastAmount] = useState(0);
 
   const handleProceed = async (
-    loanType: string,
+    loanTypeId: string,
     amount: number,
-    guarantorName: string,
+    guarantorMemberId: string,
   ) => {
-    const type = findLoanType(loanType);
-    if (!type) return;
-
     setBusy(true);
-    const terms = computeLoanTerms(type, amount);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
     try {
-      addRecord({
-        id: `loan-${Date.now()}`,
-        memberId,
-        memberName,
-        loanType,
+      await applyForLoan.mutateAsync({
+        loanTypeId,
         amount,
-        interestRate: terms.interestRate,
-        durationMonths: terms.durationMonths,
-        numberOfRepayments: terms.numberOfRepayments,
-        monthlyRepayment: terms.monthlyRepayment,
-        totalRepayment: terms.totalRepayment,
-        guarantorName,
-        date: new Date().toISOString().slice(0, 10),
-        status: "Awaiting Approval",
-        repaymentsMade: 0,
+        guarantorMemberId,
       });
       setTakeOpen(false);
       setLastAmount(amount);
       setSuccessOpen(true);
     } catch (error) {
       toast.error("Couldn't submit loan application", {
-        description: error instanceof Error ? error.message : undefined,
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setBusy(false);
@@ -171,8 +155,10 @@ export function MemberLoansView({
       <TakeLoanModal
         open={takeOpen}
         onOpenChange={setTakeOpen}
+        coopId={coopId}
         busy={busy}
-        memberName={memberName}
+        memberId={memberId}
+        members={members}
         totalSavings={totalSavings}
         onProceed={handleProceed}
       />

@@ -20,21 +20,23 @@ import {
 } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { LOAN_TYPES } from "@/lib/loans-data";
 
 interface LoanRequestsTableProps {
   requests: CoopLoanRecord[];
 }
 
-const TYPE_OPTIONS = [
-  "All types",
-  ...LOAN_TYPES.map((type) => type.name),
-] as const;
-
 export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
   const router = useRouter();
   const currency = useCurrency();
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
+  const [type, setType] = useState<string>("All types");
+
+  const typeOptions = useMemo(
+    () => [
+      "All types",
+      ...Array.from(new Set(requests.map((record) => record.loanType))),
+    ],
+    [requests],
+  );
 
   const filtered = useMemo(
     () =>
@@ -57,15 +59,13 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
       <div className="flex items-center gap-3">
         <Select
           value={type}
-          onValueChange={(value) =>
-            setType(value as (typeof TYPE_OPTIONS)[number])
-          }
+          onValueChange={(value) => setType(value ?? "All types")}
         >
           <SelectTrigger size="sm" className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {TYPE_OPTIONS.map((option) => (
+            {typeOptions.map((option) => (
               <SelectItem key={option} value={option}>
                 {option === "All types" ? "By loan type" : option}
               </SelectItem>

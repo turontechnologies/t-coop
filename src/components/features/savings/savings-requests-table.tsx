@@ -29,7 +29,6 @@ import {
 import type { SavingsRequest } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney, formatTimeAgo } from "@/lib/format";
-import { SAVINGS_TYPES } from "@/lib/savings-data";
 import { cn } from "@/lib/utils";
 
 interface SavingsRequestsTableProps {
@@ -40,18 +39,21 @@ interface SavingsRequestsTableProps {
   ) => Promise<void> | void;
 }
 
-const TYPE_OPTIONS = [
-  "All types",
-  ...SAVINGS_TYPES.map((type) => type.name),
-] as const;
-
 export function SavingsRequestsTable({
   requests,
   onResolve,
 }: SavingsRequestsTableProps) {
   const currency = useCurrency();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
+  const [type, setType] = useState<string>("All types");
+
+  const typeOptions = useMemo(
+    () => [
+      "All types",
+      ...Array.from(new Set(requests.map((request) => request.savingsType))),
+    ],
+    [requests],
+  );
 
   const filtered = useMemo(
     () =>
@@ -83,15 +85,13 @@ export function SavingsRequestsTable({
       <div className="flex items-center gap-3">
         <Select
           value={type}
-          onValueChange={(value) =>
-            setType(value as (typeof TYPE_OPTIONS)[number])
-          }
+          onValueChange={(value) => setType(value ?? "All types")}
         >
           <SelectTrigger size="sm" className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {TYPE_OPTIONS.map((option) => (
+            {typeOptions.map((option) => (
               <SelectItem key={option} value={option}>
                 {option === "All types" ? "By savings type" : option}
               </SelectItem>

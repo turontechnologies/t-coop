@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,27 +20,27 @@ import {
   type UploadTellerPayload,
 } from "@/components/features/savings/upload-teller-modal";
 import { SavingsRequestsTable } from "@/components/features/savings/savings-requests-table";
+import type { SavingsRequest } from "@/lib/coop-data";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopMembers } from "@/hooks/use-coop-members";
 import {
-  coopMemberFullName,
-  coopMemberSavingsBalance,
-  coopSavingsBySummaryType,
-  coopSavingsTotal,
-  type CoopSavingsRecord,
-} from "@/lib/coop-data";
-import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
+  useCoopSavingsRecords,
+  useCoopSavingsTypes,
+} from "@/hooks/use-coop-savings";
+import {
+  useDecideWithdrawal,
+  useManualSavingsDeposit,
+  useWithdrawalRequests,
+} from "@/hooks/use-savings-self";
 import { formatMoney } from "@/lib/format";
 import { initiateTransfer } from "@/lib/paystack-transfer";
-import { getProfileData } from "@/lib/profile-data";
 import type { ExportColumn } from "@/lib/table-export";
-import { useCoopStore } from "@/store/coop.store";
-import { useSavingsStore } from "@/store/savings.store";
 import type { AuthenticatedMember } from "@/types/auth";
+import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
 
 type AdminSavingsTab = "members" | "my" | "request";
 
-const TYPE_EXPORT_COLUMNS: ExportColumn<
-  ReturnType<typeof coopSavingsBySummaryType>[number]
->[] = [
+const TYPE_EXPORT_COLUMNS: ExportColumn<CoopSavingsTypeSummary>[] = [
   { header: "Savings Type", accessor: (row) => row.name },
   { header: "Minimum Savings", accessor: (row) => row.min },
   { header: "Maximum Savings", accessor: (row) => row.max },
@@ -48,11 +48,7 @@ const TYPE_EXPORT_COLUMNS: ExportColumn<
   { header: "Total Savings & Contributions", accessor: (row) => row.total },
 ];
 
-const REQUEST_EXPORT_COLUMNS: ExportColumn<
-  ReturnType<
-    typeof useCoopStore.getState
-  >["cooperatives"][number]["savingsRequests"][number]
->[] = [
+const REQUEST_EXPORT_COLUMNS: ExportColumn<SavingsRequest>[] = [
   { header: "Member", accessor: (row) => row.memberName },
   { header: "Type", accessor: (row) => row.type },
   { header: "Savings Type", accessor: (row) => row.savingsType },
@@ -66,26 +62,19 @@ interface AdminSavingsViewProps {
 }
 
 export function AdminSavingsView({ member }: AdminSavingsViewProps) {
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const addSavingsRecord = useCoopStore((state) => state.addSavingsRecord);
-  const resolveSavingsRequest = useCoopStore(
-    (state) => state.resolveSavingsRequest,
-  );
-  const coop = cooperatives.find((c) => c.id === ADMIN_DIRECTORY_COOP_ID);
+  const coopId = member.id;
+  const { data: coop } = useCooperative(coopId);
+  const { data: members = [] } = useCoopMembers(coopId);
+  const { data: totalsByType = [] } = useCoopSavingsTypes(coopId);
+  const { data: allRequests = [] } = useWithdrawalRequests(coopId);
+  const { data: myRecords = [] } = useCoopSavingsRecords(coopId, {
+    memberId: member.id,
+  });
 
-  const savingsRecords = useSavingsStore((state) => state.records);
-  const myTotal = useMemo(
-    () =>
-      savingsRecords
-        .filter((record) => record.memberId === member.id)
-        .reduce((sum, record) => sum + record.amount, 0),
-    [savingsRecords, member.id],
-  );
+  const manualDeposit = useManualSavingsDeposit(coopId);
+  const decideWithdrawal = useDecideWithdrawal(coopId);
 
-  const personalRequests = useSavingsStore((state) => state.requests);
-  const resolvePersonalRequest = useSavingsStore(
-    (state) => state.resolveRequest,
-  );
+  const myTotal = myRecords.reduce((sum, record) => sum + record.amount, 0);
 
   const [activeTab, setActiveTab] = useState<AdminSavingsTab>("members");
   const [tellerOpen, setTellerOpen] = useState(false);
@@ -101,10 +90,6 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     );
   }
 
-  const totalsByType = coopSavingsBySummaryType(coop);
-  const allRequests = [...coop.savingsRequests, ...personalRequests].sort(
-    (a, b) => b.requestedAt.localeCompare(a.requestedAt),
-  );
   const pendingRequests = allRequests.filter(
     (request) => request.status === "Pending",
   );
@@ -115,47 +100,31 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   };
 
   const handleUploadTeller = async (payload: UploadTellerPayload) => {
-    const uploadedMember = coop.members.find((m) => m.id === payload.memberId);
-    if (!uploadedMember) return;
-
     setTellerBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-
-    const balanceBefore = coopMemberSavingsBalance(
-      coop,
-      payload.memberId,
-      payload.savingsType,
-    );
-    const record: CoopSavingsRecord = {
-      id: `coop-sav-${Date.now()}`,
-      memberId: payload.memberId,
-      memberName: coopMemberFullName(uploadedMember),
-      savingsType: payload.savingsType,
-      amount: payload.amount,
-      balanceAfter: balanceBefore + payload.amount,
-      method: "Manual Upload",
-      transactionId: `TR-${Date.now()}`,
-      date: new Date().toISOString().slice(0, 10),
-      status: "Success",
-      receiptUrl: payload.receiptUrl,
-    };
-    addSavingsRecord(coop.id, record);
-    setTellerBusy(false);
-    setTellerOpen(false);
-    toast.success("Teller upload recorded", {
-      description: `${formatMoney(payload.amount, coop.currency)} added to ${record.memberName}'s ${payload.savingsType}.`,
-    });
+    try {
+      const result = await manualDeposit.mutateAsync(payload);
+      setTellerOpen(false);
+      toast.success("Teller upload recorded", {
+        description: `${formatMoney(payload.amount, coop.currency)} recorded for ${result.record.memberName} — ${formatMoney(result.record.amount, coop.currency)} credited after charges.`,
+      });
+    } catch (error) {
+      toast.error("Couldn't record teller upload", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setTellerBusy(false);
+    }
   };
 
   const handleResolveRequest = async (
     requestId: string,
     status: "Approved" | "Declined",
   ) => {
-    const isCoopRequest = coop.savingsRequests.some((r) => r.id === requestId);
-    const request = isCoopRequest
-      ? coop.savingsRequests.find((r) => r.id === requestId)
-      : personalRequests.find((r) => r.id === requestId);
+    const request = allRequests.find((r) => r.id === requestId);
     if (!request) return;
+
+    let transferReference: string | undefined;
 
     // Approving a withdrawal is real money leaving the co-op's Paystack
     // balance for the member's bank account — attempt that transfer first,
@@ -163,9 +132,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     // it actually goes through. A failed/misconfigured transfer should
     // never silently look like a successful withdrawal.
     if (status === "Approved" && request.type === "Withdrawal") {
-      const bankDetails = isCoopRequest
-        ? coop.members.find((m) => m.id === request.memberId)
-        : getProfileData(request.memberId);
+      const bankDetails = members.find((m) => m.id === request.memberId);
 
       if (!bankDetails?.accountNumber || !bankDetails?.bankCode) {
         toast.error("Can't disburse this withdrawal", {
@@ -175,13 +142,14 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
       }
 
       try {
-        await initiateTransfer({
+        const transfer = await initiateTransfer({
           accountNumber: bankDetails.accountNumber,
           bankCode: bankDetails.bankCode,
           accountName: bankDetails.accountName || request.memberName,
-          amount: request.amount,
+          amount: request.netAmount ?? request.amount,
           reason: `T-Coop savings withdrawal — ${request.savingsType}`,
         });
+        transferReference = transfer.reference;
       } catch (error) {
         toast.error("Payout failed", {
           description:
@@ -193,23 +161,27 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
       }
     }
 
-    if (isCoopRequest) {
-      resolveSavingsRequest(coop.id, requestId, status);
-    } else {
-      resolvePersonalRequest(requestId, status);
-    }
-
-    toast.success(
-      status === "Approved" ? "Request approved" : "Request declined",
-      {
-        description:
-          status === "Approved"
-            ? request.type === "Withdrawal"
+    try {
+      await decideWithdrawal.mutateAsync({
+        requestId,
+        status,
+        transferReference,
+      });
+      toast.success(
+        status === "Approved" ? "Request approved" : "Request declined",
+        {
+          description:
+            status === "Approved"
               ? `${formatMoney(request.amount, coop.currency)} paid out to ${request.memberName}.`
-              : `${formatMoney(request.amount, coop.currency)} deposit recorded for ${request.memberName}.`
-            : `${request.memberName}'s request was declined.`,
-      },
-    );
+              : `${request.memberName}'s request was declined.`,
+        },
+      );
+    } catch (error) {
+      toast.error("Couldn't resolve request", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    }
   };
 
   return (
@@ -235,7 +207,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:max-w-lg">
         <SummaryCard
           label="Total Savings"
-          value={coopSavingsTotal(coop)}
+          value={coop.totalSavings}
           currency={coop.currency}
         />
         <SummaryCard
@@ -293,6 +265,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
 
             <TabsPanel value="my">
               <MemberSavingsView
+                coopId={coopId}
                 memberId={member.id}
                 memberName={member.name}
                 memberEmail={member.email}
@@ -318,7 +291,8 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
       <UploadTellerModal
         open={tellerOpen}
         onOpenChange={setTellerOpen}
-        members={coop.members}
+        coopId={coopId}
+        members={members}
         busy={tellerBusy}
         onUpload={handleUploadTeller}
       />

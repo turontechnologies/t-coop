@@ -15,19 +15,17 @@ import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-sum
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { LoanRequestsTable } from "@/components/features/loans/loan-requests-table";
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
-import { coopLoansBySummaryType, coopLoansTotal } from "@/lib/coop-data";
-import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
+import type { CoopLoanRecord } from "@/lib/coop-data";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
-import { useCoopStore } from "@/store/coop.store";
-import { useLoansStore } from "@/store/loans.store";
 import type { AuthenticatedMember } from "@/types/auth";
+import type { CoopLoanTypeSummary } from "@/types/coop-loans";
 
 type AdminLoansTab = "requests" | "members" | "my";
 
-const TYPE_EXPORT_COLUMNS: ExportColumn<
-  ReturnType<typeof coopLoansBySummaryType>[number]
->[] = [
+const TYPE_EXPORT_COLUMNS: ExportColumn<CoopLoanTypeSummary>[] = [
   { header: "Loan Type", accessor: (row) => row.name },
   { header: "Eligibility %", accessor: (row) => row.eligibilityPercent },
   { header: "Loan Duration", accessor: (row) => row.durationMonths },
@@ -36,11 +34,7 @@ const TYPE_EXPORT_COLUMNS: ExportColumn<
   { header: "Earnings on Loan", accessor: (row) => row.earnings },
 ];
 
-const REQUEST_EXPORT_COLUMNS: ExportColumn<
-  ReturnType<
-    typeof useCoopStore.getState
-  >["cooperatives"][number]["loans"][number]
->[] = [
+const REQUEST_EXPORT_COLUMNS: ExportColumn<CoopLoanRecord>[] = [
   { header: "Members Id", accessor: (row) => row.memberId },
   { header: "Full Name", accessor: (row) => row.memberName },
   { header: "Loan Type", accessor: (row) => row.loanType },
@@ -55,21 +49,25 @@ interface AdminLoansViewProps {
 }
 
 export function AdminLoansView({ member }: AdminLoansViewProps) {
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = cooperatives.find((c) => c.id === ADMIN_DIRECTORY_COOP_ID);
+  const coopId = member.id;
+  const { data: coop } = useCooperative(coopId);
+  const { data: totalsByType = [] } = useCoopLoanTypes(coopId);
+  const { data: allLoans = [] } = useCoopLoanRecords(coopId);
+  const { data: myRecords = [] } = useCoopLoanRecords(coopId, {
+    memberId: member.id,
+  });
 
-  const loanRecords = useLoansStore((state) => state.records);
   const myTotal = useMemo(
     () =>
-      loanRecords
+      myRecords
         .filter(
           (record) =>
-            record.memberId === member.id &&
-            (record.status === "Active" ||
-              record.status === "Awaiting Approval"),
+            record.status === "Active" ||
+            record.status === "Awaiting Guarantor" ||
+            record.status === "Awaiting Admin",
         )
         .reduce((sum, record) => sum + record.amount, 0),
-    [loanRecords, member.id],
+    [myRecords],
   );
 
   const [activeTab, setActiveTab] = useState<AdminLoansTab>("requests");
@@ -83,8 +81,7 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
     );
   }
 
-  const totalsByType = coopLoansBySummaryType(coop);
-  const pendingRequests = coop.loans.filter(
+  const pendingRequests = allLoans.filter(
     (loan) =>
       loan.status === "Awaiting Guarantor" || loan.status === "Awaiting Admin",
   );
@@ -101,7 +98,7 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:max-w-lg">
         <SummaryCard
           label="Total Loans"
-          value={coopLoansTotal(coop)}
+          value={coop.totalLoans}
           currency={coop.currency}
         />
         <SummaryCard
@@ -163,6 +160,7 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
 
             <TabsPanel value="my">
               <MemberLoansView
+                coopId={coopId}
                 memberId={member.id}
                 memberName={member.name}
                 heading="My Loan Record"

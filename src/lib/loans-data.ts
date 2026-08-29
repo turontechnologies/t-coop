@@ -31,17 +31,6 @@ export const LOAN_TYPES: LoanTypeDef[] = [
   },
 ];
 
-export function findLoanType(name: string): LoanTypeDef | undefined {
-  return LOAN_TYPES.find((type) => type.name === name);
-}
-
-export const GUARANTORS = [
-  "Tunde Bakare",
-  "Chidinma Eze",
-  "Ngozi Okafor",
-  "Ibrahim Musa",
-];
-
 export function computeEligibleAmount(
   totalSavings: number,
   loanType: LoanTypeDef,

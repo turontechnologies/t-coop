@@ -94,6 +94,22 @@ export const platformSettingsService = {
     return data;
   },
 
+  async getWithdrawalFee(): Promise<
+    Pick<FeeSettings, "withdrawalFeeAmount" | "withdrawalFeeType">
+  > {
+    if (USE_MOCK()) {
+      return mockGet(() => {
+        const { withdrawalFeeAmount, withdrawalFeeType } =
+          useSettingsStore.getState().feeSettings;
+        return { withdrawalFeeAmount, withdrawalFeeType };
+      });
+    }
+    const { data } = await apiClient.get<
+      Pick<FeeSettings, "withdrawalFeeAmount" | "withdrawalFeeType">
+    >("/settings/withdrawal-fee");
+    return data;
+  },
+
   async getCoopIdFormat(): Promise<CoopIdFormat> {
     const { data } = await apiClient.get<CoopIdFormat>(
       "/settings/coop-id-format",

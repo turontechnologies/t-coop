@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import type { SummaryCard } from "@/lib/dashboard-data";
 import { cn } from "@/lib/utils";
@@ -14,6 +17,8 @@ interface QuickSummaryCardsProps {
 }
 
 export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
+  const router = useRouter();
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
@@ -29,6 +34,9 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
               {card.action ? (
                 <button
                   type="button"
+                  onClick={() =>
+                    card.actionHref ? router.push(card.actionHref) : undefined
+                  }
                   className="mt-1 rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/70"
                 >
                   {card.action}

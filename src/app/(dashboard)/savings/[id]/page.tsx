@@ -7,9 +7,9 @@ import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCoopSavingsRecord } from "@/hooks/use-coop-savings";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { useSavingsStore } from "@/store/savings.store";
 import { cn } from "@/lib/utils";
 
 interface SavingsDetailsPageProps {
@@ -21,10 +21,12 @@ export default function SavingsDetailsPage({
 }: SavingsDetailsPageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const record = useSavingsStore((state) =>
-    state.records.find((item) => item.id === id),
-  );
+  const { data: record, isLoading } = useCoopSavingsRecord(id);
   const currency = useCurrency();
+
+  if (isLoading) {
+    return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
+  }
 
   if (!record) {
     return (

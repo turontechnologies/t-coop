@@ -20,17 +20,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { activeSavingsTypeDefs } from "@/lib/admin-settings-data";
-import { TOTAL_SAVINGS_WITHDRAWAL } from "@/lib/coop-data";
+import {
+  TOTAL_SAVINGS_WITHDRAWAL,
+  type CoopSavingsRecord,
+} from "@/lib/coop-data";
+import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopSavingsTypes } from "@/hooks/use-coop-savings";
+import { useWithdrawalFeeSettings } from "@/hooks/use-withdrawal-fee";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
-import type { SavingsRecord } from "@/lib/savings-data";
-import { useAdminSettingsStore } from "@/store/admin-settings.store";
-import { useSettingsStore } from "@/store/settings.store";
 import { cn } from "@/lib/utils";
 
 export interface WithdrawalPayload {
-  savingsType: string;
+  savingsTypeId: string | undefined;
+  savingsTypeName: string;
   amount: number;
   note: string;
   feePercent: number;
@@ -41,8 +44,9 @@ export interface WithdrawalPayload {
 interface RequestWithdrawalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  coopId: string | undefined;
   busy: boolean;
-  memberRecords: SavingsRecord[];
+  memberRecords: CoopSavingsRecord[];
   onProceed: (payload: WithdrawalPayload) => void;
 }
 
@@ -67,6 +71,7 @@ function formatFee(
 export function RequestWithdrawalModal({
   open,
   onOpenChange,
+  coopId,
   busy,
   memberRecords,
   onProceed,
@@ -75,28 +80,26 @@ export function RequestWithdrawalModal({
   const amountId = useId();
   const noteId = useId();
   const currency = useCurrency();
-  const [savingsType, setSavingsType] = useState("");
+  const [savingsSelection, setSavingsSelection] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  const savingsTypeSettings = useAdminSettingsStore(
-    (state) => state.savingsTypeSettings,
-  );
+  const { data: types } = useCoopSavingsTypes(coopId);
   const savingsTypes = useMemo(
-    () => activeSavingsTypeDefs(savingsTypeSettings),
-    [savingsTypeSettings],
+    () => (types ?? []).filter((type) => type.status === "Active"),
+    [types],
   );
+  const selectedType = savingsTypes.find(
+    (type) => type.id === savingsSelection,
+  );
+  const isTotalSelection = savingsSelection === TOTAL_SAVINGS_WITHDRAWAL;
 
-  const coopFeeType = useAdminSettingsStore((state) => state.withdrawalFeeType);
-  const coopFeeAmount = useAdminSettingsStore(
-    (state) => state.withdrawalFeeAmount,
-  );
-  const platformFeeType = useSettingsStore(
-    (state) => state.feeSettings.withdrawalFeeType,
-  );
-  const platformFeeAmount = useSettingsStore(
-    (state) => state.feeSettings.withdrawalFeeAmount,
-  );
+  const { data: coop } = useCooperative(coopId);
+  const coopFeeType = coop?.withdrawalFeeType ?? "Percentage";
+  const coopFeeAmount = coop?.withdrawalFeeAmount ?? 0;
+  const { data: platformFee } = useWithdrawalFeeSettings();
+  const platformFeeType = platformFee?.withdrawalFeeType ?? "Percentage";
+  const platformFeeAmount = platformFee?.withdrawalFeeAmount ?? 0;
 
   const balanceByType = useMemo(() => {
     const balances = new Map<string, number>();
@@ -114,10 +117,9 @@ export function RequestWithdrawalModal({
     [memberRecords],
   );
 
-  const availableBalance =
-    savingsType === TOTAL_SAVINGS_WITHDRAWAL
-      ? totalBalance
-      : (balanceByType.get(savingsType) ?? 0);
+  const availableBalance = isTotalSelection
+    ? totalBalance
+    : (balanceByType.get(selectedType?.name ?? "") ?? 0);
 
   const amountNumber = Number(amount);
   const coopFeeValue =
@@ -130,14 +132,14 @@ export function RequestWithdrawalModal({
   const netAmount = amountNumber - feeAmount;
 
   const isValid =
-    !!savingsType &&
+    !!savingsSelection &&
     amountNumber > 0 &&
     amountNumber <= availableBalance &&
     availableBalance > 0;
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
-      setSavingsType("");
+      setSavingsSelection("");
       setAmount("");
       setNote("");
     }
@@ -161,9 +163,9 @@ export function RequestWithdrawalModal({
           <div className="space-y-2">
             <Label htmlFor={typeId}>Withdraw from</Label>
             <Select
-              value={savingsType}
+              value={savingsSelection}
               onValueChange={(value) => {
-                setSavingsType(value ?? "");
+                setSavingsSelection(value ?? "");
                 setAmount("");
               }}
               disabled={busy}
@@ -176,13 +178,13 @@ export function RequestWithdrawalModal({
                   Total Savings (all types)
                 </SelectItem>
                 {savingsTypes.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
+                  <SelectItem key={type.id} value={type.id}>
                     {type.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {savingsType ? (
+            {savingsSelection ? (
               <p className="text-xs text-muted-foreground">
                 Available balance:{" "}
                 <span className="font-medium text-foreground">
@@ -192,7 +194,7 @@ export function RequestWithdrawalModal({
             ) : null}
           </div>
 
-          {savingsType ? (
+          {savingsSelection ? (
             <div className="space-y-2">
               <Label>Quick amount</Label>
               <div className="flex flex-wrap gap-1.5">
@@ -226,10 +228,10 @@ export function RequestWithdrawalModal({
               placeholder="Enter amount"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              disabled={busy || !savingsType}
+              disabled={busy || !savingsSelection}
               className="h-11"
             />
-            {savingsType && amountNumber > availableBalance ? (
+            {savingsSelection && amountNumber > availableBalance ? (
               <p className="text-xs text-destructive">
                 Amount exceeds your available balance of{" "}
                 {formatMoney(availableBalance, currency)}
@@ -237,7 +239,7 @@ export function RequestWithdrawalModal({
             ) : null}
           </div>
 
-          {savingsType && amountNumber > 0 ? (
+          {savingsSelection && amountNumber > 0 ? (
             <div className="space-y-1.5 rounded-lg bg-accent/60 p-3 text-xs">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span>Withdrawal amount</span>
@@ -289,7 +291,10 @@ export function RequestWithdrawalModal({
             disabled={!isValid || busy}
             onClick={() =>
               onProceed({
-                savingsType,
+                savingsTypeId: isTotalSelection ? undefined : selectedType?.id,
+                savingsTypeName: isTotalSelection
+                  ? TOTAL_SAVINGS_WITHDRAWAL
+                  : (selectedType?.name ?? ""),
                 amount: amountNumber,
                 note: note.trim(),
                 // The effective percentage this fee worked out to — downstream displays

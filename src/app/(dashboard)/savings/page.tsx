@@ -15,6 +15,7 @@ export default function SavingsPage() {
         <SuperAdminSavingsView />
       ) : member.role === "member" ? (
         <MemberSavingsView
+          coopId={member.cooperativeId as string}
           memberId={member.id}
           memberName={member.name}
           memberEmail={member.email}

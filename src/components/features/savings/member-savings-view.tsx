@@ -16,31 +16,25 @@ import { SavingsRecordsTable } from "@/components/features/savings/savings-recor
 import { openPaystackCheckout } from "@/lib/paystack";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
+import type { CoopSavingsRecord } from "@/lib/coop-data";
+import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
 import {
-  downloadSavingsImportTemplate,
-  parseSavingsImportFile,
-  type ImportedSavingsRow,
-} from "@/lib/savings-import";
-import { findSavingsTypeRange, type SavingsRecord } from "@/lib/savings-data";
+  useConfirmSavingsDeposit,
+  useInitializeSavingsDeposit,
+  useRequestWithdrawal,
+} from "@/hooks/use-savings-self";
 import type { ExportColumn } from "@/lib/table-export";
-import { useSavingsStore } from "@/store/savings.store";
 
-const EXPORT_COLUMNS: ExportColumn<SavingsRecord>[] = [
+const EXPORT_COLUMNS: ExportColumn<CoopSavingsRecord>[] = [
   { header: "Savings Type", accessor: (record) => record.savingsType },
-  {
-    header: "Minimum Savings",
-    accessor: (record) => findSavingsTypeRange(record.savingsType)?.min ?? "",
-  },
-  {
-    header: "Maximum Savings",
-    accessor: (record) => findSavingsTypeRange(record.savingsType)?.max ?? "",
-  },
+  { header: "Method", accessor: (record) => record.method },
   { header: "Savings Amount", accessor: (record) => record.amount },
   { header: "Date", accessor: (record) => record.date },
   { header: "Status", accessor: (record) => record.status },
 ];
 
 interface MemberSavingsViewProps {
+  coopId: string;
   memberId: string;
   memberName: string;
   memberEmail: string;
@@ -56,6 +50,7 @@ interface MemberSavingsViewProps {
 }
 
 export function MemberSavingsView({
+  coopId,
   memberId,
   memberName,
   memberEmail,
@@ -66,19 +61,18 @@ export function MemberSavingsView({
   withdrawOpen: withdrawOpenProp,
   onWithdrawOpenChange,
 }: MemberSavingsViewProps) {
-  const records = useSavingsStore((state) => state.records);
-  const addRecord = useSavingsStore((state) => state.addRecord);
-  const addRequest = useSavingsStore((state) => state.addRequest);
   const currency = useCurrency();
-
-  const memberRecords = useMemo(
-    () => records.filter((record) => record.memberId === memberId),
-    [records, memberId],
-  );
+  const { data: memberRecords = [] } = useCoopSavingsRecords(coopId, {
+    memberId,
+  });
   const total = useMemo(
     () => memberRecords.reduce((sum, record) => sum + record.amount, 0),
     [memberRecords],
   );
+
+  const initializeDeposit = useInitializeSavingsDeposit(coopId);
+  const confirmDeposit = useConfirmSavingsDeposit(coopId);
+  const requestWithdrawal = useRequestWithdrawal(coopId);
 
   const [internalAddOpen, setInternalAddOpen] = useState(false);
   const addOpen = addOpenProp ?? internalAddOpen;
@@ -91,29 +85,32 @@ export function MemberSavingsView({
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastAmount, setLastAmount] = useState(0);
 
-  const handleProceed = async (savingsType: string, amount: number) => {
+  const handleProceed = async (savingsTypeId: string, amount: number) => {
     setBusy(true);
     try {
+      const intent = await initializeDeposit.mutateAsync({
+        savingsTypeId,
+        amount,
+      });
       await openPaystackCheckout({
         email: memberEmail,
         amountNaira: amount,
-        reference: `TCOOP-${Date.now()}`,
-        onSuccess: (reference) => {
-          addRecord({
-            id: reference,
-            memberId,
-            memberName,
-            savingsType,
-            amount,
-            balanceAfter: total + amount,
-            method: "Paystack",
-            transactionId: reference,
-            date: new Date().toISOString().slice(0, 10),
-            status: "Success",
-          });
-          setAddOpen(false);
-          setLastAmount(amount);
-          setSuccessOpen(true);
+        reference: intent.reference,
+        publicKey: intent.publicKey,
+        onSuccess: async (reference) => {
+          try {
+            await confirmDeposit.mutateAsync(reference);
+            setAddOpen(false);
+            setLastAmount(amount);
+            setSuccessOpen(true);
+          } catch (error) {
+            toast.error("Couldn't confirm payment", {
+              description:
+                error instanceof Error ? error.message : "Please try again.",
+            });
+          } finally {
+            setBusy(false);
+          }
         },
         onClose: () => setBusy(false),
       });
@@ -121,61 +118,36 @@ export function MemberSavingsView({
       toast.error("Couldn't start payment", {
         description: error instanceof Error ? error.message : undefined,
       });
-    } finally {
       setBusy(false);
     }
   };
 
   const handleRequestWithdrawal = async ({
-    savingsType,
+    savingsTypeId,
+    savingsTypeName,
     amount,
     note,
-    feePercent,
-    feeAmount,
     netAmount,
   }: WithdrawalPayload) => {
     setWithdrawBusy(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    addRequest({
-      id: `sav-req-${Date.now()}`,
-      memberId,
-      memberName,
-      type: "Withdrawal",
-      savingsType,
-      amount,
-      note: note || undefined,
-      status: "Pending",
-      requestedAt: new Date().toISOString(),
-      feePercent,
-      feeAmount,
-      netAmount,
-    });
-    setWithdrawBusy(false);
-    setWithdrawOpen(false);
-    toast.success("Withdrawal requested", {
-      description: `Your request for ${formatMoney(amount, currency)} from ${savingsType} is awaiting admin approval — you'll receive ${formatMoney(netAmount, currency)} after fees.`,
-    });
-  };
-
-  const handleImport = (importedRows: ImportedSavingsRow[]) => {
-    let runningTotal = total;
-    importedRows.forEach((row, index) => {
-      runningTotal += row.amount;
-      const reference = `IMPORT-${Date.now()}-${index}`;
-      addRecord({
-        id: reference,
-        memberId,
-        memberName,
-        savingsType: row.savingsType,
-        amount: row.amount,
-        balanceAfter: runningTotal,
-        method: "Manual Upload",
-        transactionId: reference,
-        date: row.date,
-        status: row.status,
+    try {
+      await requestWithdrawal.mutateAsync({
+        savingsTypeId,
+        amount,
+        note: note || undefined,
       });
-    });
+      setWithdrawOpen(false);
+      toast.success("Withdrawal requested", {
+        description: `Your request for ${formatMoney(amount, currency)} from ${savingsTypeName} is awaiting admin approval — you'll receive ${formatMoney(netAmount, currency)} after fees.`,
+      });
+    } catch (error) {
+      toast.error("Couldn't submit withdrawal request", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setWithdrawBusy(false);
+    }
   };
 
   return (
@@ -224,12 +196,6 @@ export function MemberSavingsView({
               filenamePrefix={`savings-${memberId}`}
               exportTitle={`${memberName} — Savings & Contributions`}
               entityLabel="savings record"
-              importConfig={{
-                templateStorageKey: "savings-template-downloaded",
-                downloadTemplate: downloadSavingsImportTemplate,
-                parseFile: parseSavingsImportFile,
-                onImport: handleImport,
-              }}
             />
           </div>
           <SavingsRecordsTable records={memberRecords} />
@@ -239,6 +205,7 @@ export function MemberSavingsView({
       <AddSavingsModal
         open={addOpen}
         onOpenChange={setAddOpen}
+        coopId={coopId}
         busy={busy}
         onProceed={handleProceed}
       />
@@ -250,6 +217,7 @@ export function MemberSavingsView({
       <RequestWithdrawalModal
         open={withdrawOpen}
         onOpenChange={setWithdrawOpen}
+        coopId={coopId}
         busy={withdrawBusy}
         memberRecords={memberRecords}
         onProceed={handleRequestWithdrawal}

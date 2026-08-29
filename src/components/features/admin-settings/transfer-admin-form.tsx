@@ -188,13 +188,23 @@ export function TransferAdminForm() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
-                disabled={!isValid}
+                disabled={!isValid || busy}
                 onClick={() => onConfirm()}
               >
-                Yes, transfer it
+                {busy ? (
+                  <>
+                    <Loader2
+                      className="size-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Transferring…
+                  </>
+                ) : (
+                  "Yes, transfer it"
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

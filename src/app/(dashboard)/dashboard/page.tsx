@@ -3,12 +3,14 @@
 import { QuickSummaryCards } from "@/components/features/dashboard/quick-summary-cards";
 import { ActivityChart } from "@/components/features/dashboard/activity-chart";
 import { RecentActivities } from "@/components/features/dashboard/recent-activities";
+import { useCurrency } from "@/components/providers/currency-provider";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import { useAuthStore } from "@/store/auth.store";
 
 export default function DashboardPage() {
   const member = useAuthStore((state) => state.member);
-  const { data, isLoading } = useDashboardSummary(member?.role);
+  const currency = useCurrency();
+  const { data, isLoading } = useDashboardSummary(member?.role, currency);
 
   if (!member) return null;
 

@@ -19,14 +19,16 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { coopLoanStatusBadgeVariant } from "@/lib/coop-data";
-import { getDirectoryCoop } from "@/lib/member-directory";
 import {
   generateLoanTransactions,
   generateRepaymentSchedule,
   type RepaymentStatus,
 } from "@/lib/loans-data";
+import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useCooperative } from "@/hooks/use-cooperative";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { useCoopStore } from "@/store/coop.store";
+import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 
 interface AdminLoanRecordPageProps {
@@ -44,10 +46,15 @@ export default function AdminLoanRecordPage({
 }: AdminLoanRecordPageProps) {
   const { recordId } = use(params);
   const router = useRouter();
-  const cooperatives = useCoopStore((state) => state.cooperatives);
-  const coop = getDirectoryCoop(cooperatives);
-  const record = coop?.loans.find((item) => item.id === recordId);
-  const member = coop?.members.find((item) => item.id === record?.memberId);
+  const authMember = useAuthStore((state) => state.member);
+  const coopId =
+    authMember?.role === "admin"
+      ? authMember.id
+      : (authMember?.cooperativeId ?? undefined);
+  const { data: coop } = useCooperative(coopId);
+  const { data: record, isLoading } = useCoopLoanRecord(recordId);
+  const { data: members = [] } = useCoopMembers(coopId);
+  const member = members.find((item) => item.id === record?.memberId);
 
   const schedule = useMemo(
     () => (record ? generateRepaymentSchedule(record) : []),
@@ -57,6 +64,10 @@ export default function AdminLoanRecordPage({
     () => (record ? generateLoanTransactions(record) : []),
     [record],
   );
+
+  if (isLoading) {
+    return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
+  }
 
   if (!coop || !record) {
     return (

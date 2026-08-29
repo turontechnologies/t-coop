@@ -21,21 +21,22 @@ import {
 import {
   generateLoanTransactions,
   generateRepaymentSchedule,
-  type LoanStatus,
   type RepaymentStatus,
 } from "@/lib/loans-data";
+import type { CoopLoanStatus } from "@/lib/coop-data";
+import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { useLoansStore } from "@/store/loans.store";
 import { cn } from "@/lib/utils";
 
 interface LoanDetailsPageProps {
   params: Promise<{ id: string }>;
 }
 
-function statusBadgeVariant(status: LoanStatus) {
+function statusBadgeVariant(status: CoopLoanStatus) {
   if (status === "Active" || status === "Completed") return "secondary";
-  if (status === "Awaiting Approval") return "outline";
+  if (status === "Awaiting Guarantor" || status === "Awaiting Admin")
+    return "outline";
   return "destructive";
 }
 
@@ -48,9 +49,7 @@ function repaymentBadgeVariant(status: RepaymentStatus) {
 export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const record = useLoansStore((state) =>
-    state.records.find((item) => item.id === id),
-  );
+  const { data: record, isLoading } = useCoopLoanRecord(id);
   const currency = useCurrency();
 
   const schedule = useMemo(
@@ -61,6 +60,10 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
     () => (record ? generateLoanTransactions(record) : []),
     [record],
   );
+
+  if (isLoading) {
+    return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
+  }
 
   if (!record) {
     return (

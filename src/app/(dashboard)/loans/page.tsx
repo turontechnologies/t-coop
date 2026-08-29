@@ -14,7 +14,11 @@ export default function LoansPage() {
       {member.role === "super_admin" ? (
         <SuperAdminLoansView />
       ) : member.role === "member" ? (
-        <MemberLoansView memberId={member.id} memberName={member.name} />
+        <MemberLoansView
+          coopId={member.cooperativeId as string}
+          memberId={member.id}
+          memberName={member.name}
+        />
       ) : (
         <AdminLoansView member={member} />
       )}

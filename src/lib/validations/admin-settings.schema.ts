@@ -18,6 +18,18 @@ export const withdrawalFeeSchema = z.object({
 
 export type WithdrawalFeeFormValues = z.infer<typeof withdrawalFeeSchema>;
 
+/** The co-op's own cut of every savings deposit and loan disbursement — combined with the
+ * platform's own rate (super admin's Fees & Charges) at transaction time, same mechanics as
+ * {@link withdrawalFeeSchema}. */
+export const coopChargesSchema = z.object({
+  savingsChargeType: z.enum(["Fixed", "Percentage"]),
+  savingsChargeAmount: z.number().min(0, "Enter an amount of 0 or more"),
+  loansChargeType: z.enum(["Fixed", "Percentage"]),
+  loansChargeAmount: z.number().min(0, "Enter an amount of 0 or more"),
+});
+
+export type CoopChargesFormValues = z.infer<typeof coopChargesSchema>;
+
 // Matches SavingsTypeCreateRequest on the backend exactly — no approval-group field, since
 // savings/loan REQUEST approval workflow (who signs off on a member's request) is a separate,
 // not-yet-built feature; this form only defines the type itself.

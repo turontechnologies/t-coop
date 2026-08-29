@@ -7,12 +7,11 @@ import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { DashboardShell } from "@/components/layouts/dashboard-shell";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { getNavItems, isPathPermitted } from "@/config/dashboard-nav";
+import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { useMinimumDuration } from "@/hooks/use-minimum-duration";
 import { hasAppIntroShown } from "@/lib/app-intro";
-import { getDirectoryCoop } from "@/lib/member-directory";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
-import { useCoopStore } from "@/store/coop.store";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -66,18 +65,15 @@ export default function DashboardRouteLayout({
   const pathname = usePathname();
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const member = useAuthStore((state) => state.member);
-  const cooperatives = useCoopStore((state) => state.cooperatives);
 
-  // Admin's whole area revolves around one co-op — its currency applies
-  // everywhere in their pages by default. Super admin's aggregate/dashboard
-  // views default to the platform base (NGN); per-co-op super-admin screens
-  // (e.g. /co-operatives/[id]/**) nest their own narrower CurrencyProvider.
-  // Member's own pages use a separate personal data model with no co-op
-  // link yet, so they also default to NGN — see currency-conversion.md.
-  const currency =
-    member?.role === "admin"
-      ? (getDirectoryCoop(cooperatives)?.currency ?? "NGN")
-      : "NGN";
+  // Admin and member both belong to one real co-op — its currency applies
+  // everywhere in their pages. Super admin's aggregate/dashboard views default
+  // to the platform base (NGN); per-co-op super-admin screens (e.g.
+  // /co-operatives/[id]/**) nest their own narrower CurrencyProvider.
+  const brandingCoopId =
+    member?.role === "admin" ? member.id : (member?.cooperativeId ?? null);
+  const { data: branding } = useCooperativeBranding(brandingCoopId);
+  const currency = branding?.currency ?? "NGN";
 
   // Evaluated once per mount: a fresh page load/reload always resets this,
   // so a direct or reloaded visit gets the full branded intro. Arriving via

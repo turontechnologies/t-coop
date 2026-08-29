@@ -19,38 +19,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { activeSavingsTypeDefs } from "@/lib/admin-settings-data";
+import { useCoopSavingsTypes } from "@/hooks/use-coop-savings";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
-import { useAdminSettingsStore } from "@/store/admin-settings.store";
 
 interface AddSavingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  coopId: string | undefined;
   busy: boolean;
-  onProceed: (savingsType: string, amount: number) => void;
+  onProceed: (savingsTypeId: string, amount: number) => void;
 }
 
 export function AddSavingsModal({
   open,
   onOpenChange,
+  coopId,
   busy,
   onProceed,
 }: AddSavingsModalProps) {
   const typeId = useId();
   const amountId = useId();
-  const [savingsType, setSavingsType] = useState("");
+  const [savingsTypeId, setSavingsTypeId] = useState("");
   const [amount, setAmount] = useState("");
   const currency = useCurrency();
 
-  const savingsTypeSettings = useAdminSettingsStore(
-    (state) => state.savingsTypeSettings,
-  );
+  const { data: types } = useCoopSavingsTypes(coopId);
   const savingsTypes = useMemo(
-    () => activeSavingsTypeDefs(savingsTypeSettings),
-    [savingsTypeSettings],
+    () => (types ?? []).filter((type) => type.status === "Active"),
+    [types],
   );
-  const selectedType = savingsTypes.find((type) => type.name === savingsType);
+  const selectedType = savingsTypes.find((type) => type.id === savingsTypeId);
   const amountNumber = Number(amount);
   const isValid =
     !!selectedType &&
@@ -60,7 +59,7 @@ export function AddSavingsModal({
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
-      setSavingsType("");
+      setSavingsTypeId("");
       setAmount("");
     }
     onOpenChange(next);
@@ -77,8 +76,8 @@ export function AddSavingsModal({
           <div className="space-y-2">
             <Label htmlFor={typeId}>Savings Type</Label>
             <Select
-              value={savingsType}
-              onValueChange={(value) => setSavingsType(value ?? "")}
+              value={savingsTypeId}
+              onValueChange={(value) => setSavingsTypeId(value ?? "")}
               disabled={busy}
             >
               <SelectTrigger id={typeId} className="h-11 w-full">
@@ -86,7 +85,7 @@ export function AddSavingsModal({
               </SelectTrigger>
               <SelectContent>
                 {savingsTypes.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
+                  <SelectItem key={type.id} value={type.id}>
                     {type.name}
                   </SelectItem>
                 ))}
@@ -127,7 +126,7 @@ export function AddSavingsModal({
           <Button
             type="button"
             disabled={!isValid || busy}
-            onClick={() => onProceed(savingsType, amountNumber)}
+            onClick={() => onProceed(savingsTypeId, amountNumber)}
           >
             {busy ? (
               <>

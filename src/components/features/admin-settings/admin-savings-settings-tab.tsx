@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { SavingsTypeModal } from "@/components/features/admin-settings/savings-type-modal";
 import { SavingsTypeSettingsTable } from "@/components/features/admin-settings/savings-type-settings-table";
+import { CoopChargesForm } from "@/components/features/admin-settings/coop-charges-form";
 import { WithdrawalFeeForm } from "@/components/features/admin-settings/withdrawal-fee-form";
 import {
   useCoopSavingsTypeMutations,
@@ -85,6 +86,7 @@ export function AdminSavingsSettingsTab() {
   return (
     <div className="space-y-6">
       <WithdrawalFeeForm />
+      <CoopChargesForm />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full max-w-xs">

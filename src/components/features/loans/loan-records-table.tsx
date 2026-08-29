@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { LOAN_TYPES, type LoanRecord, type LoanStatus } from "@/lib/loans-data";
+import type { CoopLoanRecord, CoopLoanStatus } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -35,25 +35,23 @@ function toIsoDate(date: Date): string {
 }
 
 interface LoanRecordsTableProps {
-  records: LoanRecord[];
+  records: CoopLoanRecord[];
 }
 
 const STATUS_OPTIONS = [
   "All statuses",
+  "Awaiting Guarantor",
+  "Awaiting Admin",
   "Active",
-  "Awaiting Approval",
   "Completed",
   "Rejected",
 ] as const;
-const TYPE_OPTIONS = [
-  "All types",
-  ...LOAN_TYPES.map((type) => type.name),
-] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
-function statusBadgeVariant(status: LoanStatus) {
+function statusBadgeVariant(status: CoopLoanStatus) {
   if (status === "Active" || status === "Completed") return "secondary";
-  if (status === "Awaiting Approval") return "outline";
+  if (status === "Awaiting Guarantor" || status === "Awaiting Admin")
+    return "outline";
   return "destructive";
 }
 
@@ -63,10 +61,18 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
+  const [type, setType] = useState<string>("All types");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+
+  const typeOptions = useMemo(
+    () => [
+      "All types",
+      ...Array.from(new Set(records.map((record) => record.loanType))),
+    ],
+    [records],
+  );
 
   const dateFrom = dateRange?.from ? toIsoDate(dateRange.from) : "";
   const dateTo = dateRange?.to ? toIsoDate(dateRange.to) : "";
@@ -146,7 +152,7 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
         <Select
           value={type}
           onValueChange={(value) => {
-            setType(value as (typeof TYPE_OPTIONS)[number]);
+            setType(value ?? "All types");
             setPage(1);
           }}
         >
@@ -154,7 +160,7 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {TYPE_OPTIONS.map((option) => (
+            {typeOptions.map((option) => (
               <SelectItem key={option} value={option}>
                 {option === "All types" ? "By loan type" : option}
               </SelectItem>

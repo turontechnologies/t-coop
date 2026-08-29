@@ -25,11 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
-import {
-  findSavingsTypeRange,
-  SAVINGS_TYPES,
-  type SavingsRecord,
-} from "@/lib/savings-data";
+import type { CoopSavingsRecord } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -39,7 +35,7 @@ function toIsoDate(date: Date): string {
 }
 
 interface SavingsRecordsTableProps {
-  records: SavingsRecord[];
+  records: CoopSavingsRecord[];
 }
 
 const STATUS_OPTIONS = [
@@ -47,10 +43,6 @@ const STATUS_OPTIONS = [
   "Success",
   "Pending",
   "Failed",
-] as const;
-const TYPE_OPTIONS = [
-  "All types",
-  ...SAVINGS_TYPES.map((type) => type.name),
 ] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
@@ -60,10 +52,18 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] =
     useState<(typeof STATUS_OPTIONS)[number]>("All statuses");
-  const [type, setType] = useState<(typeof TYPE_OPTIONS)[number]>("All types");
+  const [type, setType] = useState<string>("All types");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+
+  const typeOptions = useMemo(
+    () => [
+      "All types",
+      ...Array.from(new Set(records.map((record) => record.savingsType))),
+    ],
+    [records],
+  );
 
   const dateFrom = dateRange?.from ? toIsoDate(dateRange.from) : "";
   const dateTo = dateRange?.to ? toIsoDate(dateRange.to) : "";
@@ -143,7 +143,7 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
         <Select
           value={type}
           onValueChange={(value) => {
-            setType(value as (typeof TYPE_OPTIONS)[number]);
+            setType(value ?? "All types");
             setPage(1);
           }}
         >
@@ -151,7 +151,7 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {TYPE_OPTIONS.map((option) => (
+            {typeOptions.map((option) => (
               <SelectItem key={option} value={option}>
                 {option === "All types" ? "By savings type" : option}
               </SelectItem>
@@ -230,10 +230,7 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
                 Savings Type
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
-                Minimum Savings
-              </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
-                Maximum Savings
+                Method
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
                 Savings Amount
@@ -248,7 +245,7 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
             {pageRecords.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={5}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No savings records match your filters.
@@ -256,7 +253,6 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
               </tr>
             ) : (
               pageRecords.map((record) => {
-                const range = findSavingsTypeRange(record.savingsType);
                 return (
                   <tr
                     key={record.id}
@@ -267,10 +263,7 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
                       {record.savingsType}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {range ? formatMoney(range.min, currency) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {range ? formatMoney(range.max, currency) : "—"}
+                      {record.method}
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       {formatMoney(record.amount, currency)}
@@ -307,48 +300,40 @@ export function SavingsRecordsTable({ records }: SavingsRecordsTableProps) {
         isEmpty={pageRecords.length === 0}
         emptyMessage="No savings records match your filters."
       >
-        {pageRecords.map((record) => {
-          const range = findSavingsTypeRange(record.savingsType);
-          return (
-            <MobileRecordCard
-              key={record.id}
-              onClick={() => router.push(`/savings/${record.id}`)}
-              title={record.savingsType}
-              badge={
-                <Badge
-                  variant={
-                    record.status === "Success"
-                      ? "secondary"
-                      : record.status === "Pending"
-                        ? "outline"
-                        : "destructive"
-                  }
-                  className={cn(
-                    record.status === "Success" && "bg-success/15 text-success",
-                  )}
-                >
-                  {record.status}
-                </Badge>
-              }
-              fields={[
-                {
-                  label: "Amount",
-                  value: formatMoney(record.amount, currency),
-                },
-                {
-                  label: "Range",
-                  value: range
-                    ? `${formatMoney(range.min, currency)} – ${formatMoney(range.max, currency)}`
-                    : "—",
-                },
-                {
-                  label: "Date",
-                  value: formatDateLong(new Date(record.date)),
-                },
-              ]}
-            />
-          );
-        })}
+        {pageRecords.map((record) => (
+          <MobileRecordCard
+            key={record.id}
+            onClick={() => router.push(`/savings/${record.id}`)}
+            title={record.savingsType}
+            badge={
+              <Badge
+                variant={
+                  record.status === "Success"
+                    ? "secondary"
+                    : record.status === "Pending"
+                      ? "outline"
+                      : "destructive"
+                }
+                className={cn(
+                  record.status === "Success" && "bg-success/15 text-success",
+                )}
+              >
+                {record.status}
+              </Badge>
+            }
+            fields={[
+              {
+                label: "Amount",
+                value: formatMoney(record.amount, currency),
+              },
+              { label: "Method", value: record.method },
+              {
+                label: "Date",
+                value: formatDateLong(new Date(record.date)),
+              },
+            ]}
+          />
+        ))}
       </MobileRecordList>
 
       {filtered.length > 0 ? (

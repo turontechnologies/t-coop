@@ -20,17 +20,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { activeSavingsTypeDefs } from "@/lib/admin-settings-data";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
+import { useCoopSavingsTypes } from "@/hooks/use-coop-savings";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import { uploadService } from "@/services/upload.service";
-import { useAdminSettingsStore } from "@/store/admin-settings.store";
 
 export interface UploadTellerPayload {
   memberId: string;
-  savingsType: string;
+  savingsTypeId: string;
   amount: number;
   receiptUrl?: string;
 }
@@ -38,6 +37,7 @@ export interface UploadTellerPayload {
 interface UploadTellerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  coopId: string | undefined;
   members: CoopMember[];
   busy: boolean;
   onUpload: (payload: UploadTellerPayload) => void;
@@ -46,6 +46,7 @@ interface UploadTellerModalProps {
 export function UploadTellerModal({
   open,
   onOpenChange,
+  coopId,
   members,
   busy,
   onUpload,
@@ -57,19 +58,17 @@ export function UploadTellerModal({
 
   const [memberId, setMemberId] = useState("");
   const [amount, setAmount] = useState("");
-  const [savingsType, setSavingsType] = useState("");
+  const [savingsTypeId, setSavingsTypeId] = useState("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const currency = useCurrency();
 
-  const savingsTypeSettings = useAdminSettingsStore(
-    (state) => state.savingsTypeSettings,
-  );
+  const { data: types } = useCoopSavingsTypes(coopId);
   const savingsTypes = useMemo(
-    () => activeSavingsTypeDefs(savingsTypeSettings),
-    [savingsTypeSettings],
+    () => (types ?? []).filter((type) => type.status === "Active"),
+    [types],
   );
-  const selectedType = savingsTypes.find((type) => type.name === savingsType);
+  const selectedType = savingsTypes.find((type) => type.id === savingsTypeId);
   const amountNumber = Number(amount);
   const isValid =
     !!memberId &&
@@ -81,7 +80,7 @@ export function UploadTellerModal({
   const reset = () => {
     setMemberId("");
     setAmount("");
-    setSavingsType("");
+    setSavingsTypeId("");
     setReceiptFile(null);
     setReceiptError(null);
   };
@@ -111,7 +110,7 @@ export function UploadTellerModal({
       if (receiptFile) {
         receiptUrl = await uploadService.uploadAttachment(receiptFile);
       }
-      onUpload({ memberId, savingsType, amount: amountNumber, receiptUrl });
+      onUpload({ memberId, savingsTypeId, amount: amountNumber, receiptUrl });
     } catch (error) {
       toast.error("Couldn't upload receipt", {
         description:
@@ -165,8 +164,8 @@ export function UploadTellerModal({
           <div className="space-y-2">
             <Label htmlFor={typeId}>Savings Type</Label>
             <Select
-              value={savingsType}
-              onValueChange={(value) => setSavingsType(value ?? "")}
+              value={savingsTypeId}
+              onValueChange={(value) => setSavingsTypeId(value ?? "")}
               disabled={busy}
             >
               <SelectTrigger id={typeId} className="h-11 w-full">
@@ -174,7 +173,7 @@ export function UploadTellerModal({
               </SelectTrigger>
               <SelectContent>
                 {savingsTypes.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
+                  <SelectItem key={type.id} value={type.id}>
                     {type.name}
                   </SelectItem>
                 ))}
