@@ -8,6 +8,7 @@ export const AUDIT_MODULES = [
   "Notices",
   "Settings",
   "Users",
+  "Support",
 ] as const;
 export type AuditModule = (typeof AUDIT_MODULES)[number];
 

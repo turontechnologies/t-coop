@@ -41,7 +41,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
     { label: "Loans", href: "/loans", icon: Landmark },
     { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
-    { label: "Support", icon: LifeBuoy },
+    { label: "Support", href: "/support", icon: LifeBuoy },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   admin: [
@@ -59,7 +59,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Notice Board", href: "/notice-board", icon: Megaphone },
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
     { label: "Loans", href: "/loans", icon: Landmark },
-    { label: "Support", icon: LifeBuoy },
+    { label: "Support", href: "/support", icon: LifeBuoy },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   support: [

@@ -7,6 +7,7 @@ import {
   Info,
   KeyRound,
   Landmark,
+  LifeBuoy,
   LogOut,
   Megaphone,
   Pencil,
@@ -38,6 +39,7 @@ export const MODULE_ICONS: Record<AuditModule, LucideIcon> = {
   Notices: Megaphone,
   Settings: SettingsIcon,
   Users: UserCog,
+  Support: LifeBuoy,
 };
 
 export const ACTION_ICONS: Record<AuditAction, LucideIcon> = {

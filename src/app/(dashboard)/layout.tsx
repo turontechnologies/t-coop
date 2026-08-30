@@ -40,6 +40,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/loans/")) return "Loan Details";
   if (pathname.startsWith("/members/")) return "Member Details";
   if (pathname.startsWith("/notice-board/")) return "Notice Details";
+  if (pathname.startsWith("/support/")) return "Ticket Details";
   if (/^\/co-operatives\/[^/]+\/members\//.test(pathname))
     return "Member Details";
   if (/^\/co-operatives\/[^/]+\/savings\/record\//.test(pathname))
