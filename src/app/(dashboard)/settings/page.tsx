@@ -19,10 +19,18 @@ import { SettingsPaymentTab } from "@/components/features/settings/settings-paym
 import { SettingsProfileTab } from "@/components/features/settings/settings-profile-tab";
 import { SettingsUserManagementTab } from "@/components/features/settings/settings-user-management-tab";
 import { SuperAdminUserManagementTab } from "@/components/features/settings/super-admin-user-management-tab";
+import { useTabAccess } from "@/hooks/use-permission";
 import { useAuthStore } from "@/store/auth.store";
+
+const MODULE = "Settings";
 
 export default function SettingsPage() {
   const member = useAuthStore((state) => state.member);
+  const profileAccess = useTabAccess(MODULE, "Profile");
+  const savingsAccess = useTabAccess(MODULE, "Savings Settings");
+  const loansAccess = useTabAccess(MODULE, "Loan Settings");
+  const cooperativeAccess = useTabAccess(MODULE, "Co-operative Settings");
+  const usersAccess = useTabAccess(MODULE, "User Management");
   if (!member) return null;
 
   if (member.role === "member" || member.role === "support") {
@@ -81,32 +89,72 @@ export default function SettingsPage() {
                 <SettingsLogsTab />
               </TabsPanel>
             </Tabs>
+          ) : profileAccess === null &&
+            savingsAccess === null &&
+            loansAccess === null &&
+            cooperativeAccess === null &&
+            usersAccess === null ? (
+            <p className="text-sm text-muted-foreground">
+              You don&apos;t have access to any part of Settings.
+            </p>
           ) : (
-            <Tabs defaultValue="profile">
+            <Tabs
+              defaultValue={
+                profileAccess !== null
+                  ? "profile"
+                  : savingsAccess !== null
+                    ? "savings"
+                    : loansAccess !== null
+                      ? "loans"
+                      : cooperativeAccess !== null
+                        ? "cooperative"
+                        : "users"
+              }
+            >
               <TabsList>
-                <TabsTab value="profile">Profile</TabsTab>
-                <TabsTab value="savings">Savings Settings</TabsTab>
-                <TabsTab value="loans">Loan Settings</TabsTab>
-                <TabsTab value="cooperative">Co-operative Settings</TabsTab>
-                <TabsTab value="users">User Management</TabsTab>
+                {profileAccess !== null ? (
+                  <TabsTab value="profile">Profile</TabsTab>
+                ) : null}
+                {savingsAccess !== null ? (
+                  <TabsTab value="savings">Savings Settings</TabsTab>
+                ) : null}
+                {loansAccess !== null ? (
+                  <TabsTab value="loans">Loan Settings</TabsTab>
+                ) : null}
+                {cooperativeAccess !== null ? (
+                  <TabsTab value="cooperative">Co-operative Settings</TabsTab>
+                ) : null}
+                {usersAccess !== null ? (
+                  <TabsTab value="users">User Management</TabsTab>
+                ) : null}
                 <TabsIndicator />
               </TabsList>
 
-              <TabsPanel value="profile">
-                <AdminSettingsProfileTab member={member} />
-              </TabsPanel>
-              <TabsPanel value="savings">
-                <AdminSavingsSettingsTab />
-              </TabsPanel>
-              <TabsPanel value="loans">
-                <AdminLoanSettingsTab />
-              </TabsPanel>
-              <TabsPanel value="cooperative">
-                <AdminCooperativeSettingsTab />
-              </TabsPanel>
-              <TabsPanel value="users">
-                <SettingsUserManagementTab />
-              </TabsPanel>
+              {profileAccess !== null ? (
+                <TabsPanel value="profile">
+                  <AdminSettingsProfileTab member={member} />
+                </TabsPanel>
+              ) : null}
+              {savingsAccess !== null ? (
+                <TabsPanel value="savings">
+                  <AdminSavingsSettingsTab />
+                </TabsPanel>
+              ) : null}
+              {loansAccess !== null ? (
+                <TabsPanel value="loans">
+                  <AdminLoanSettingsTab />
+                </TabsPanel>
+              ) : null}
+              {cooperativeAccess !== null ? (
+                <TabsPanel value="cooperative">
+                  <AdminCooperativeSettingsTab />
+                </TabsPanel>
+              ) : null}
+              {usersAccess !== null ? (
+                <TabsPanel value="users">
+                  <SettingsUserManagementTab />
+                </TabsPanel>
+              ) : null}
             </Tabs>
           )}
         </CardContent>

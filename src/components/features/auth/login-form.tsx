@@ -16,7 +16,6 @@ import { Label } from "@/components/ui/label";
 // import { DemoAccounts } from "@/components/features/auth/demo-accounts";
 import { RouteTransition } from "@/components/brand/route-transition";
 import { useLogin } from "@/hooks/use-login";
-import { logActivity } from "@/lib/audit-log";
 import { useAuthStore } from "@/store/auth.store";
 import { usePasswordResetStore } from "@/store/password-reset.store";
 import { markAppIntroShown } from "@/lib/app-intro";
@@ -66,11 +65,6 @@ export function LoginForm() {
       setKeepLoggedIn(values.keepLoggedIn);
       setMember(response.member);
       setToken(response.token);
-      logActivity({
-        module: "Authentication",
-        action: "Login",
-        resource: response.member.email,
-      });
       setSignedInName(response.member.name);
     } catch (error) {
       toast.error("Sign in failed", {

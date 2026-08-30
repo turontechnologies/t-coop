@@ -11,6 +11,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import { hasModuleAccess } from "@/lib/permissions";
 import type { UserRole } from "@/types/auth";
 
 export interface NavItem {
@@ -112,8 +113,9 @@ export function getNavItems(
 ): NavItem[] {
   const candidates = candidateItems(role, permissionModules);
   if (!candidates) return NAV_ITEMS[role];
-  const allowed = new Set(permissionModules ?? []);
-  return candidates.filter((item) => allowed.has(item.label));
+  return candidates.filter((item) =>
+    hasModuleAccess(permissionModules, item.label),
+  );
 }
 
 function matchesHref(pathname: string, href: string): boolean {
@@ -142,6 +144,5 @@ export function isPathPermitted(
     (item) => item.href && matchesHref(pathname, item.href),
   );
   if (!matched) return true;
-  const allowed = new Set(permissionModules ?? []);
-  return allowed.has(matched.label);
+  return hasModuleAccess(permissionModules, matched.label);
 }

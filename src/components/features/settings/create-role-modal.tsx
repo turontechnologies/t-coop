@@ -3,7 +3,7 @@
 import { useEffect, useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PERMISSION_MODULES, type PlatformRole } from "@/lib/settings-data";
+import { PermissionTreeEditor } from "@/components/features/settings/permission-tree-editor";
+import { PLATFORM_MENU_TREE } from "@/lib/permissions";
+import type { PlatformRole } from "@/lib/settings-data";
 import {
   createRoleSchema,
   type CreateRoleFormValues,
@@ -94,60 +90,20 @@ export function CreateRoleModal({
 
           <div className="space-y-2">
             <Label>Permissions</Label>
+            <p className="text-xs text-muted-foreground">
+              Check a module for access to it, then toggle Read (view only) or
+              Write (can also create/edit/approve).
+            </p>
             <Controller
               control={control}
               name="permissions"
               render={({ field }) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <button
-                        type="button"
-                        disabled={busy}
-                        className="flex h-11 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                      />
-                    }
-                  >
-                    <span
-                      className={
-                        field.value.length === 0
-                          ? "text-muted-foreground"
-                          : undefined
-                      }
-                    >
-                      {field.value.length === 0
-                        ? "Select permissions"
-                        : field.value.length === PERMISSION_MODULES.length
-                          ? "All access"
-                          : `${field.value.length} selected`}
-                    </span>
-                    <ChevronDown
-                      className="size-4 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="w-(--anchor-width) min-w-56"
-                  >
-                    {PERMISSION_MODULES.map((module) => (
-                      <DropdownMenuCheckboxItem
-                        key={module}
-                        closeOnClick={false}
-                        checked={field.value.includes(module)}
-                        onCheckedChange={(checked) => {
-                          field.onChange(
-                            checked
-                              ? [...field.value, module]
-                              : field.value.filter((item) => item !== module),
-                          );
-                        }}
-                      >
-                        {module}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <PermissionTreeEditor
+                  tree={PLATFORM_MENU_TREE}
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={busy}
+                />
               )}
             />
             {errors.permissions ? (

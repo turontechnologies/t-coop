@@ -19,9 +19,11 @@ export interface CoopLoanRecordFilters {
 }
 
 /**
- * Super-admin loans oversight (the `/co-operatives/[id]/loans/...` routes) — real backend
- * (LoanController), not the mock/Zustand-backed personal loans model `/loans` still uses for the
- * admin/member self-service flow. Mirrors coop-savings.service.ts exactly.
+ * Loans oversight (the `/co-operatives/[id]/loans/...` routes, and — since `LoanController`
+ * scopes access down for non-staff callers — the record list/detail these hooks also back on the
+ * admin/member self-service `/loans` pages). The self-service mutations (apply, guarantor
+ * response, decision) live in `loan-self.service.ts` against `LoanSelfServiceController`. Mirrors
+ * coop-savings.service.ts exactly.
  */
 export const coopLoanService = {
   async getLoanTypes(coopId: string): Promise<CoopLoanTypeSummary[]> {

@@ -22,7 +22,6 @@ import { useChangePassword } from "@/hooks/use-change-password";
 import { useCountries } from "@/hooks/use-countries";
 import { useProfile } from "@/hooks/use-profile";
 import { useUpdateProfile } from "@/hooks/use-update-profile";
-import { logActivity } from "@/lib/audit-log";
 import { getInitials } from "@/lib/format";
 import type { ProfileRecord } from "@/lib/profile-data";
 import { uploadService } from "@/services/upload.service";
@@ -185,11 +184,6 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
     try {
       const avatarUrl = await uploadService.uploadAvatar(file);
       setAvatarUrl(avatarUrl);
-      logActivity({
-        module: "Settings",
-        action: "Update",
-        resource: "Profile photo",
-      });
       toast.success("Profile photo updated");
     } catch (error) {
       toast.error("Couldn't upload photo", {

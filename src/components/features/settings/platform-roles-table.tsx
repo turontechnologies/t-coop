@@ -19,11 +19,8 @@ import {
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
 import { formatDateLong } from "@/lib/format";
-import {
-  PERMISSION_MODULES,
-  type PlatformRole,
-  type PlatformUser,
-} from "@/lib/settings-data";
+import { PLATFORM_MENU_TREE, describeGrants } from "@/lib/permissions";
+import type { PlatformRole, PlatformUser } from "@/lib/settings-data";
 import { cn } from "@/lib/utils";
 
 interface PlatformRolesTableProps {
@@ -35,9 +32,7 @@ interface PlatformRolesTableProps {
 }
 
 function permissionsLabel(permissions: string[]): string {
-  if (permissions.length >= PERMISSION_MODULES.length) return "All access";
-  if (permissions.length === 1) return permissions[0];
-  return `${permissions.length} modules`;
+  return describeGrants(permissions, PLATFORM_MENU_TREE);
 }
 
 export function PlatformRolesTable({

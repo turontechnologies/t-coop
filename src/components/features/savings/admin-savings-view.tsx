@@ -35,10 +35,13 @@ import {
 import { formatMoney } from "@/lib/format";
 import { initiateTransfer } from "@/lib/paystack-transfer";
 import type { ExportColumn } from "@/lib/table-export";
+import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
 import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
 
 type AdminSavingsTab = "members" | "my" | "request";
+
+const MODULE = "Savings & Contributions";
 
 const TYPE_EXPORT_COLUMNS: ExportColumn<CoopSavingsTypeSummary>[] = [
   { header: "Savings Type", accessor: (row) => row.name },
@@ -76,7 +79,13 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
 
   const myTotal = myRecords.reduce((sum, record) => sum + record.amount, 0);
 
-  const [activeTab, setActiveTab] = useState<AdminSavingsTab>("members");
+  const membersAccess = useTabAccess(MODULE, "Members Savings");
+  const myAccess = useTabAccess(MODULE, "My Savings");
+  const requestAccess = useTabAccess(MODULE, "Request");
+  const firstVisibleTab: AdminSavingsTab =
+    membersAccess !== null ? "members" : myAccess !== null ? "my" : "request";
+
+  const [activeTab, setActiveTab] = useState<AdminSavingsTab>(firstVisibleTab);
   const [tellerOpen, setTellerOpen] = useState(false);
   const [tellerBusy, setTellerBusy] = useState(false);
   const [myAddOpen, setMyAddOpen] = useState(false);
@@ -93,6 +102,14 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   const pendingRequests = allRequests.filter(
     (request) => request.status === "Pending",
   );
+
+  if (membersAccess === null && myAccess === null && requestAccess === null) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        You don&apos;t have access to any part of Savings & Contributions.
+      </p>
+    );
+  }
 
   const handlePrimaryAction = () => {
     if (activeTab === "members") setTellerOpen(true);
@@ -188,7 +205,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
-        {activeTab === "my" ? (
+        {activeTab === "my" && myAccess === "write" ? (
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -199,7 +216,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
             </Button>
             <Button onClick={handlePrimaryAction}>+ New Savings</Button>
           </div>
-        ) : activeTab === "members" ? (
+        ) : activeTab === "members" && membersAccess === "write" ? (
           <Button onClick={handlePrimaryAction}>+ New Savings</Button>
         ) : null}
       </div>
@@ -225,14 +242,20 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <TabsList>
-                <TabsTab value="members">Members Savings</TabsTab>
-                <TabsTab value="my">My Savings</TabsTab>
-                <TabsTab value="request">
-                  Request
-                  {pendingRequests.length > 0
-                    ? ` (${pendingRequests.length})`
-                    : ""}
-                </TabsTab>
+                {membersAccess !== null ? (
+                  <TabsTab value="members">Members Savings</TabsTab>
+                ) : null}
+                {myAccess !== null ? (
+                  <TabsTab value="my">My Savings</TabsTab>
+                ) : null}
+                {requestAccess !== null ? (
+                  <TabsTab value="request">
+                    Request
+                    {pendingRequests.length > 0
+                      ? ` (${pendingRequests.length})`
+                      : ""}
+                  </TabsTab>
+                ) : null}
                 <TabsIndicator />
               </TabsList>
               {activeTab === "members" ? (
@@ -254,36 +277,43 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
               ) : null}
             </div>
 
-            <TabsPanel value="members">
-              <CoopSavingsSummaryTable
-                totalsByType={totalsByType}
-                currency={coop.currency}
-                coopId={coop.id}
-                basePath="/savings/type"
-              />
-            </TabsPanel>
+            {membersAccess !== null ? (
+              <TabsPanel value="members">
+                <CoopSavingsSummaryTable
+                  totalsByType={totalsByType}
+                  currency={coop.currency}
+                  coopId={coop.id}
+                  basePath="/savings/type"
+                />
+              </TabsPanel>
+            ) : null}
 
-            <TabsPanel value="my">
-              <MemberSavingsView
-                coopId={coopId}
-                memberId={member.id}
-                memberName={member.name}
-                memberEmail={member.email}
-                heading="My Savings Record"
-                showSummary={false}
-                addOpen={myAddOpen}
-                onAddOpenChange={setMyAddOpen}
-                withdrawOpen={myWithdrawOpen}
-                onWithdrawOpenChange={setMyWithdrawOpen}
-              />
-            </TabsPanel>
+            {myAccess !== null ? (
+              <TabsPanel value="my">
+                <MemberSavingsView
+                  coopId={coopId}
+                  memberId={member.id}
+                  memberName={member.name}
+                  memberEmail={member.email}
+                  heading="My Savings Record"
+                  showSummary={false}
+                  addOpen={myAddOpen}
+                  onAddOpenChange={setMyAddOpen}
+                  withdrawOpen={myWithdrawOpen}
+                  onWithdrawOpenChange={setMyWithdrawOpen}
+                />
+              </TabsPanel>
+            ) : null}
 
-            <TabsPanel value="request">
-              <SavingsRequestsTable
-                requests={allRequests}
-                onResolve={handleResolveRequest}
-              />
-            </TabsPanel>
+            {requestAccess !== null ? (
+              <TabsPanel value="request">
+                <SavingsRequestsTable
+                  requests={allRequests}
+                  canResolve={requestAccess === "write"}
+                  onResolve={handleResolveRequest}
+                />
+              </TabsPanel>
+            ) : null}
           </Tabs>
         </CardContent>
       </Card>

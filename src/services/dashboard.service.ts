@@ -110,7 +110,7 @@ function toRecentActivities(
       month: "long",
       year: "numeric",
     }),
-    status: role !== "super_admin" ? activity.status : null,
+    status: role !== "super_admin" ? (activity.status ?? null) : null,
   }));
 }
 

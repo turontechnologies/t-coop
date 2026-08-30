@@ -20,10 +20,13 @@ import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
+import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
 import type { CoopLoanTypeSummary } from "@/types/coop-loans";
 
 type AdminLoansTab = "requests" | "members" | "my";
+
+const MODULE = "Loans";
 
 const TYPE_EXPORT_COLUMNS: ExportColumn<CoopLoanTypeSummary>[] = [
   { header: "Loan Type", accessor: (row) => row.name },
@@ -70,13 +73,31 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
     [myRecords],
   );
 
-  const [activeTab, setActiveTab] = useState<AdminLoansTab>("requests");
+  const requestsAccess = useTabAccess(MODULE, "Requests");
+  const membersAccess = useTabAccess(MODULE, "Members Loans");
+  const myAccess = useTabAccess(MODULE, "My Loans");
+  const firstVisibleTab: AdminLoansTab =
+    requestsAccess !== null
+      ? "requests"
+      : membersAccess !== null
+        ? "members"
+        : "my";
+
+  const [activeTab, setActiveTab] = useState<AdminLoansTab>(firstVisibleTab);
   const [myTakeOpen, setMyTakeOpen] = useState(false);
 
   if (!coop) {
     return (
       <p className="text-sm text-muted-foreground">
         We couldn&apos;t find your co-operative.
+      </p>
+    );
+  }
+
+  if (requestsAccess === null && membersAccess === null && myAccess === null) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        You don&apos;t have access to any part of Loans.
       </p>
     );
   }
@@ -90,7 +111,7 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
-        {activeTab === "my" ? (
+        {activeTab === "my" && myAccess === "write" ? (
           <Button onClick={() => setMyTakeOpen(true)}>+ New Loan</Button>
         ) : null}
       </div>
@@ -116,14 +137,20 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <TabsList>
-                <TabsTab value="requests">
-                  Requests
-                  {pendingRequests.length > 0
-                    ? ` (${pendingRequests.length})`
-                    : ""}
-                </TabsTab>
-                <TabsTab value="members">Members Loans</TabsTab>
-                <TabsTab value="my">My Loans</TabsTab>
+                {requestsAccess !== null ? (
+                  <TabsTab value="requests">
+                    Requests
+                    {pendingRequests.length > 0
+                      ? ` (${pendingRequests.length})`
+                      : ""}
+                  </TabsTab>
+                ) : null}
+                {membersAccess !== null ? (
+                  <TabsTab value="members">Members Loans</TabsTab>
+                ) : null}
+                {myAccess !== null ? (
+                  <TabsTab value="my">My Loans</TabsTab>
+                ) : null}
                 <TabsIndicator />
               </TabsList>
               {activeTab === "requests" ? (
@@ -145,30 +172,36 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
               ) : null}
             </div>
 
-            <TabsPanel value="requests">
-              <LoanRequestsTable requests={pendingRequests} />
-            </TabsPanel>
+            {requestsAccess !== null ? (
+              <TabsPanel value="requests">
+                <LoanRequestsTable requests={pendingRequests} />
+              </TabsPanel>
+            ) : null}
 
-            <TabsPanel value="members">
-              <CoopLoansSummaryTable
-                totalsByType={totalsByType}
-                currency={coop.currency}
-                coopId={coop.id}
-                basePath="/loans/type"
-              />
-            </TabsPanel>
+            {membersAccess !== null ? (
+              <TabsPanel value="members">
+                <CoopLoansSummaryTable
+                  totalsByType={totalsByType}
+                  currency={coop.currency}
+                  coopId={coop.id}
+                  basePath="/loans/type"
+                />
+              </TabsPanel>
+            ) : null}
 
-            <TabsPanel value="my">
-              <MemberLoansView
-                coopId={coopId}
-                memberId={member.id}
-                memberName={member.name}
-                heading="My Loan Record"
-                showSummary={false}
-                takeOpen={myTakeOpen}
-                onTakeOpenChange={setMyTakeOpen}
-              />
-            </TabsPanel>
+            {myAccess !== null ? (
+              <TabsPanel value="my">
+                <MemberLoansView
+                  coopId={coopId}
+                  memberId={member.id}
+                  memberName={member.name}
+                  heading="My Loan Record"
+                  showSummary={false}
+                  takeOpen={myTakeOpen}
+                  onTakeOpenChange={setMyTakeOpen}
+                />
+              </TabsPanel>
+            ) : null}
           </Tabs>
         </CardContent>
       </Card>

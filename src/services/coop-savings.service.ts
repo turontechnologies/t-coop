@@ -19,9 +19,10 @@ export interface CoopSavingsRecordFilters {
 }
 
 /**
- * Super-admin savings oversight (the `/co-operatives/[id]/savings/...` routes) — real backend
- * (SavingsController), not the mock/Zustand-backed personal savings model `/savings` still uses
- * for the admin/member self-service flow. See documentation/savings-page.md.
+ * Savings oversight (the `/co-operatives/[id]/savings/...` routes, and — since `SavingsController`
+ * scopes access down for non-staff callers — the record list/detail these hooks also back on the
+ * admin/member self-service `/savings` pages). The self-service mutations (deposit, withdrawal
+ * request/decision) live in `savings-self.service.ts` against `SavingsSelfServiceController`.
  */
 export const coopSavingsService = {
   async getSavingsTypes(coopId: string): Promise<CoopSavingsTypeSummary[]> {

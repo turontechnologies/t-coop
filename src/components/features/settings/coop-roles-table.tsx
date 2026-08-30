@@ -19,7 +19,7 @@ import {
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
 import { formatDateLong } from "@/lib/format";
-import { COOP_PERMISSION_MODULES } from "@/lib/settings-data";
+import { COOP_MENU_TREE, describeGrants } from "@/lib/permissions";
 import type { CoopRole, CoopUser } from "@/services/coop-staff.service";
 import { cn } from "@/lib/utils";
 
@@ -32,9 +32,7 @@ interface CoopRolesTableProps {
 }
 
 function permissionsLabel(permissions: string[]): string {
-  if (permissions.length >= COOP_PERMISSION_MODULES.length) return "All access";
-  if (permissions.length === 1) return permissions[0];
-  return `${permissions.length} modules`;
+  return describeGrants(permissions, COOP_MENU_TREE);
 }
 
 export function CoopRolesTable({

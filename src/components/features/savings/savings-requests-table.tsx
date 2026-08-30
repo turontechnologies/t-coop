@@ -33,6 +33,9 @@ import { cn } from "@/lib/utils";
 
 interface SavingsRequestsTableProps {
   requests: SavingsRequest[];
+  /** Hides the Approve/Decline actions for a read-only viewer — defaults to true so every
+   * existing caller (which never restricts this) keeps working unchanged. */
+  canResolve?: boolean;
   onResolve: (
     requestId: string,
     status: "Approved" | "Declined",
@@ -41,6 +44,7 @@ interface SavingsRequestsTableProps {
 
 export function SavingsRequestsTable({
   requests,
+  canResolve = true,
   onResolve,
 }: SavingsRequestsTableProps) {
   const currency = useCurrency();
@@ -196,7 +200,7 @@ export function SavingsRequestsTable({
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      {request.status === "Pending" ? (
+                      {request.status === "Pending" && canResolve ? (
                         <div className="flex items-center gap-2">
                           <ConfirmResolveDialog
                             request={request}
@@ -300,7 +304,7 @@ export function SavingsRequestsTable({
                 },
               ]}
               actions={
-                request.status === "Pending" ? (
+                request.status === "Pending" && canResolve ? (
                   <>
                     <ConfirmResolveDialog
                       request={request}

@@ -41,6 +41,7 @@ import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useGuarantorResponse, useLoanDecision } from "@/hooks/use-loans-self";
+import { useTabAccess } from "@/hooks/use-permission";
 import { initiateTransfer } from "@/lib/paystack-transfer";
 import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
@@ -64,6 +65,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   const { data: members = [] } = useCoopMembers(coopId);
   const guarantorResponse = useGuarantorResponse(coopId ?? "");
   const loanDecision = useLoanDecision(coopId ?? "");
+  const requestsAccess = useTabAccess("Loans", "Requests");
 
   if (isLoading) {
     return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
@@ -187,7 +189,8 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   };
 
   const showGuarantorActions = record.status === "Awaiting Guarantor";
-  const showAdminActions = record.status === "Awaiting Admin";
+  const showAdminActions =
+    record.status === "Awaiting Admin" && requestsAccess === "write";
 
   return (
     <div className="space-y-4 pt-6">
