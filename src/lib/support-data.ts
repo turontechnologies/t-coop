@@ -1,4 +1,4 @@
-export type TicketStatus = "Open" | "Escalated" | "Resolved";
+export type TicketStatus = "Open" | "Escalated" | "Resolved" | "Closed";
 
 export const TICKET_CATEGORIES = [
   "Savings",
@@ -15,7 +15,8 @@ export type TicketRaiserRole = "member" | "admin";
  * escalated. Never moves back — resolving an escalated ticket is always the super admin's call. */
 export type TicketAssigneeRole = "admin" | "super_admin";
 
-export type TicketEventType = "Raised" | "Reply" | "Escalated" | "Resolved";
+export type TicketEventType =
+  "Raised" | "Reply" | "Escalated" | "Resolved" | "Closed" | "Reopened";
 
 export interface TicketEvent {
   id: string;
@@ -24,6 +25,9 @@ export interface TicketEvent {
   actorName: string;
   actorRole: TicketRaiserRole | "super_admin";
   message?: string;
+  /** Evidence attached to a Raised or Reply event — a Cloudinary URL from the same
+   * `uploadService.uploadAttachment` flow used everywhere else in the app. */
+  attachmentUrl?: string;
   createdAt: string;
 }
 
@@ -51,7 +55,7 @@ export interface SupportTicket {
 export function ticketStatusBadgeVariant(
   status: TicketStatus,
 ): "secondary" | "outline" | "destructive" {
-  if (status === "Resolved") return "secondary";
+  if (status === "Resolved" || status === "Closed") return "secondary";
   if (status === "Open") return "outline";
   return "destructive";
 }

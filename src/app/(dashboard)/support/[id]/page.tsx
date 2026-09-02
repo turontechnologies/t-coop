@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useId, useState } from "react";
+import { use, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Paperclip, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -21,42 +21,58 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateLong, getInitials } from "@/lib/format";
-import { ticketStatusBadgeVariant } from "@/lib/support-data";
+import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
+import { ticketStatusBadgeVariant, type TicketEvent } from "@/lib/support-data";
+import {
+  useCloseTicket,
+  useEscalateTicket,
+  useReopenTicket,
+  useReplyToTicket,
+  useResolveTicket,
+  useSupportTicket,
+} from "@/hooks/use-support";
+import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
-import { useSupportStore } from "@/store/support.store";
 import { cn } from "@/lib/utils";
 
 interface TicketDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
+const IMAGE_URL_PATTERN = /\.(png|jpe?g|webp|gif)(\?.*)?$/i;
+
 export default function TicketDetailPage({ params }: TicketDetailPageProps) {
   const { id } = use(params);
   const router = useRouter();
   const member = useAuthStore((state) => state.member);
-  const ticket = useSupportStore((state) =>
-    state.tickets.find((t) => t.id === id),
-  );
-  const replyToTicket = useSupportStore((state) => state.replyToTicket);
-  const escalateTicket = useSupportStore((state) => state.escalateTicket);
-  const resolveTicket = useSupportStore((state) => state.resolveTicket);
+  const { data: ticket, isLoading, isError } = useSupportTicket(id);
+
+  const replyMutation = useReplyToTicket(id);
+  const escalateMutation = useEscalateTicket(id);
+  const resolveMutation = useResolveTicket(id);
+  const closeMutation = useCloseTicket(id);
+  const reopenMutation = useReopenTicket(id);
 
   const [reply, setReply] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [replyAttachment, setReplyAttachment] = useState<File | null>(null);
+  const [replyAttachmentError, setReplyAttachmentError] = useState<
+    string | null
+  >(null);
+  const [uploadingReply, setUploadingReply] = useState(false);
   const replyId = useId();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!member) return null;
 
-  // Tenant isolation: a member only ever sees their own tickets, an admin only their own
-  // co-op's, a super admin sees everything.
-  const isOwnTicket = ticket?.raisedById === member.id;
-  const isOwnCoopTicket =
-    member.role === "admin" && ticket?.cooperativeId === member.id;
-  const canView =
-    !!ticket &&
-    (member.role === "super_admin" || isOwnTicket || isOwnCoopTicket);
+  if (isLoading) {
+    return (
+      <div className="space-y-4 pt-6">
+        <p className="text-sm text-muted-foreground">Loading ticket…</p>
+      </div>
+    );
+  }
 
-  if (!ticket || !canView) {
+  if (!ticket || isError) {
     return (
       <div className="space-y-4 pt-6">
         <p className="text-sm text-muted-foreground">
@@ -70,56 +86,131 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
     );
   }
 
-  // Who's currently responsible for resolving/escalating this ticket — only they get those
-  // actions; the person who raised it can always reply, just never resolve their own issue.
+  const isOwnTicket = ticket.raisedById === member.id;
+  const isOwnCoopTicket =
+    member.role === "admin" && ticket.cooperativeId === member.id;
+
+  // Who's currently responsible for resolving/closing/escalating this ticket — only they get
+  // those actions; the person who raised it can always reply, just never act on their own issue.
   const isAssignee =
     (member.role === "admin" &&
       ticket.assignedToRole === "admin" &&
       isOwnCoopTicket) ||
     (member.role === "super_admin" && ticket.assignedToRole === "super_admin");
-  const isOpen = ticket.status !== "Resolved";
-  const canReply = isOpen && (isAssignee || isOwnTicket);
-  const canResolve = isOpen && isAssignee;
-  const canEscalate = isOpen && isAssignee && ticket.assignedToRole === "admin";
+  const isTerminal = ticket.status === "Resolved" || ticket.status === "Closed";
+  const canReply = !isTerminal && (isAssignee || isOwnTicket);
+  const canResolve = !isTerminal && isAssignee;
+  const canClose = !isTerminal && isAssignee;
+  const canEscalate =
+    !isTerminal && isAssignee && ticket.assignedToRole === "admin";
+  const canReopen = isTerminal && isAssignee;
 
-  const actorRole: "member" | "admin" | "super_admin" =
-    member.role === "super_admin"
-      ? "super_admin"
-      : member.role === "admin"
-        ? "admin"
-        : "member";
+  const anyActionBusy =
+    replyMutation.isPending ||
+    escalateMutation.isPending ||
+    resolveMutation.isPending ||
+    closeMutation.isPending ||
+    reopenMutation.isPending;
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setReplyAttachmentError(
+        `"${file.name}" is too large — attachments are limited to ${Math.round(MAX_ATTACHMENT_BYTES / 1024 / 1024)}MB.`,
+      );
+      return;
+    }
+    setReplyAttachmentError(null);
+    setReplyAttachment(file);
+  };
 
   const handleReply = async () => {
     if (!reply.trim()) return;
-    setBusy(true);
-    replyToTicket(
-      ticket.id,
-      { actorId: member.id, actorName: member.name, actorRole },
-      reply.trim(),
-    );
-    setReply("");
-    setBusy(false);
-    toast.success("Reply sent");
+    try {
+      let attachmentUrl: string | undefined;
+      if (replyAttachment) {
+        setUploadingReply(true);
+        attachmentUrl = await uploadService.uploadAttachment(replyAttachment);
+      }
+      replyMutation.mutate(
+        { message: reply.trim(), attachmentUrl },
+        {
+          onSuccess: () => {
+            setReply("");
+            setReplyAttachment(null);
+            toast.success("Reply sent");
+          },
+          onError: (error) => {
+            toast.error("Couldn't send reply", {
+              description:
+                error instanceof Error ? error.message : "Please try again.",
+            });
+          },
+        },
+      );
+    } catch (error) {
+      toast.error("Couldn't upload attachment", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setUploadingReply(false);
+    }
   };
 
-  const handleResolve = async (resolutionNote: string) => {
-    resolveTicket(
-      ticket.id,
-      { actorId: member.id, actorName: member.name, actorRole },
-      resolutionNote,
-    );
-    toast.success("Ticket resolved", {
-      description: `${ticket.raisedByName} will be notified.`,
+  const handleResolve = (resolutionNote: string) => {
+    resolveMutation.mutate(resolutionNote, {
+      onSuccess: () =>
+        toast.success("Ticket resolved", {
+          description: `${ticket.raisedByName} will be notified.`,
+        }),
+      onError: (error) =>
+        toast.error("Couldn't resolve the ticket", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        }),
     });
   };
 
-  const handleEscalate = async (note: string) => {
-    escalateTicket(
-      ticket.id,
-      { actorId: member.id, actorName: member.name, actorRole },
-      note || undefined,
-    );
-    toast.success("Escalated to the super admin");
+  const handleClose = (note: string) => {
+    closeMutation.mutate(note || undefined, {
+      onSuccess: () =>
+        toast.success("Ticket closed", {
+          description: `${ticket.raisedByName} will be notified.`,
+        }),
+      onError: (error) =>
+        toast.error("Couldn't close the ticket", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        }),
+    });
+  };
+
+  const handleEscalate = (note: string) => {
+    escalateMutation.mutate(note || undefined, {
+      onSuccess: () => toast.success("Escalated to the super admin"),
+      onError: (error) =>
+        toast.error("Couldn't escalate the ticket", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        }),
+    });
+  };
+
+  const handleReopen = (note: string) => {
+    reopenMutation.mutate(note || undefined, {
+      onSuccess: () =>
+        toast.success("Ticket reopened", {
+          description: `${ticket.raisedByName} will be notified.`,
+        }),
+      onError: (error) =>
+        toast.error("Couldn't reopen the ticket", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        }),
+    });
   };
 
   return (
@@ -145,7 +236,7 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
               {formatDateLong(new Date(ticket.createdAt))}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge
               variant={ticketStatusBadgeVariant(ticket.status)}
               className={cn(
@@ -155,37 +246,66 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
               {ticket.status}
             </Badge>
             {canEscalate ? (
-              <EscalateDialog busy={busy} onConfirm={handleEscalate} />
+              <NoteDialog
+                trigger="Escalate"
+                triggerVariant="outline"
+                title="Escalate to the super admin?"
+                description="This forwards the ticket (with its full history) to the platform team — you'll no longer be able to act on it yourself."
+                noteLabel="Note for the super admin (optional)"
+                notePlaceholder="Why does this need platform-level attention?"
+                noteRequired={false}
+                confirmLabel="Escalate"
+                busy={escalateMutation.isPending}
+                onConfirm={handleEscalate}
+              />
+            ) : null}
+            {canClose ? (
+              <NoteDialog
+                trigger="Close"
+                triggerVariant="outline"
+                title="Close this ticket?"
+                description="Use this when the ticket doesn't need a fix — duplicate, no longer relevant, etc. The person who raised it will be notified."
+                noteLabel="Reason (optional)"
+                notePlaceholder="Why is this being closed?"
+                noteRequired={false}
+                confirmLabel="Close"
+                busy={closeMutation.isPending}
+                onConfirm={handleClose}
+              />
             ) : null}
             {canResolve ? (
-              <ResolveDialog busy={busy} onConfirm={handleResolve} />
+              <NoteDialog
+                trigger="Resolve"
+                title="Resolve this ticket?"
+                description="The person who raised it will be notified it's resolved."
+                noteLabel="Resolution note"
+                notePlaceholder="What was done to resolve this?"
+                noteRequired
+                confirmLabel="Resolve"
+                busy={resolveMutation.isPending}
+                onConfirm={handleResolve}
+              />
+            ) : null}
+            {canReopen ? (
+              <NoteDialog
+                trigger="Recheck / Reopen"
+                triggerVariant="outline"
+                title="Reopen this ticket?"
+                description="This puts the ticket back in your queue for another look. The person who raised it will be notified."
+                noteLabel="Note (optional)"
+                notePlaceholder="Why is this being reopened?"
+                noteRequired={false}
+                confirmLabel="Reopen"
+                busy={reopenMutation.isPending}
+                onConfirm={handleReopen}
+              />
             ) : null}
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
             {ticket.timeline.map((event) => (
-              <div key={event.id} className="flex items-start gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {getInitials(event.actorName)}
-                </span>
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">
-                      {event.actorName}
-                    </p>
-                    <EventLabel type={event.type} />
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateLong(new Date(event.createdAt))}
-                    </p>
-                  </div>
-                  {event.message ? (
-                    <p className="text-sm text-muted-foreground">
-                      {event.message}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
+              <TimelineEntry key={event.id} event={event} />
             ))}
           </div>
 
@@ -198,16 +318,58 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
                 placeholder="Write a reply…"
                 value={reply}
                 onChange={(event) => setReply(event.target.value)}
-                disabled={busy}
+                disabled={anyActionBusy || uploadingReply}
               />
-              <div className="flex justify-end">
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {replyAttachment ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-border px-2.5 py-1.5 text-xs">
+                      <Paperclip
+                        className="size-3.5 shrink-0 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <span className="max-w-40 truncate">
+                        {replyAttachment.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setReplyAttachment(null)}
+                        aria-label="Remove attachment"
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                        disabled={anyActionBusy || uploadingReply}
+                      >
+                        <X className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={anyActionBusy || uploadingReply}
+                    >
+                      <Paperclip className="size-3.5" aria-hidden="true" />
+                      Attach
+                    </Button>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </div>
+
                 <Button
                   type="button"
                   size="sm"
-                  disabled={busy || !reply.trim()}
+                  disabled={anyActionBusy || uploadingReply || !reply.trim()}
                   onClick={handleReply}
                 >
-                  {busy ? (
+                  {replyMutation.isPending || uploadingReply ? (
                     <Loader2
                       className="size-3.5 animate-spin"
                       aria-hidden="true"
@@ -217,10 +379,69 @@ export default function TicketDetailPage({ params }: TicketDetailPageProps) {
                   )}
                 </Button>
               </div>
+              {replyAttachmentError ? (
+                <p className="text-sm text-destructive">
+                  {replyAttachmentError}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function TimelineEntry({ event }: { event: TicketEvent }) {
+  const isImage = event.attachmentUrl
+    ? IMAGE_URL_PATTERN.test(event.attachmentUrl)
+    : false;
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        {getInitials(event.actorName)}
+      </span>
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-foreground">
+            {event.actorName}
+          </p>
+          <EventLabel type={event.type} />
+          <p className="text-xs text-muted-foreground">
+            {formatDateLong(new Date(event.createdAt))}
+          </p>
+        </div>
+        {event.message ? (
+          <p className="text-sm text-muted-foreground">{event.message}</p>
+        ) : null}
+        {event.attachmentUrl ? (
+          isImage ? (
+            <a
+              href={event.attachmentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-fit"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={event.attachmentUrl}
+                alt="Attachment"
+                className="max-h-48 rounded-lg border border-border object-cover"
+              />
+            </a>
+          ) : (
+            <a
+              href={event.attachmentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-fit items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs text-foreground hover:bg-muted/50"
+            >
+              <Paperclip className="size-3.5" aria-hidden="true" />
+              View attachment
+            </a>
+          )
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -232,16 +453,36 @@ function EventLabel({ type }: { type: string }) {
       ? "escalated this"
       : type === "Resolved"
         ? "resolved this"
-        : "replied";
+        : type === "Closed"
+          ? "closed this"
+          : type === "Reopened"
+            ? "reopened this"
+            : "replied";
   return <span className="text-xs text-muted-foreground">{label}</span>;
 }
 
-function ResolveDialog({
+function NoteDialog({
+  trigger,
+  triggerVariant,
+  title,
+  description,
+  noteLabel,
+  notePlaceholder,
+  noteRequired,
+  confirmLabel,
   busy,
   onConfirm,
 }: {
+  trigger: string;
+  triggerVariant?: "outline";
+  title: string;
+  description: string;
+  noteLabel: string;
+  notePlaceholder: string;
+  noteRequired: boolean;
+  confirmLabel: string;
   busy: boolean;
-  onConfirm: (note: string) => Promise<void> | void;
+  onConfirm: (note: string) => void;
 }) {
   const noteId = useId();
   const [open, setOpen] = useState(false);
@@ -252,91 +493,30 @@ function ResolveDialog({
     setOpen(next);
   };
 
-  const handleConfirm = async () => {
-    await onConfirm(note.trim() || "Resolved.");
-    handleOpenChange(false);
-  };
-
-  return (
-    <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogTrigger render={<Button type="button" size="sm" />}>
-        Resolve
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Resolve this ticket?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The person who raised it will be notified it&apos;s resolved.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor={noteId}>Resolution note (optional)</Label>
-          <Textarea
-            id={noteId}
-            rows={3}
-            placeholder="What was done to resolve this?"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            disabled={busy}
-          />
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={busy} onClick={handleConfirm}>
-            {busy ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              "Resolve"
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function EscalateDialog({
-  busy,
-  onConfirm,
-}: {
-  busy: boolean;
-  onConfirm: (note: string) => Promise<void> | void;
-}) {
-  const noteId = useId();
-  const [open, setOpen] = useState(false);
-  const [note, setNote] = useState("");
-
-  const handleOpenChange = (next: boolean) => {
-    if (!next) setNote("");
-    setOpen(next);
-  };
-
-  const handleConfirm = async () => {
-    await onConfirm(note.trim());
+  const handleConfirm = () => {
+    if (noteRequired && !note.trim()) return;
+    onConfirm(note.trim());
     handleOpenChange(false);
   };
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger
-        render={<Button type="button" variant="outline" size="sm" />}
+        render={<Button type="button" variant={triggerVariant} size="sm" />}
       >
-        Escalate
+        {trigger}
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Escalate to the super admin?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This forwards the ticket (with its full history) to the platform
-            team — you&apos;ll no longer be able to resolve it yourself.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-2">
-          <Label htmlFor={noteId}>Note for the super admin (optional)</Label>
+          <Label htmlFor={noteId}>{noteLabel}</Label>
           <Textarea
             id={noteId}
             rows={3}
-            placeholder="Why does this need platform-level attention?"
+            placeholder={notePlaceholder}
             value={note}
             onChange={(event) => setNote(event.target.value)}
             disabled={busy}
@@ -344,11 +524,14 @@ function EscalateDialog({
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={busy} onClick={handleConfirm}>
+          <AlertDialogAction
+            disabled={busy || (noteRequired && !note.trim())}
+            onClick={handleConfirm}
+          >
             {busy ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
-              "Escalate"
+              confirmLabel
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

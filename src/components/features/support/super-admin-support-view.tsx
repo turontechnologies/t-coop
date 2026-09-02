@@ -11,20 +11,22 @@ import {
 } from "@/components/ui/select";
 import { TicketListTable } from "@/components/features/support/ticket-list-table";
 import type { TicketStatus } from "@/lib/support-data";
-import { useSupportStore } from "@/store/support.store";
+import { useSupportTickets } from "@/hooks/use-support";
 
-const STATUS_OPTIONS = ["All", "Open", "Escalated", "Resolved"] as const;
+const STATUS_OPTIONS = [
+  "All",
+  "Open",
+  "Escalated",
+  "Resolved",
+  "Closed",
+] as const;
 
 export function SuperAdminSupportView() {
-  const tickets = useSupportStore((state) => state.tickets);
+  const { data: tickets, isLoading } = useSupportTickets();
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]>("All");
 
-  // Platform-wide, no tenant filter — every co-op's escalations and every admin's own tickets
-  // land here, since there's no one above the super admin to isolate them from.
-  const platformTickets = useMemo(
-    () => tickets.filter((ticket) => ticket.assignedToRole === "super_admin"),
-    [tickets],
-  );
+  // The backend already scopes this to platform-assigned tickets, tenant-agnostic by design.
+  const platformTickets = useMemo(() => tickets ?? [], [tickets]);
   const filtered = useMemo(
     () =>
       status === "All"
@@ -35,7 +37,7 @@ export function SuperAdminSupportView() {
     [platformTickets, status],
   );
   const openCount = platformTickets.filter(
-    (t) => t.status !== "Resolved",
+    (t) => t.status !== "Resolved" && t.status !== "Closed",
   ).length;
 
   return (
@@ -69,7 +71,9 @@ export function SuperAdminSupportView() {
             tickets={filtered}
             showRaisedBy
             showCooperative
-            emptyMessage="No tickets match this filter."
+            emptyMessage={
+              isLoading ? "Loading tickets…" : "No tickets match this filter."
+            }
           />
         </CardContent>
       </Card>

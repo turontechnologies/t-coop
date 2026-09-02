@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -15,35 +16,29 @@ import {
   type RaiseTicketPayload,
 } from "@/components/features/support/raise-ticket-modal";
 import { TicketListTable } from "@/components/features/support/ticket-list-table";
-import { useSupportStore } from "@/store/support.store";
+import { useRaiseTicket, useSupportTickets } from "@/hooks/use-support";
 import type { AuthenticatedMember } from "@/types/auth";
 
 interface AdminTicketsTabProps {
   member: AuthenticatedMember;
-  cooperativeName: string;
 }
 
-export function AdminTicketsTab({
-  member,
-  cooperativeName,
-}: AdminTicketsTabProps) {
-  const tickets = useSupportStore((state) => state.tickets);
-  const raiseTicket = useSupportStore((state) => state.raiseTicket);
+export function AdminTicketsTab({ member }: AdminTicketsTabProps) {
+  const { data: tickets, isLoading } = useSupportTickets();
+  const raiseTicket = useRaiseTicket();
 
-  // Members Directory tickets — everyone in this admin's own co-op who raised a ticket that
-  // hasn't been escalated away from them yet, tenant-isolated to this co-op alone.
+  // The backend already scopes this list to the admin's own co-op — split here into "raised to
+  // me" (a member's ticket, still theirs to answer) vs "my own" (raised by this admin themself).
   const raisedToMe = useMemo(
     () =>
-      tickets.filter(
+      (tickets ?? []).filter(
         (ticket) =>
-          ticket.cooperativeId === member.id &&
-          ticket.raisedByRole === "member" &&
-          ticket.assignedToRole === "admin",
+          ticket.raisedByRole === "member" && ticket.assignedToRole === "admin",
       ),
-    [tickets, member.id],
+    [tickets],
   );
   const myTickets = useMemo(
-    () => tickets.filter((ticket) => ticket.raisedById === member.id),
+    () => (tickets ?? []).filter((ticket) => ticket.raisedById === member.id),
     [tickets, member.id],
   );
 
@@ -51,15 +46,20 @@ export function AdminTicketsTab({
   const [activeTab, setActiveTab] = useState<"raised" | "my">("raised");
 
   const handleRaise = (payload: RaiseTicketPayload) => {
-    raiseTicket({
-      ...payload,
-      raisedById: member.id,
-      raisedByName: member.name,
-      raisedByRole: "admin",
-      cooperativeId: member.id,
-      cooperativeName,
+    raiseTicket.mutate(payload, {
+      onSuccess: () => {
+        setRaiseOpen(false);
+        toast.success("Ticket raised", {
+          description: "The super admin will be notified.",
+        });
+      },
+      onError: (error) => {
+        toast.error("Couldn't raise the ticket", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
+      },
     });
-    setRaiseOpen(false);
   };
 
   return (
@@ -90,14 +90,22 @@ export function AdminTicketsTab({
               <TicketListTable
                 tickets={raisedToMe}
                 showRaisedBy
-                emptyMessage="No issues have been raised by your members yet."
+                emptyMessage={
+                  isLoading
+                    ? "Loading tickets…"
+                    : "No issues have been raised by your members yet."
+                }
               />
             </TabsPanel>
 
             <TabsPanel value="my">
               <TicketListTable
                 tickets={myTickets}
-                emptyMessage="You haven't raised any issues yet."
+                emptyMessage={
+                  isLoading
+                    ? "Loading tickets…"
+                    : "You haven't raised any issues yet."
+                }
               />
             </TabsPanel>
           </Tabs>
@@ -108,7 +116,7 @@ export function AdminTicketsTab({
         open={raiseOpen}
         onOpenChange={setRaiseOpen}
         recipientLabel="the super admin"
-        busy={false}
+        busy={raiseTicket.isPending}
         onSubmit={handleRaise}
       />
     </div>

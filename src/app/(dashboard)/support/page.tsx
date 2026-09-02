@@ -11,14 +11,10 @@ import { AdminSupportView } from "@/components/features/support/admin-support-vi
 import { AdminTicketsTab } from "@/components/features/support/admin-tickets-tab";
 import { MemberSupportView } from "@/components/features/support/member-support-view";
 import { SuperAdminSupportView } from "@/components/features/support/super-admin-support-view";
-import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { useAuthStore } from "@/store/auth.store";
 
 export default function SupportPage() {
   const member = useAuthStore((state) => state.member);
-  const brandingCoopId =
-    member?.role === "admin" ? member.id : (member?.cooperativeId ?? null);
-  const { data: branding } = useCooperativeBranding(brandingCoopId);
 
   if (!member) return null;
 
@@ -33,11 +29,7 @@ export default function SupportPage() {
   if (member.role === "member") {
     return (
       <div className="pt-6">
-        <MemberSupportView
-          member={member}
-          cooperativeName={branding?.name ?? "Your co-operative"}
-          recipientLabel="your co-operative's admin"
-        />
+        <MemberSupportView recipientLabel="your co-operative's admin" />
       </div>
     );
   }
@@ -58,10 +50,7 @@ export default function SupportPage() {
           </TabsList>
 
           <TabsPanel value="tickets">
-            <AdminTicketsTab
-              member={member}
-              cooperativeName={branding?.name ?? member.name}
-            />
+            <AdminTicketsTab member={member} />
           </TabsPanel>
 
           <TabsPanel value="subscription">

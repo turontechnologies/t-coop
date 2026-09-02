@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,42 +9,33 @@ import {
   type RaiseTicketPayload,
 } from "@/components/features/support/raise-ticket-modal";
 import { TicketListTable } from "@/components/features/support/ticket-list-table";
-import { useSupportStore } from "@/store/support.store";
-import type { AuthenticatedMember } from "@/types/auth";
+import { useRaiseTicket, useSupportTickets } from "@/hooks/use-support";
 
 interface MemberSupportViewProps {
-  member: AuthenticatedMember;
-  /** Falls back to the member's own name when a co-op name isn't otherwise known — every real
-   * caller passes the branding-resolved name. */
-  cooperativeName: string;
   recipientLabel: string;
 }
 
-export function MemberSupportView({
-  member,
-  cooperativeName,
-  recipientLabel,
-}: MemberSupportViewProps) {
-  const tickets = useSupportStore((state) => state.tickets);
-  const raiseTicket = useSupportStore((state) => state.raiseTicket);
-
-  const myTickets = useMemo(
-    () => tickets.filter((ticket) => ticket.raisedById === member.id),
-    [tickets, member.id],
-  );
+export function MemberSupportView({ recipientLabel }: MemberSupportViewProps) {
+  const { data: tickets, isLoading } = useSupportTickets();
+  const raiseTicket = useRaiseTicket();
 
   const [raiseOpen, setRaiseOpen] = useState(false);
 
   const handleRaise = (payload: RaiseTicketPayload) => {
-    raiseTicket({
-      ...payload,
-      raisedById: member.id,
-      raisedByName: member.name,
-      raisedByRole: "member",
-      cooperativeId: member.cooperativeId ?? member.id,
-      cooperativeName,
+    raiseTicket.mutate(payload, {
+      onSuccess: () => {
+        setRaiseOpen(false);
+        toast.success("Ticket raised", {
+          description: `${recipientLabel} will be notified.`,
+        });
+      },
+      onError: (error) => {
+        toast.error("Couldn't raise the ticket", {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        });
+      },
     });
-    setRaiseOpen(false);
   };
 
   return (
@@ -56,8 +48,12 @@ export function MemberSupportView({
       <Card>
         <CardContent>
           <TicketListTable
-            tickets={myTickets}
-            emptyMessage="You haven't raised any issues yet."
+            tickets={tickets ?? []}
+            emptyMessage={
+              isLoading
+                ? "Loading your tickets…"
+                : "You haven't raised any issues yet."
+            }
           />
         </CardContent>
       </Card>
@@ -66,7 +62,7 @@ export function MemberSupportView({
         open={raiseOpen}
         onOpenChange={setRaiseOpen}
         recipientLabel={recipientLabel}
-        busy={false}
+        busy={raiseTicket.isPending}
         onSubmit={handleRaise}
       />
     </div>
