@@ -65,9 +65,13 @@ export function MemberLoansView({
     () => savingsRecords.reduce((sum, record) => sum + record.amount, 0),
     [savingsRecords],
   );
+  // memberRecords now also includes loans where this member is only the named guarantor (see
+  // LoanController's records() filter) — the summary total below stays scoped to loans they
+  // actually borrowed, otherwise a guarantee they stood for would inflate their own balance.
   const totalActive = useMemo(
     () =>
       memberRecords
+        .filter((record) => record.memberId === memberId)
         .filter(
           (record) =>
             record.status === "Active" ||
@@ -75,7 +79,7 @@ export function MemberLoansView({
             record.status === "Awaiting Admin",
         )
         .reduce((sum, record) => sum + record.amount, 0),
-    [memberRecords],
+    [memberRecords, memberId],
   );
 
   const [internalTakeOpen, setInternalTakeOpen] = useState(false);
@@ -148,7 +152,7 @@ export function MemberLoansView({
               exportTitle={`${memberName} — Loans`}
             />
           </div>
-          <LoanRecordsTable records={memberRecords} />
+          <LoanRecordsTable records={memberRecords} viewerId={memberId} />
         </CardContent>
       </Card>
 

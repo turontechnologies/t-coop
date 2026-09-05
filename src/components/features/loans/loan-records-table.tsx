@@ -36,6 +36,10 @@ function toIsoDate(date: Date): string {
 
 interface LoanRecordsTableProps {
   records: CoopLoanRecord[];
+  /** When set, rows where this isn't the loan's applicant (i.e. the viewer is only its named
+   * guarantor) get a "You're the guarantor" tag — a member's own loan list now includes those
+   * alongside their own applications, so they need to read differently. */
+  viewerId?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -55,7 +59,7 @@ function statusBadgeVariant(status: CoopLoanStatus) {
   return "destructive";
 }
 
-export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
+export function LoanRecordsTable({ records, viewerId }: LoanRecordsTableProps) {
   const router = useRouter();
   const currency = useCurrency();
   const [search, setSearch] = useState("");
@@ -271,7 +275,14 @@ export function LoanRecordsTable({ records }: LoanRecordsTableProps) {
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
-                    {record.loanType}
+                    <span className="flex items-center gap-2">
+                      {record.loanType}
+                      {viewerId && record.memberId !== viewerId ? (
+                        <Badge variant="outline" className="text-[10px]">
+                          Guarantor
+                        </Badge>
+                      ) : null}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-foreground">
                     {formatMoney(record.amount, currency)}

@@ -95,6 +95,9 @@ export interface CoopLoanRecord {
   numberOfRepayments: number;
   monthlyRepayment: number;
   totalRepayment: number;
+  /** Absent only in legacy mock/demo records — a real record always has it (hard FK on the
+   * backend). */
+  guarantorId?: string;
   guarantorName: string;
   date: string;
   status: CoopLoanStatus;
