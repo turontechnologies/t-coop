@@ -9,11 +9,7 @@ import {
 } from "lucide-react";
 import { apiClient } from "@/lib/axios";
 import {
-  getActivityChartData,
-  getActivityRate,
   getChartSeries,
-  getRecentActivities,
-  getSummaryCards,
   type ActivityPoint,
   type RecentActivity,
   type SummaryCard,
@@ -119,10 +115,6 @@ export const dashboardService = {
     role: UserRole,
     currency: string,
   ): Promise<DashboardSummary> {
-    if (process.env.NEXT_PUBLIC_USE_MOCK_DASHBOARD === "true") {
-      return mockSummary(role);
-    }
-
     const { data } =
       await apiClient.get<DashboardSummaryResponse>("/dashboard/summary");
 
@@ -135,16 +127,3 @@ export const dashboardService = {
     };
   },
 };
-
-// Kept for local demoing without a backend running at all — flip
-// NEXT_PUBLIC_USE_MOCK_DASHBOARD back to "true" to use this instead.
-async function mockSummary(role: UserRole): Promise<DashboardSummary> {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  return {
-    cards: getSummaryCards(role),
-    chart: getActivityChartData(),
-    chartSeries: getChartSeries(role),
-    activityRate: getActivityRate(),
-    recentActivity: getRecentActivities(role),
-  };
-}

@@ -1,8 +1,6 @@
 import { apiClient } from "@/lib/axios";
 import type { CoopLoanRecord } from "@/lib/coop-data";
 
-const USE_MOCK = () => process.env.NEXT_PUBLIC_USE_MOCK_LOANS === "true";
-
 export interface LoanApplicationPayload {
   loanTypeId: string;
   amount: number;
@@ -26,7 +24,6 @@ export const loanSelfService = {
     coopId: string,
     payload: LoanApplicationPayload,
   ): Promise<CoopLoanRecord> {
-    if (USE_MOCK()) throw new Error("Mock loan applications aren't supported.");
     const { data } = await apiClient.post<CoopLoanRecord>(
       `/cooperatives/${coopId}/loans`,
       payload,
@@ -40,8 +37,6 @@ export const loanSelfService = {
     decision: "Accepted" | "Rejected",
     documentUrl?: string,
   ): Promise<CoopLoanRecord> {
-    if (USE_MOCK())
-      throw new Error("Mock guarantor responses aren't supported.");
     const { data } = await apiClient.patch<CoopLoanRecord>(
       `/cooperatives/${coopId}/loans/${loanId}/guarantor-response`,
       { decision, documentUrl },
@@ -53,7 +48,6 @@ export const loanSelfService = {
     coopId: string,
     loanId: string,
   ): Promise<DisbursementPreview> {
-    if (USE_MOCK()) return { loanAmount: 0, chargeAmount: 0, netDisbursed: 0 };
     const { data } = await apiClient.get<DisbursementPreview>(
       `/cooperatives/${coopId}/loans/${loanId}/disbursement`,
     );
@@ -66,7 +60,6 @@ export const loanSelfService = {
     decision: "Approved" | "Rejected",
     options?: { rejectionReason?: string; transferReference?: string },
   ): Promise<CoopLoanRecord> {
-    if (USE_MOCK()) throw new Error("Mock loan decisions aren't supported.");
     const { data } = await apiClient.patch<CoopLoanRecord>(
       `/cooperatives/${coopId}/loans/${loanId}/decision`,
       { decision, ...options },

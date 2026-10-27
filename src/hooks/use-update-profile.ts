@@ -1,13 +1,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ProfileFormValues } from "@/lib/validations/profile.schema";
 import { profileService } from "@/services/profile.service";
-import type { UpdateProfileRequest } from "@/services/profile.service";
 import { useAuthStore } from "@/store/auth.store";
+
+interface UpdateProfileRequest {
+  /** Keys the cache to invalidate — the backend always updates the signed-in member. */
+  memberId: string;
+  values: ProfileFormValues;
+}
 
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: UpdateProfileRequest) =>
-      profileService.updateProfile(payload),
+    mutationFn: ({ values }: UpdateProfileRequest) =>
+      profileService.updateProfile(values),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["profile", variables.memberId],

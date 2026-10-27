@@ -32,6 +32,7 @@ export const COOP_MENU_TREE: MenuNode[] = COOP_PERMISSION_MODULES.map(
           "Savings Settings",
           "Loan Settings",
           "Co-operative Settings",
+          "Integrations",
           "User Management",
         ],
       };

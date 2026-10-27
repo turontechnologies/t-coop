@@ -40,7 +40,7 @@ import {
   generateRepaymentSchedule,
   type RepaymentStatus,
 } from "@/lib/loans-data";
-import { openPaystackCheckout } from "@/lib/paystack";
+import { openCoopCheckout } from "@/lib/coop-checkout";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -89,11 +89,14 @@ export function LoanRepaymentPanel({
     setPayBusy(true);
     try {
       const intent = await initializeRepayment.mutateAsync();
-      await openPaystackCheckout({
+      await openCoopCheckout({
+        gateway: intent.gateway,
         email: memberEmail,
         amountNaira: intent.amount,
         reference: intent.reference,
         publicKey: intent.publicKey,
+        title: "Loan repayment",
+        description: `Installment ${intent.installmentNumber} of ${record.numberOfRepayments}`,
         onSuccess: async (reference) => {
           try {
             await confirmRepayment.mutateAsync(reference);

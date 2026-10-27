@@ -9,6 +9,7 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { AdminCooperativeSettingsTab } from "@/components/features/admin-settings/admin-cooperative-settings-tab";
+import { AdminIntegrationsTab } from "@/components/features/admin-settings/admin-integrations-tab";
 import { AdminLoanSettingsTab } from "@/components/features/admin-settings/admin-loan-settings-tab";
 import { AdminSavingsSettingsTab } from "@/components/features/admin-settings/admin-savings-settings-tab";
 import { AdminSettingsProfileTab } from "@/components/features/admin-settings/admin-settings-profile-tab";
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const loansAccess = useTabAccess(MODULE, "Loan Settings");
   const cooperativeAccess = useTabAccess(MODULE, "Co-operative Settings");
   const usersAccess = useTabAccess(MODULE, "User Management");
+  const integrationsAccess = useTabAccess(MODULE, "Integrations");
   if (!member) return null;
 
   if (member.role === "member" || member.role === "support") {
@@ -93,6 +95,7 @@ export default function SettingsPage() {
             savingsAccess === null &&
             loansAccess === null &&
             cooperativeAccess === null &&
+            integrationsAccess === null &&
             usersAccess === null ? (
             <p className="text-sm text-muted-foreground">
               You don&apos;t have access to any part of Settings.
@@ -108,7 +111,9 @@ export default function SettingsPage() {
                       ? "loans"
                       : cooperativeAccess !== null
                         ? "cooperative"
-                        : "users"
+                        : integrationsAccess !== null
+                          ? "integrations"
+                          : "users"
               }
             >
               <TabsList>
@@ -123,6 +128,9 @@ export default function SettingsPage() {
                 ) : null}
                 {cooperativeAccess !== null ? (
                   <TabsTab value="cooperative">Co-operative Settings</TabsTab>
+                ) : null}
+                {integrationsAccess !== null ? (
+                  <TabsTab value="integrations">Integrations</TabsTab>
                 ) : null}
                 {usersAccess !== null ? (
                   <TabsTab value="users">User Management</TabsTab>
@@ -148,6 +156,13 @@ export default function SettingsPage() {
               {cooperativeAccess !== null ? (
                 <TabsPanel value="cooperative">
                   <AdminCooperativeSettingsTab />
+                </TabsPanel>
+              ) : null}
+              {integrationsAccess !== null ? (
+                <TabsPanel value="integrations">
+                  <AdminIntegrationsTab
+                    readOnly={integrationsAccess !== "write"}
+                  />
                 </TabsPanel>
               ) : null}
               {usersAccess !== null ? (

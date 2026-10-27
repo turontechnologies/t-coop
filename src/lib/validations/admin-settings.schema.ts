@@ -11,6 +11,83 @@ export const coopBankAccountSchema = z.object({
 
 export type CoopBankAccountFormValues = z.infer<typeof coopBankAccountSchema>;
 
+/** Mirrors CoopIntegrationsController's own checks so a mistake is caught before saving.
+ * `*SecretKeySet` aren't inputs — they're whether a secret is already saved, so an enabled
+ * gateway only needs a new secret typed in when there isn't one yet. */
+export const coopIntegrationsSchema = z
+  .object({
+    paystackEnabled: z.boolean(),
+    paystackPublicKey: z.string().trim(),
+    paystackSecretKey: z.string().trim(),
+    paystackSecretKeySet: z.boolean(),
+    flutterwaveEnabled: z.boolean(),
+    flutterwavePublicKey: z.string().trim(),
+    flutterwaveSecretKey: z.string().trim(),
+    flutterwaveSecretKeySet: z.boolean(),
+  })
+  .superRefine((values, ctx) => {
+    const check = (
+      name: string,
+      enabled: boolean,
+      publicKey: string,
+      secretKey: string,
+      secretSaved: boolean,
+      publicPrefix: string,
+      secretPrefix: string,
+      fields: { public: string; secret: string },
+    ) => {
+      if (!enabled) return;
+      if (!publicKey) {
+        ctx.addIssue({
+          code: "custom",
+          path: [fields.public],
+          message: `Enter your ${name} public key`,
+        });
+      } else if (!publicKey.startsWith(publicPrefix)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [fields.public],
+          message: `A ${name} public key starts with ${publicPrefix}`,
+        });
+      }
+      if (!secretKey && !secretSaved) {
+        ctx.addIssue({
+          code: "custom",
+          path: [fields.secret],
+          message: `Enter your ${name} secret key`,
+        });
+      } else if (secretKey && !secretKey.startsWith(secretPrefix)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [fields.secret],
+          message: `A ${name} secret key starts with ${secretPrefix}`,
+        });
+      }
+    };
+    check(
+      "Paystack",
+      values.paystackEnabled,
+      values.paystackPublicKey,
+      values.paystackSecretKey,
+      values.paystackSecretKeySet,
+      "pk_",
+      "sk_",
+      { public: "paystackPublicKey", secret: "paystackSecretKey" },
+    );
+    check(
+      "Flutterwave",
+      values.flutterwaveEnabled,
+      values.flutterwavePublicKey,
+      values.flutterwaveSecretKey,
+      values.flutterwaveSecretKeySet,
+      "FLWPUBK",
+      "FLWSECK",
+      { public: "flutterwavePublicKey", secret: "flutterwaveSecretKey" },
+    );
+  });
+
+export type CoopIntegrationsFormValues = z.infer<typeof coopIntegrationsSchema>;
+
 export const withdrawalFeeSchema = z.object({
   withdrawalFeeType: z.enum(["Fixed", "Percentage"]),
   withdrawalFeeAmount: z.number().min(0, "Enter an amount of 0 or more"),

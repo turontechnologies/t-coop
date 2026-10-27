@@ -13,7 +13,7 @@ import {
   type WithdrawalPayload,
 } from "@/components/features/savings/request-withdrawal-modal";
 import { SavingsRecordsTable } from "@/components/features/savings/savings-records-table";
-import { openPaystackCheckout } from "@/lib/paystack";
+import { openCoopCheckout } from "@/lib/coop-checkout";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
@@ -92,11 +92,14 @@ export function MemberSavingsView({
         savingsTypeId,
         amount,
       });
-      await openPaystackCheckout({
+      await openCoopCheckout({
+        gateway: intent.gateway,
         email: memberEmail,
         amountNaira: amount,
         reference: intent.reference,
         publicKey: intent.publicKey,
+        title: "Savings deposit",
+        description: "Deposit into your co-operative savings",
         onSuccess: async (reference) => {
           try {
             await confirmDeposit.mutateAsync(reference);

@@ -1,7 +1,6 @@
 import { apiClient } from "@/lib/axios";
+import type { CoopPaymentGateway } from "@/lib/coop-checkout";
 import type { CoopLoanRecord } from "@/lib/coop-data";
-
-const USE_MOCK = () => process.env.NEXT_PUBLIC_USE_MOCK_LOANS === "true";
 
 export interface NextInstallment {
   installmentNumber: number;
@@ -12,6 +11,7 @@ export interface InitializeRepaymentResult {
   reference: string;
   installmentNumber: number;
   amount: number;
+  gateway: CoopPaymentGateway;
   publicKey: string;
 }
 
@@ -20,7 +20,7 @@ export interface LoanRepaymentRecord {
   loanId: string;
   installmentNumber: number;
   amount: number;
-  method: "Paystack" | "Manual Upload";
+  method: CoopPaymentGateway | "Manual Upload";
   transactionId: string;
   date: string;
   status: "Success";
@@ -42,7 +42,6 @@ export const loanRepaymentService = {
     coopId: string,
     loanId: string,
   ): Promise<NextInstallment> {
-    if (USE_MOCK()) throw new Error("Mock loan repayments aren't supported.");
     const { data } = await apiClient.get<NextInstallment>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/next`,
     );
@@ -53,7 +52,6 @@ export const loanRepaymentService = {
     coopId: string,
     loanId: string,
   ): Promise<InitializeRepaymentResult> {
-    if (USE_MOCK()) throw new Error("Mock loan repayments aren't supported.");
     const { data } = await apiClient.post<InitializeRepaymentResult>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/initialize`,
     );
@@ -65,7 +63,6 @@ export const loanRepaymentService = {
     loanId: string,
     reference: string,
   ): Promise<RepaymentResult> {
-    if (USE_MOCK()) throw new Error("Mock loan repayments aren't supported.");
     const { data } = await apiClient.post<RepaymentResult>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/confirm`,
       { reference },
@@ -74,7 +71,6 @@ export const loanRepaymentService = {
   },
 
   async manual(coopId: string, loanId: string): Promise<RepaymentResult> {
-    if (USE_MOCK()) throw new Error("Mock loan repayments aren't supported.");
     const { data } = await apiClient.post<RepaymentResult>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/manual`,
     );
@@ -82,7 +78,6 @@ export const loanRepaymentService = {
   },
 
   async list(coopId: string, loanId: string): Promise<LoanRepaymentRecord[]> {
-    if (USE_MOCK()) return [];
     const { data } = await apiClient.get<LoanRepaymentRecord[]>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments`,
     );

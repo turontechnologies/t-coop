@@ -1,7 +1,6 @@
 import { apiClient } from "@/lib/axios";
 import type { CoopSavingsRecord, SavingsRequest } from "@/lib/coop-data";
-
-const USE_MOCK = () => process.env.NEXT_PUBLIC_USE_MOCK_SAVINGS === "true";
+import type { CoopPaymentGateway } from "@/lib/coop-checkout";
 
 export interface InitializeDepositPayload {
   savingsTypeId: string;
@@ -11,6 +10,7 @@ export interface InitializeDepositPayload {
 export interface InitializeDepositResult {
   reference: string;
   amount: number;
+  gateway: CoopPaymentGateway;
   publicKey: string;
   chargeAmount: number;
   netAmount: number;
@@ -81,7 +81,6 @@ export const savingsSelfService = {
     coopId: string,
     payload: InitializeDepositPayload,
   ): Promise<InitializeDepositResult> {
-    if (USE_MOCK()) throw new Error("Mock savings deposits aren't supported.");
     const { data } = await apiClient.post<InitializeDepositResult>(
       `/cooperatives/${coopId}/savings/deposits/initialize`,
       payload,
@@ -93,7 +92,6 @@ export const savingsSelfService = {
     coopId: string,
     reference: string,
   ): Promise<DepositResult> {
-    if (USE_MOCK()) throw new Error("Mock savings deposits aren't supported.");
     const { data } = await apiClient.post<DepositResult>(
       `/cooperatives/${coopId}/savings/deposits/confirm`,
       { reference },
@@ -105,7 +103,6 @@ export const savingsSelfService = {
     coopId: string,
     payload: ManualDepositPayload,
   ): Promise<DepositResult> {
-    if (USE_MOCK()) throw new Error("Mock savings deposits aren't supported.");
     const { data } = await apiClient.post<DepositResult>(
       `/cooperatives/${coopId}/savings/deposits/manual`,
       payload,
@@ -117,7 +114,6 @@ export const savingsSelfService = {
     coopId: string,
     payload: WithdrawalRequestPayload,
   ): Promise<SavingsRequest> {
-    if (USE_MOCK()) throw new Error("Mock withdrawals aren't supported.");
     const { data } = await apiClient.post<SavingsRequestDto>(
       `/cooperatives/${coopId}/savings/withdrawals`,
       payload,
@@ -129,7 +125,6 @@ export const savingsSelfService = {
     coopId: string,
     memberId?: string,
   ): Promise<SavingsRequest[]> {
-    if (USE_MOCK()) return [];
     const { data } = await apiClient.get<SavingsRequestDto[]>(
       `/cooperatives/${coopId}/savings/withdrawals`,
       { params: memberId ? { memberId } : undefined },
@@ -143,7 +138,6 @@ export const savingsSelfService = {
     status: "Approved" | "Declined",
     transferReference?: string,
   ): Promise<SavingsRequest> {
-    if (USE_MOCK()) throw new Error("Mock withdrawals aren't supported.");
     const { data } = await apiClient.patch<SavingsRequestDto>(
       `/cooperatives/${coopId}/savings/withdrawals/${requestId}`,
       { status, transferReference },

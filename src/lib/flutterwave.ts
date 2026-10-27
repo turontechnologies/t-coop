@@ -49,6 +49,9 @@ export interface FlutterwaveCheckoutParams {
   reference: string;
   onSuccess: (reference: string) => void;
   onClose: () => void;
+  /** Shown at the top of Flutterwave's modal — defaults to the subscription checkout's copy. */
+  title?: string;
+  description?: string;
 }
 
 export async function openFlutterwaveCheckout({
@@ -58,6 +61,8 @@ export async function openFlutterwaveCheckout({
   reference,
   onSuccess,
   onClose,
+  title = "T-Cooperative Subscription",
+  description = "Platform subscription renewal",
 }: FlutterwaveCheckoutParams): Promise<void> {
   await loadFlutterwaveScript();
   if (!window.FlutterwaveCheckout) {
@@ -72,10 +77,7 @@ export async function openFlutterwaveCheckout({
     amount: amountNaira,
     currency: "NGN",
     customer: { email },
-    customizations: {
-      title: "T-Cooperative Subscription",
-      description: "Platform subscription renewal",
-    },
+    customizations: { title, description },
     callback: (response) => {
       if (response.status === "successful") onSuccess(response.tx_ref);
     },

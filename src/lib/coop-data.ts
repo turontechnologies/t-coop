@@ -46,7 +46,7 @@ export interface CoopSavingsRecord {
   savingsType: string;
   amount: number;
   balanceAfter: number;
-  method: "Paystack" | "Manual Upload";
+  method: "Paystack" | "Flutterwave" | "Manual Upload";
   transactionId: string;
   date: string;
   status: CoopSavingsStatus;
