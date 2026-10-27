@@ -43,7 +43,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { TimePicker, formatTimeLabel } from "@/components/ui/time-picker";
 import { formatDateLong } from "@/lib/format";
-import { ADMIN_DIRECTORY_COOP_ID } from "@/lib/member-directory";
 import type { NoticeAttachment } from "@/types/notice";
 import {
   createNoticeSchema,
@@ -94,11 +93,10 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
       recipient: isSuperAdmin ? "All Admins" : "All Members",
       medium: "Email",
       schedule: "now",
-      // Admins only ever manage one co-op, so it's picked implicitly and never shown as a
-      // field; the backend enforces this server-side too (it ignores this value for anyone
-      // but a super admin), so it's really just a placeholder to satisfy the "pick at least
-      // one" validation for a field this role never sees.
-      targetCoopIds: isSuperAdmin ? [] : [ADMIN_DIRECTORY_COOP_ID],
+      // Admins only ever manage one co-op — their own — so it's picked implicitly and never
+      // shown as a field; the backend enforces this server-side too (it ignores this value for
+      // anyone but a super admin).
+      targetCoopIds: isSuperAdmin ? [] : [member.cooperativeId ?? member.id],
     },
   });
 

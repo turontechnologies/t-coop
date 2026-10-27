@@ -16,10 +16,9 @@ import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
 } from "@/lib/validations/auth.schema";
-import type { AuthenticatedMember } from "@/types/auth";
 
 interface ForgotPasswordFormProps {
-  onSent: (email: string, otp?: string, member?: AuthenticatedMember) => void;
+  onSent: (email: string) => void;
 }
 
 export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
@@ -39,8 +38,8 @@ export function ForgotPasswordForm({ onSent }: ForgotPasswordFormProps) {
   const onSubmit = handleSubmit(async (values) => {
     forgotPassword.reset();
     try {
-      const response = await forgotPassword.mutateAsync(values);
-      onSent(values.email, response.otp, response.member);
+      await forgotPassword.mutateAsync(values);
+      onSent(values.email);
     } catch (error) {
       setError("email", {
         message:

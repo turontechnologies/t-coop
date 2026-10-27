@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// import { DemoAccounts } from "@/components/features/auth/demo-accounts";
 import { RouteTransition } from "@/components/brand/route-transition";
 import { useLogin } from "@/hooks/use-login";
 import { useAuthStore } from "@/store/auth.store";
@@ -46,17 +45,11 @@ export function LoginForm() {
     register,
     handleSubmit,
     control,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { membershipId: "", password: "", keepLoggedIn: false },
   });
-
-  // const fillDemoAccount = (membershipId: string, password: string) => {
-  //   setValue("membershipId", membershipId, { shouldValidate: true });
-  //   setValue("password", password, { shouldValidate: true });
-  // };
 
   const onSubmit = handleSubmit(async (values) => {
     login.reset();
@@ -216,8 +209,6 @@ export function LoginForm() {
           )}
         </Button>
       </motion.div>
-
-      {/* <DemoAccounts onSelect={fillDemoAccount} /> */}
     </form>
   );
 }

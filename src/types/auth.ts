@@ -35,9 +35,6 @@ export interface PasswordResetRequest {
 
 export interface PasswordResetResponse {
   message: string;
-  /** Only populated by the mock path — no real backend ever returns these. */
-  otp?: string;
-  member?: AuthenticatedMember;
 }
 
 export interface VerifyOtpRequest {

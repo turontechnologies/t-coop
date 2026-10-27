@@ -6,31 +6,19 @@ import { motion } from "framer-motion";
 import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ForgotPasswordForm } from "@/components/features/auth/forgot-password-form";
-import { OtpEmailPreview } from "@/components/features/auth/otp-email-preview";
 import { usePasswordResetStore } from "@/store/password-reset.store";
-import type { AuthenticatedMember } from "@/types/auth";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const setEmail = usePasswordResetStore((state) => state.setEmail);
-  const [sent, setSent] = useState<{
-    email: string;
-    otp?: string;
-    member?: AuthenticatedMember;
-  } | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const handleSent = (
-    email: string,
-    otp?: string,
-    member?: AuthenticatedMember,
-  ) => {
+  const handleSent = (email: string) => {
     setEmail(email);
-    setSent({ email, otp, member });
+    setSentTo(email);
   };
 
-  if (sent) {
-    const isMockPreview = Boolean(sent.otp && sent.member);
-
+  if (sentTo) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -46,31 +34,12 @@ export default function ForgotPasswordPage() {
             Check your email
           </h2>
           <p className="text-sm text-muted-foreground">
-            {isMockPreview ? (
-              <>
-                Demo preview — here&apos;s a simulated look at the email we just
-                sent to{" "}
-                <span className="font-medium text-foreground">
-                  {sent.email}
-                </span>
-                .
-              </>
-            ) : (
-              <>
-                We&apos;ve sent a 6-digit code to{" "}
-                <span className="font-medium text-foreground">
-                  {sent.email}
-                </span>
-                . It expires in 10 minutes — check your spam folder if it
-                doesn&apos;t show up in a minute or two.
-              </>
-            )}
+            We&apos;ve sent a 6-digit code to{" "}
+            <span className="font-medium text-foreground">{sentTo}</span>. It
+            expires in 10 minutes — check your spam folder if it doesn&apos;t
+            show up in a minute or two.
           </p>
         </div>
-
-        {isMockPreview && sent.member && sent.otp ? (
-          <OtpEmailPreview name={sent.member.name} otp={sent.otp} />
-        ) : null}
 
         <div className="space-y-2">
           <Button
@@ -82,7 +51,7 @@ export default function ForgotPasswordPage() {
           </Button>
           <button
             type="button"
-            onClick={() => setSent(null)}
+            onClick={() => setSentTo(null)}
             className="w-full text-center text-sm font-medium text-primary hover:underline"
           >
             Use a different email
