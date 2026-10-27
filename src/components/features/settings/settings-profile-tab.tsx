@@ -241,7 +241,6 @@ function SettingsProfileForm({ member, profile }: SettingsProfileFormProps) {
       if (anyPasswordFilled) {
         try {
           await changePassword.mutateAsync({
-            memberId: member.id,
             currentPassword: passwordFields.currentPassword,
             newPassword: passwordFields.newPassword,
           });

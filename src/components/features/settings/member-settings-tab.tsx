@@ -68,7 +68,6 @@ export function MemberSettingsTab({ member }: MemberSettingsTabProps) {
 
     try {
       await changePassword.mutateAsync({
-        memberId: member.id,
         currentPassword: fields.currentPassword,
         newPassword: fields.newPassword,
       });
