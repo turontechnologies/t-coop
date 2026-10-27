@@ -9,6 +9,7 @@ function invalidateLoans(
   coopId: string,
 ) {
   queryClient.invalidateQueries({ queryKey: ["coop-loans", coopId] });
+  queryClient.invalidateQueries({ queryKey: ["coop-loans", "record"] });
   queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 }
 
@@ -55,6 +56,21 @@ export function useLoanDisbursementPreview(
   });
 }
 
+export function useLoanApprovals(
+  coopId: string | undefined,
+  loanId: string | undefined,
+) {
+  return useQuery({
+    queryKey: ["coop-loans", coopId, "approvals", loanId],
+    queryFn: () =>
+      loanSelfService.getApprovals(coopId as string, loanId as string),
+    enabled: Boolean(coopId) && Boolean(loanId),
+    staleTime: 0,
+  });
+}
+
+/** An officer's decision on the loan's current step — approving at Secretary pays it out
+ * server-side. */
 export function useLoanDecision(coopId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -62,17 +78,11 @@ export function useLoanDecision(coopId: string) {
       loanId,
       decision,
       rejectionReason,
-      transferReference,
     }: {
       loanId: string;
       decision: "Approved" | "Rejected";
       rejectionReason?: string;
-      transferReference?: string;
-    }) =>
-      loanSelfService.decide(coopId, loanId, decision, {
-        rejectionReason,
-        transferReference,
-      }),
+    }) => loanSelfService.decide(coopId, loanId, decision, { rejectionReason }),
     onSuccess: () => invalidateLoans(queryClient, coopId),
   });
 }

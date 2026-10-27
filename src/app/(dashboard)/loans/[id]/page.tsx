@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoanRepaymentPanel } from "@/components/features/loans/loan-repayment-panel";
 import type { CoopLoanStatus } from "@/lib/coop-data";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
-import { useGuarantorResponse, useLoanDecision } from "@/hooks/use-loans-self";
+import { useGuarantorResponse, useLoanApprovals } from "@/hooks/use-loans-self";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { useAuthStore } from "@/store/auth.store";
@@ -36,8 +36,7 @@ interface LoanDetailsPageProps {
 
 function statusBadgeVariant(status: CoopLoanStatus) {
   if (status === "Active" || status === "Completed") return "secondary";
-  if (status === "Awaiting Guarantor" || status === "Awaiting Admin")
-    return "outline";
+  if (PENDING_LOAN_STATUSES.includes(status)) return "outline";
   return "destructive";
 }
 
@@ -51,8 +50,7 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
   const coopId =
     member?.role === "admin" ? member.id : (member?.cooperativeId ?? "");
   const guarantorResponse = useGuarantorResponse(coopId);
-  const loanDecision = useLoanDecision(coopId);
-  const [rejectReason, setRejectReason] = useState("");
+  const { data: approvals } = useLoanApprovals(coopId || undefined, id);
 
   if (isLoading) {
     return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
@@ -77,7 +75,8 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
   const isAdmin = member.role === "admin";
   const showGuarantorActions =
     record.status === "Awaiting Guarantor" && isGuarantor;
-  const showAdminActions = record.status === "Awaiting Admin" && isAdmin;
+  // Officers (and the admin covering a vacant office) approve on the request page.
+  const showReviewLink = !!approvals?.canApprove || !!approvals?.canReject;
 
   const handleGuarantorAccept = async () => {
     try {
@@ -103,23 +102,6 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
       toast.success("You've declined this guarantor request");
     } catch (error) {
       toast.error("Couldn't record your response", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
-    }
-  };
-
-  const handleReject = async () => {
-    try {
-      await loanDecision.mutateAsync({
-        loanId: record.id,
-        decision: "Rejected",
-        rejectionReason: rejectReason.trim(),
-      });
-      setRejectReason("");
-      toast.success("Loan application rejected");
-    } catch (error) {
-      toast.error("Couldn't reject that loan", {
         description:
           error instanceof Error ? error.message : "Please try again.",
       });
@@ -215,55 +197,13 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          ) : showAdminActions ? (
-            <div className="flex items-center gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger render={<Button variant="outline" />}>
-                  Reject
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Reject loan application</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {record.memberName} will see the reason you give below.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="space-y-2">
-                    <Label>Reason for rejection</Label>
-                    <Textarea
-                      placeholder="e.g. Insufficient savings history for this loan type."
-                      value={rejectReason}
-                      onChange={(event) => setRejectReason(event.target.value)}
-                    />
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setRejectReason("")}>
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      disabled={!rejectReason.trim() || loanDecision.isPending}
-                      onClick={handleReject}
-                    >
-                      {loanDecision.isPending ? (
-                        <Loader2
-                          className="size-4 animate-spin"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        "Reject"
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button
-                nativeButton={false}
-                render={<Link href={`/loans/request/${record.id}`} />}
-              >
-                Review to Approve
-              </Button>
-            </div>
+          ) : showReviewLink ? (
+            <Button
+              nativeButton={false}
+              render={<Link href={`/loans/request/${record.id}`} />}
+            >
+              Review{approvals?.actingAs ? ` as ${approvals.actingAs}` : ""}
+            </Button>
           ) : null}
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
