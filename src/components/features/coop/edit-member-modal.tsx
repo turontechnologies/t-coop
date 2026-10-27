@@ -181,7 +181,7 @@ export function EditMemberModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={guarantorId}>Guarantor</Label>
+              <Label htmlFor={guarantorId}>Guarantor (optional)</Label>
               <Input
                 id={guarantorId}
                 disabled={isSubmitting}

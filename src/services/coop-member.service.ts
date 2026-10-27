@@ -84,8 +84,6 @@ export const coopMemberService = {
     coopId: string,
     values: AddMemberFormValues,
   ): Promise<CoopMember> {
-    // Each guarantor gets a real email invite server-side (MemberGuarantor) — the backend takes
-    // the {name, email, phone} list as-is, not a joined string.
     const { data } = await apiClient.post<CoopMemberDto>(
       `/cooperatives/${coopId}/members`,
       values,

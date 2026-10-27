@@ -78,8 +78,33 @@ export interface SavingsRequest {
   netAmount?: number;
 }
 
+/** A loan moves Guarantor -> Vice President -> Treasurer -> Secretary; the Secretary's approval
+ * pays it out and makes it Active. */
 export type CoopLoanStatus =
-  "Awaiting Guarantor" | "Awaiting Admin" | "Active" | "Completed" | "Rejected";
+  | "Awaiting Guarantor"
+  | "Awaiting Vice President"
+  | "Awaiting Treasurer"
+  | "Awaiting Secretary"
+  | "Active"
+  | "Completed"
+  | "Rejected";
+
+/** Every status a loan request can be in before it's paid out or rejected. */
+export const PENDING_LOAN_STATUSES: CoopLoanStatus[] = [
+  "Awaiting Guarantor",
+  "Awaiting Vice President",
+  "Awaiting Treasurer",
+  "Awaiting Secretary",
+];
+
+/** Waiting on one of the officers (past the guarantor). */
+export function isAwaitingOfficer(status: CoopLoanStatus): boolean {
+  return (
+    status === "Awaiting Vice President" ||
+    status === "Awaiting Treasurer" ||
+    status === "Awaiting Secretary"
+  );
+}
 
 export interface CoopLoanRecord {
   id: string;
@@ -101,8 +126,12 @@ export interface CoopLoanRecord {
   /** Set once the guarantor accepts — a payslip/proof upload, base64 data URL. */
   guarantorDocumentUrl?: string;
   guarantorAcceptedAt?: string;
-  /** Set when the admin rejects — shown wherever this record is viewed. */
+  /** Set when an officer rejects — shown wherever this record is viewed. */
   rejectionReason?: string;
+  /** Set once the Secretary's approval pays the loan out — principal minus loan charges. */
+  disbursedAmount?: number | null;
+  disbursementReference?: string | null;
+  disbursedAt?: string | null;
 }
 
 export function coopMemberFullName(member: CoopMember): string {
@@ -113,7 +142,6 @@ export function coopLoanStatusBadgeVariant(
   status: CoopLoanStatus,
 ): "secondary" | "outline" | "destructive" {
   if (status === "Active" || status === "Completed") return "secondary";
-  if (status === "Awaiting Guarantor" || status === "Awaiting Admin")
-    return "outline";
+  if (PENDING_LOAN_STATUSES.includes(status)) return "outline";
   return "destructive";
 }

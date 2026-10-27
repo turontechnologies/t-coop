@@ -76,11 +76,6 @@ export const editCooperativeSchema = z.object({
     .max(10, "Enter at most 10 digits")
     .optional(),
   memberIdType: z.enum(["NUMERIC", "ALPHA", "ALPHANUMERIC"]).optional(),
-  minGuarantors: z
-    .number()
-    .min(1, "Enter at least 1 guarantor")
-    .max(10, "Enter at most 10 guarantors")
-    .optional(),
 });
 
 export type EditCooperativeFormValues = z.infer<typeof editCooperativeSchema>;
@@ -90,7 +85,7 @@ export const editMemberSchema = z.object({
   lastName: z.string().trim().min(1, "Enter a last name"),
   email: z.email("Enter a valid email address"),
   role: z.enum(["Member", "Admin"]),
-  guarantor: z.string().trim().min(1, "Enter a guarantor"),
+  guarantor: z.string().trim().optional(),
   country: z.string().min(1, "Select a country"),
   state: z.string().trim().min(1, "Select a state"),
   city: z.string().trim().min(1, "Select a city"),

@@ -30,23 +30,8 @@ export const addMemberSchema = z.object({
   city: z.string().trim().optional(),
   facebook: z.string().trim().optional(),
   membershipId: z.string().trim().min(1, "Enter a membership ID"),
-  // Length enforced against the co-op's own configured minimum in the form itself (a per-co-op
-  // setting, not a fixed schema rule) — see AddMemberForm. Index 0 must be an existing member of
-  // the co-op (picked via Combobox, which fills in their email/phone too); the rest can be
-  // anyone, but every guarantor gets a real email invite and has to accept it.
-  guarantors: z
-    .array(
-      z.object({
-        name: z.string().trim().min(1, "Enter the guarantor's name"),
-        email: z.email("Enter a valid email address"),
-        phone: z
-          .string()
-          .trim()
-          .min(7, "Enter a valid phone number")
-          .regex(/^[\d+\s-]+$/, "Enter a valid phone number"),
-      }),
-    )
-    .min(1, "Enter at least one guarantor"),
+  // No guarantor to join — a member only names one when applying for a loan. Next-of-kin details
+  // are all optional.
   nextOfKinName: z.string().trim().optional(),
   nextOfKinPhone: z.string().trim().optional(),
   nextOfKinEmail: z.string().trim().optional(),
