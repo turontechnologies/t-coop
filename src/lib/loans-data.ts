@@ -7,30 +7,6 @@ export interface LoanTypeDef {
   eligibilityPercent: number;
 }
 
-export const LOAN_TYPES: LoanTypeDef[] = [
-  {
-    name: "Emergency Loan",
-    interestRate: 5,
-    maxAmount: 50_000,
-    durationMonths: 3,
-    eligibilityPercent: 300,
-  },
-  {
-    name: "Education Loan",
-    interestRate: 7,
-    maxAmount: 200_000,
-    durationMonths: 6,
-    eligibilityPercent: 200,
-  },
-  {
-    name: "Business Loan",
-    interestRate: 10,
-    maxAmount: 500_000,
-    durationMonths: 12,
-    eligibilityPercent: 100,
-  },
-];
-
 export function computeEligibleAmount(
   totalSavings: number,
   loanType: LoanTypeDef,
@@ -118,28 +94,4 @@ export function generateRepaymentSchedule(
       status,
     };
   });
-}
-
-export interface LoanTransaction {
-  transactionId: string;
-  installment: number;
-  amount: number;
-  date: string;
-  method: "Wallet Deduction";
-  status: "Success";
-}
-
-export function generateLoanTransactions(
-  loan: RepaymentSourceLoan & { id: string },
-): LoanTransaction[] {
-  return generateRepaymentSchedule(loan)
-    .filter((item) => item.status === "Paid")
-    .map((item) => ({
-      transactionId: `${loan.id.toUpperCase()}-TXN-${String(item.installment).padStart(2, "0")}`,
-      installment: item.installment,
-      amount: item.totalAmount,
-      date: item.dueDate,
-      method: "Wallet Deduction",
-      status: "Success",
-    }));
 }

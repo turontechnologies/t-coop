@@ -39,20 +39,15 @@ function loadPaystackScript(): Promise<void> {
   return scriptPromise;
 }
 
-export function isPaystackConfigured(): boolean {
-  return !!process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
-}
-
 export interface PaystackCheckoutOptions {
   email: string;
   amountNaira: number;
   reference: string;
   onSuccess: (reference: string) => void;
   onClose: () => void;
-  /** Defaults to NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY — pass the platform's own key (e.g. from
-   * Settings > Integrations, via GET /subscriptions/me) when checking out for something the
-   * super admin configured their own gateway credentials for, like a subscription payment. */
-  publicKey?: string;
+  /** Always from the backend's initialize response — the platform's key (Settings ->
+   * Integrations) or the co-op's own (co-op admin's Settings -> Integrations). */
+  publicKey: string;
 }
 
 export async function openPaystackCheckout({
@@ -61,13 +56,10 @@ export async function openPaystackCheckout({
   reference,
   onSuccess,
   onClose,
-  publicKey,
+  publicKey: key,
 }: PaystackCheckoutOptions): Promise<void> {
-  const key = publicKey ?? process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
   if (!key) {
-    throw new Error(
-      "Paystack isn't configured yet. Add NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY to .env.local.",
-    );
+    throw new Error("Paystack isn't set up yet. Please contact your admin.");
   }
 
   await loadPaystackScript();

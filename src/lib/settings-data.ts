@@ -16,26 +16,11 @@ export interface FeeSettings {
   withdrawalFeeAmount: number;
 }
 
-export const INITIAL_FEE_SETTINGS: FeeSettings = {
-  savingsChargeType: "Percentage",
-  savingsChargeAmount: 0.25,
-  loansChargeType: "Percentage",
-  loansChargeAmount: 1,
-  withdrawalFeeType: "Percentage",
-  withdrawalFeeAmount: 1,
-};
-
 export interface CollectionAccountSettings {
   bankCode: string;
   accountNumber: string;
   accountName: string;
 }
-
-export const INITIAL_COLLECTION_ACCOUNT: CollectionAccountSettings = {
-  bankCode: "",
-  accountNumber: "",
-  accountName: "",
-};
 
 export interface IntegrationSettings {
   paystackEnabled: boolean;
@@ -54,24 +39,6 @@ export interface IntegrationSettings {
   smsApiKey: string;
   smsSenderId: string;
 }
-
-export const INITIAL_INTEGRATIONS: IntegrationSettings = {
-  paystackEnabled: true,
-  paystackPublicKey: "",
-  paystackSecretKey: "",
-  paystackWebhookSecret: "",
-  flutterwaveEnabled: false,
-  flutterwavePublicKey: "",
-  flutterwaveSecretKey: "",
-  flutterwaveEncryptionKey: "",
-  opayEnabled: false,
-  opayPublicKey: "",
-  opaySecretKey: "",
-  opayMerchantId: "",
-  smsEnabled: false,
-  smsApiKey: "",
-  smsSenderId: "",
-};
 
 export const PERMISSION_MODULES = [
   "Dashboard",
@@ -111,33 +78,6 @@ export interface PlatformUser {
   status: PlatformUserStatus;
 }
 
-export const INITIAL_PLATFORM_USERS: PlatformUser[] = [
-  {
-    id: "usr-1",
-    name: "Jonathan Edward",
-    email: "jonathan@gmail.com",
-    role: "Support",
-    dateAdded: "2026-06-09",
-    status: "Active",
-  },
-  {
-    id: "usr-2",
-    name: "Amaka Chukwu",
-    email: "amaka.chukwu@t-coop.com",
-    role: "Support",
-    dateAdded: "2026-06-12",
-    status: "Active",
-  },
-  {
-    id: "usr-3",
-    name: "Segun Ojo",
-    email: "segun.ojo@t-coop.com",
-    role: "Support",
-    dateAdded: "2026-07-01",
-    status: "Active",
-  },
-];
-
 export type PlatformRoleStatus = "Active" | "Inactive";
 
 export interface PlatformRole {
@@ -147,13 +87,3 @@ export interface PlatformRole {
   dateAdded: string;
   status: PlatformRoleStatus;
 }
-
-export const INITIAL_PLATFORM_ROLES: PlatformRole[] = [
-  {
-    id: "role-1",
-    name: "Support",
-    permissions: [...PERMISSION_MODULES],
-    dateAdded: "2026-06-09",
-    status: "Active",
-  },
-];
