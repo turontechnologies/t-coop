@@ -77,7 +77,10 @@ export function TakeLoanModal({
     [selectedType, amountNumber],
   );
 
-  const guarantorOptions = members.filter((member) => member.id !== memberId);
+  // A guarantor has to be an active member of this co-op (the backend enforces it too).
+  const guarantorOptions = members.filter(
+    (member) => member.id !== memberId && member.status === "Active",
+  );
 
   const isValid =
     !!selectedType &&
@@ -157,7 +160,7 @@ export function TakeLoanModal({
               disabled={busy}
             >
               <SelectTrigger id={guarantorId} className="h-11 w-full">
-                <SelectValue placeholder="Select a guarantor" />
+                <SelectValue placeholder="Select a member of your co-operative" />
               </SelectTrigger>
               <SelectContent>
                 {guarantorOptions.map((member) => (

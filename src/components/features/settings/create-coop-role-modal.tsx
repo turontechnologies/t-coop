@@ -81,10 +81,17 @@ export function CreateCoopRoleModal({
               id={roleNameId}
               placeholder="Enter name"
               disabled={busy}
+              readOnly={!!editingRole?.office}
               aria-invalid={!!errors.roleName}
               className="h-11"
               {...register("roleName")}
             />
+            {editingRole?.office ? (
+              <p className="text-xs text-muted-foreground">
+                Officer roles keep their name — they&apos;re part of loan
+                approvals. You can still change what they can access.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">

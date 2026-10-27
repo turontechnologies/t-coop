@@ -35,6 +35,11 @@ function permissionsLabel(permissions: string[]): string {
   return describeGrants(permissions, COOP_MENU_TREE);
 }
 
+/** Who currently holds an officer role, if anyone. */
+function holderOf(role: CoopRole, users: CoopUser[]): string | null {
+  return users.find((user) => user.role === role.name)?.name ?? null;
+}
+
 export function CoopRolesTable({
   roles,
   users,
@@ -83,7 +88,17 @@ export function CoopRolesTable({
                     className="border-b border-border last:border-0"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {role.name}
+                      <div className="flex items-center gap-2">
+                        {role.name}
+                        {role.office ? (
+                          <Badge variant="outline">Officer</Badge>
+                        ) : null}
+                      </div>
+                      {role.office ? (
+                        <p className="text-xs font-normal text-muted-foreground">
+                          {holderOf(role, users) ?? "Vacant — admin covers it"}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {permissionsLabel(role.permissions)}
@@ -109,30 +124,34 @@ export function CoopRolesTable({
                         >
                           <Pencil className="size-3.5" aria-hidden="true" />
                         </button>
-                        <ConfirmToggleDialog
-                          trigger={
-                            <button
-                              type="button"
-                              className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                              aria-label={
-                                isActive
-                                  ? `Disable ${role.name}`
-                                  : `Activate ${role.name}`
+                        {role.office ? null : (
+                          <>
+                            <ConfirmToggleDialog
+                              trigger={
+                                <button
+                                  type="button"
+                                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                  aria-label={
+                                    isActive
+                                      ? `Disable ${role.name}`
+                                      : `Activate ${role.name}`
+                                  }
+                                />
                               }
+                              entityLabel="Role"
+                              name={role.name}
+                              isActive={isActive}
+                              onConfirm={() => onToggleStatus(role)}
+                            >
+                              <Power className="size-3.5" aria-hidden="true" />
+                            </ConfirmToggleDialog>
+                            <RemoveRoleDialog
+                              role={role}
+                              inUse={inUse}
+                              onRemove={onRemove}
                             />
-                          }
-                          entityLabel="Role"
-                          name={role.name}
-                          isActive={isActive}
-                          onConfirm={() => onToggleStatus(role)}
-                        >
-                          <Power className="size-3.5" aria-hidden="true" />
-                        </ConfirmToggleDialog>
-                        <RemoveRoleDialog
-                          role={role}
-                          inUse={inUse}
-                          onRemove={onRemove}
-                        />
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -153,7 +172,7 @@ export function CoopRolesTable({
           return (
             <MobileRecordCard
               key={role.id}
-              title={role.name}
+              title={role.office ? `${role.name} (Officer)` : role.name}
               badge={
                 <Badge
                   variant={isActive ? "secondary" : "destructive"}
@@ -163,6 +182,15 @@ export function CoopRolesTable({
                 </Badge>
               }
               fields={[
+                ...(role.office
+                  ? [
+                      {
+                        label: "Held by",
+                        value:
+                          holderOf(role, users) ?? "Vacant — admin covers it",
+                      },
+                    ]
+                  : []),
                 {
                   label: "Permissions",
                   value: permissionsLabel(role.permissions),
@@ -182,30 +210,34 @@ export function CoopRolesTable({
                   >
                     <Pencil className="size-3.5" aria-hidden="true" />
                   </button>
-                  <ConfirmToggleDialog
-                    trigger={
-                      <button
-                        type="button"
-                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        aria-label={
-                          isActive
-                            ? `Disable ${role.name}`
-                            : `Activate ${role.name}`
+                  {role.office ? null : (
+                    <>
+                      <ConfirmToggleDialog
+                        trigger={
+                          <button
+                            type="button"
+                            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            aria-label={
+                              isActive
+                                ? `Disable ${role.name}`
+                                : `Activate ${role.name}`
+                            }
+                          />
                         }
+                        entityLabel="Role"
+                        name={role.name}
+                        isActive={isActive}
+                        onConfirm={() => onToggleStatus(role)}
+                      >
+                        <Power className="size-3.5" aria-hidden="true" />
+                      </ConfirmToggleDialog>
+                      <RemoveRoleDialog
+                        role={role}
+                        inUse={inUse}
+                        onRemove={onRemove}
                       />
-                    }
-                    entityLabel="Role"
-                    name={role.name}
-                    isActive={isActive}
-                    onConfirm={() => onToggleStatus(role)}
-                  >
-                    <Power className="size-3.5" aria-hidden="true" />
-                  </ConfirmToggleDialog>
-                  <RemoveRoleDialog
-                    role={role}
-                    inUse={inUse}
-                    onRemove={onRemove}
-                  />
+                    </>
+                  )}
                 </>
               }
             />

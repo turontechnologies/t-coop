@@ -5,6 +5,9 @@ export interface CoopRole {
   name: string;
   permissions: string[];
   status: "Active" | "Inactive";
+  /** Set only on the four fixed officer roles — they can't be renamed, deactivated, or deleted,
+   * and each is held by at most one member. */
+  office: "PRESIDENT" | "VICE_PRESIDENT" | "TREASURER" | "SECRETARY" | null;
   dateAdded: string;
 }
 
