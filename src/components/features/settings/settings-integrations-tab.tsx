@@ -147,10 +147,11 @@ function SettingsIntegrationsForm({
             ]}
             caveat={
               <>
-                These are read live for subscription checkout (Support page).
-                The separate bank payout routes still read from the
-                server&apos;s <code>PAYSTACK_SECRET_KEY</code> environment
-                variable, not from values saved here.
+                Read live for subscription checkout, bank-account lookups, and
+                members&apos; savings/loan payments in any co-op that
+                hasn&apos;t connected its own gateway. Bank payouts still read
+                the server&apos;s <code>PAYSTACK_SECRET_KEY</code> environment
+                variable.
               </>
             }
           />
