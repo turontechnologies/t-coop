@@ -25,7 +25,7 @@ grant shows the tab without save buttons.
 The co-op's own Paystack and/or Flutterwave account
 (`admin-integrations-tab.tsx` → `GET/PATCH /cooperatives/{id}/integrations`).
 When one is on, members' **savings deposits and loan repayments are paid
-into it**, and **loan payouts are sent from it** (Paystack only). With
+into it**, and **loan and withdrawal payouts are sent from it** (Paystack only). With
 nothing on, the platform's Paystack is used. If both are on, Paystack wins.
 
 - Secret keys are write-only: the page shows "Saved — leave blank to keep

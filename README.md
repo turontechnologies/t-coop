@@ -27,7 +27,6 @@ Create `.env.local` (gitignored) in the project root:
 
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1   # the backend
-PAYSTACK_SECRET_KEY=sk_test_...                    # savings-withdrawal payouts only
 CLOUDINARY_CLOUD_NAME=...                          # profile photo uploads
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
@@ -40,10 +39,9 @@ co-op admin's Settings → Integrations (that co-op's own account for member
 deposits, repayments, and loan payouts). See
 [payments-and-payouts.md](./documentation/payments-and-payouts.md).
 
-`PAYSTACK_SECRET_KEY` is only read by the web app's
-`src/app/api/paystack/transfer*` route, used for savings-withdrawal payouts.
-Use a **test-mode** key and never put it in a `NEXT_PUBLIC_*` variable.
-Cloudinary credentials are server-only too (no `NEXT_PUBLIC_` prefix).
+Every payout (loans and savings withdrawals) is sent by the backend, so the
+web app holds no Paystack secret. Cloudinary credentials are server-only (no
+`NEXT_PUBLIC_` prefix).
 
 ## Accounts
 
@@ -70,8 +68,6 @@ and is expected to change it (Settings → password, or Forgot password).
 | `/dashboard`                                    | Role-aware dashboard (super admin / admin / member)                                                                                                              | [dashboard.md](./documentation/dashboard.md)                                                                           |
 | `/profile`                                      | View your own member details, Edit to change them (any role)                                                                                                     | [profile-page.md](./documentation/profile-page.md)                                                                     |
 | `/api/upload`                                   | Route handler: signs and uploads the profile photo to Cloudinary                                                                                                 | [profile-page.md](./documentation/profile-page.md)                                                                     |
-| `/api/paystack/transfer`                        | Route handler: savings-withdrawal payout (loan payouts run on the backend)                                                                                       | [payments-and-payouts.md](./documentation/payments-and-payouts.md)                                                     |
-| `/api/paystack/transfer/finalize`               | Route handler: OTP-confirms a payout, if Paystack requires it                                                                                                    | [payments-and-payouts.md](./documentation/payments-and-payouts.md)                                                     |
 | `/savings`                                      | Savings & Contributions (member + admin; real Paystack)                                                                                                          | [savings-page.md](./documentation/savings-page.md)                                                                     |
 | `/savings/[id]`                                 | Individual savings record detail (member's own)                                                                                                                  | [savings-page.md](./documentation/savings-page.md)                                                                     |
 | `/savings/type/[type]`                          | Admin: all members' records for one savings type                                                                                                                 | [savings-page.md](./documentation/savings-page.md)                                                                     |
@@ -124,7 +120,6 @@ src/
     (dashboard)/              role-aware dashboard, auth-guarded
                               (co-operatives/, members/, notice-board/ nested under here)
     api/upload/               route handler: signed Cloudinary upload for avatars
-    api/paystack/             route handlers: transfer + finalize (savings-withdrawal payouts)
     layout.tsx, template.tsx, loading.tsx   root providers + page transitions
   components/
     brand/                   logo, animated loading mark, route transitions
@@ -179,13 +174,12 @@ contract lives in the backend repo:
 - [x] Co-operatives (super admin: list, add, per-co-op Members/Savings/Loans drill-down, member detail, record detail)
 - [x] Members Directory (admin: list, add with real bank-account verification — no guarantor needed to join, next of kin optional, bulk import via template, export, edit (including bank details), disable/activate, member detail with Savings/Loans tabs, responsive mobile cards)
 - [x] Notice Board (all roles; real cross-tab real-time via `storage` events — announcements, meeting notices, meeting minutes with PDF attachment, scheduled send, reply/feedback thread, live notification bell)
-- [x] Real Paystack Transfers (loan disbursement, savings withdrawal payouts), real bank-account verification, live bank list, live cascading Country/State/City — see [payments-and-payouts.md](./documentation/payments-and-payouts.md)
+- [x] Real Paystack Transfers, sent by the backend (loan disbursement, savings withdrawal payouts — approvable on web and mobile), real bank-account verification, live bank list, live cascading Country/State/City — see [payments-and-payouts.md](./documentation/payments-and-payouts.md)
 - [x] Subscriptions (super admin: every co-op's subscription standing, revenue, manual payment upload, per-co-op payment history — see [subscriptions-page.md](./documentation/subscriptions-page.md))
 - [x] Settings (super admin: profile + password, fees & collections account, dual Paystack/Flutterwave integration toggles, platform staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location — see [settings-page.md](./documentation/settings-page.md). admin: profile + personal bank account, savings/loan type catalog management (add/edit/enable/disable), co-operative profile + bank account + currency, own payment gateways (Integrations), co-op staff roles including the four officer roles — see [admin-settings-page.md](./documentation/admin-settings-page.md))
 - [x] Per-co-op currency with live conversion (admin sets their co-op's currency from ~160 real ISO 4217 options; super admin sees it read-only with a genuinely live rate against NGN, refreshed on a timer, everywhere a co-op shows up; every displayed savings/loans amount app-wide is formatted in that co-op's own currency, isolated per co-op on the super-admin side, with cross-co-op aggregates genuinely converted and summed — see [currency-conversion.md](./documentation/currency-conversion.md))
 - [x] Light/dark theme
 - [x] Real backend for everything — no mock mode; payments verified server-side
-- [ ] Move savings-withdrawal payouts to the backend (loan payouts already are)
 - [ ] Confirm payments and transfers by Paystack webhook, not only the synchronous response
 
 ## Known Gotchas

@@ -136,11 +136,11 @@ export const savingsSelfService = {
     coopId: string,
     requestId: string,
     status: "Approved" | "Declined",
-    transferReference?: string,
   ): Promise<SavingsRequest> {
+    // Approving pays the member out server-side — see SavingsSelfServiceController.
     const { data } = await apiClient.patch<SavingsRequestDto>(
       `/cooperatives/${coopId}/savings/withdrawals/${requestId}`,
-      { status, transferReference },
+      { status },
     );
     return fromRequestDto(data);
   },

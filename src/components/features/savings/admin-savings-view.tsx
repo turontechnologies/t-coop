@@ -33,7 +33,6 @@ import {
   useWithdrawalRequests,
 } from "@/hooks/use-savings-self";
 import { formatMoney } from "@/lib/format";
-import { initiateTransfer } from "@/lib/paystack-transfer";
 import type { ExportColumn } from "@/lib/table-export";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
@@ -141,63 +140,27 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     const request = allRequests.find((r) => r.id === requestId);
     if (!request) return;
 
-    let transferReference: string | undefined;
-
-    // Approving a withdrawal is real money leaving the co-op's Paystack
-    // balance for the member's bank account — attempt that transfer first,
-    // and only mark the request Approved (and create the ledger record) if
-    // it actually goes through. A failed/misconfigured transfer should
-    // never silently look like a successful withdrawal.
-    if (status === "Approved" && request.type === "Withdrawal") {
-      const bankDetails = members.find((m) => m.id === request.memberId);
-
-      if (!bankDetails?.accountNumber || !bankDetails?.bankCode) {
-        toast.error("Can't disburse this withdrawal", {
-          description: `${request.memberName} hasn't verified their bank account yet.`,
-        });
-        return;
-      }
-
-      try {
-        const transfer = await initiateTransfer({
-          accountNumber: bankDetails.accountNumber,
-          bankCode: bankDetails.bankCode,
-          accountName: bankDetails.accountName || request.memberName,
-          amount: request.netAmount ?? request.amount,
-          reason: `T-Coop savings withdrawal — ${request.savingsType}`,
-        });
-        transferReference = transfer.reference;
-      } catch (error) {
-        toast.error("Payout failed", {
-          description:
-            error instanceof Error
-              ? error.message
-              : "Couldn't process this withdrawal payout.",
-        });
-        return;
-      }
-    }
-
+    // Approving pays the member out server-side (the co-op's own Paystack, else the
+    // platform's) — the request only becomes Approved if Paystack accepts the transfer.
     try {
-      await decideWithdrawal.mutateAsync({
-        requestId,
-        status,
-        transferReference,
-      });
+      await decideWithdrawal.mutateAsync({ requestId, status });
       toast.success(
-        status === "Approved" ? "Request approved" : "Request declined",
+        status === "Approved" ? "Withdrawal paid out" : "Request declined",
         {
           description:
             status === "Approved"
-              ? `${formatMoney(request.amount, coop.currency)} paid out to ${request.memberName}.`
+              ? `${formatMoney(request.netAmount ?? request.amount, coop.currency)} sent to ${request.memberName}'s bank account.`
               : `${request.memberName}'s request was declined.`,
         },
       );
     } catch (error) {
-      toast.error("Couldn't resolve request", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
+      toast.error(
+        status === "Approved" ? "Payout failed" : "Couldn't decline request",
+        {
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+        },
+      );
     }
   };
 

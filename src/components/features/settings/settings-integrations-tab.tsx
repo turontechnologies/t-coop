@@ -147,11 +147,10 @@ function SettingsIntegrationsForm({
             ]}
             caveat={
               <>
-                Read live for subscription checkout, bank-account lookups, and
-                members&apos; savings/loan payments in any co-op that
-                hasn&apos;t connected its own gateway. Bank payouts still read
-                the server&apos;s <code>PAYSTACK_SECRET_KEY</code> environment
-                variable.
+                Read live for subscription checkout, bank-account lookups, and —
+                in any co-op that hasn&apos;t connected its own gateway —
+                members&apos; savings/loan payments plus loan and withdrawal
+                payouts.
               </>
             }
           />

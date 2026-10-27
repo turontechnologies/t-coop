@@ -46,12 +46,14 @@ keys live in the super admin's Settings → Integrations
   platform's. The reference is fixed per loan (`loan-<loanId>`), so a retry
   can't pay twice. The loan only becomes Active if Paystack accepts the
   transfer.
-- **Savings withdrawal approval — still from the web app.** The admin's
-  approval calls the Next.js route `POST /api/paystack/transfer`
-  (`src/lib/paystack-transfer.ts`), which reads `PAYSTACK_SECRET_KEY` from
-  the server environment. It runs the transfer first and only marks the
-  request Approved if it succeeds. Moving this to the backend like loans is
-  a sensible next step.
+- **Savings withdrawal — server-side, on approval.** When an admin (or
+  co-op staff with the Request tab) approves a member's withdrawal request,
+  the backend sends the amount after the withdrawal fee to the member's
+  bank account, from the same account rule as loans. The reference is fixed
+  per request (`wd-<requestId>`). Only if Paystack accepts the transfer is
+  the request marked Approved and the withdrawal written to the ledger;
+  otherwise it stays Pending and the error is shown. Works the same on web
+  and mobile.
 
 ### Paystack account requirements
 
@@ -63,9 +65,7 @@ Paystack's own message until they're met:
   in test mode with a valid recipient.
 - **"Confirm transfers with OTP" must be off** (Paystack Settings →
   Preferences). An automated payout can't type an OTP; the backend reports
-  this clearly instead of leaving a half-finished transfer. The web app's
-  `POST /api/paystack/transfer/finalize` + `finalizeTransfer()` exist for a
-  manual OTP step but nothing calls them.
+  this clearly instead of leaving a half-finished transfer.
 
 ## Bank details and lookups
 
@@ -94,10 +94,9 @@ address form through `src/components/features/shared/location-fields.tsx`.
   payment or payout uses).
 - Web: `src/lib/coop-checkout.ts`, `src/lib/paystack.ts`,
   `src/lib/flutterwave.ts`, `src/lib/bank-lookup.ts`,
-  `src/lib/paystack-transfer.ts`, `src/app/api/paystack/transfer*`.
+  plus the mobile app's `components/payments/coop-checkout.tsx`.
 
 ## Future improvements
 
-- Move savings-withdrawal payouts to the backend, matching loans.
 - Confirm transfers and payments by Paystack webhook rather than only the
   synchronous response.

@@ -61,24 +61,18 @@ export function useWithdrawalRequests(
   });
 }
 
+/** Approving pays the member out server-side; the request only becomes Approved once Paystack
+ * accepts the transfer. */
 export function useDecideWithdrawal(coopId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       requestId,
       status,
-      transferReference,
     }: {
       requestId: string;
       status: "Approved" | "Declined";
-      transferReference?: string;
-    }) =>
-      savingsSelfService.decideWithdrawal(
-        coopId,
-        requestId,
-        status,
-        transferReference,
-      ),
+    }) => savingsSelfService.decideWithdrawal(coopId, requestId, status),
     onSuccess: () => invalidateSavings(queryClient, coopId),
   });
 }

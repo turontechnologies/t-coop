@@ -60,10 +60,9 @@ log.
   subscription checkout on `/support` (all three gateways); every bank
   list / account-name lookup (Paystack); and members' deposits,
   repayments and loan payouts in any co-op that hasn't connected its own
-  gateway (Paystack) — see [payments-and-payouts.md](./payments-and-payouts.md).
-  Only the web app's savings-withdrawal payout route
-  (`/api/paystack/transfer`) still reads the `PAYSTACK_SECRET_KEY`
-  environment variable. The secret key field
+  gateway (Paystack), and loan and withdrawal payouts for those co-ops —
+  see [payments-and-payouts.md](./payments-and-payouts.md). No payment key
+  lives in an environment variable any more. The secret key field
   is a `PasswordInput`, but is still transmitted and stored — this
   page is meant for a trusted super admin only, same as every other
   Settings tab.
