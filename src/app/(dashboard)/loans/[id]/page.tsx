@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, type ReactNode } from "react";
+import { use, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -19,10 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { LoanRepaymentPanel } from "@/components/features/loans/loan-repayment-panel";
-import type { CoopLoanStatus } from "@/lib/coop-data";
+import { PENDING_LOAN_STATUSES, type CoopLoanStatus } from "@/lib/coop-data";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
 import { useGuarantorResponse, useLoanApprovals } from "@/hooks/use-loans-self";
 import { useCurrency } from "@/components/providers/currency-provider";

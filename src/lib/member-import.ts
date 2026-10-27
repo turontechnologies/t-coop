@@ -10,7 +10,6 @@ const TEMPLATE_HEADERS = [
   "Email Address",
   "Phone",
   "Role",
-  "Guarantor",
   "Country",
   "State",
 ];
@@ -24,7 +23,6 @@ export interface ImportedMemberRow {
   email: string;
   phone: string;
   role: CoopMemberRole;
-  guarantor: string;
   country: string;
   state: string;
 }
@@ -67,7 +65,6 @@ export function downloadMemberImportTemplate() {
       "Role",
       `Optional — defaults to "Member". Valid values: ${VALID_ROLES.join(", ")}`,
     ],
-    ["Guarantor", "Optional"],
     ["Country", "Required"],
     ["State", "Optional"],
   ]);
@@ -168,7 +165,6 @@ export async function parseMemberImportFile(
       email,
       phone,
       role: matchedRole ?? "Member",
-      guarantor: String(raw["Guarantor"] ?? "").trim(),
       country,
       state: String(raw["State"] ?? "").trim(),
     });

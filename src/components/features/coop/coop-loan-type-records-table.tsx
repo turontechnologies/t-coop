@@ -48,7 +48,9 @@ const STATUS_OPTIONS = [
   "All statuses",
   "Active",
   "Awaiting Guarantor",
-  "Awaiting Admin",
+  "Awaiting Vice President",
+  "Awaiting Treasurer",
+  "Awaiting Secretary",
   "Completed",
   "Rejected",
 ] as const;

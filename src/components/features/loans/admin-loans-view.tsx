@@ -15,7 +15,7 @@ import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-sum
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { LoanRequestsTable } from "@/components/features/loans/loan-requests-table";
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
-import type { CoopLoanRecord } from "@/lib/coop-data";
+import { PENDING_LOAN_STATUSES, type CoopLoanRecord } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { formatMoney } from "@/lib/format";
@@ -66,8 +66,7 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
         .filter(
           (record) =>
             record.status === "Active" ||
-            record.status === "Awaiting Guarantor" ||
-            record.status === "Awaiting Admin",
+            PENDING_LOAN_STATUSES.includes(record.status),
         )
         .reduce((sum, record) => sum + record.amount, 0),
     [myRecords],
@@ -102,9 +101,8 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
     );
   }
 
-  const pendingRequests = allLoans.filter(
-    (loan) =>
-      loan.status === "Awaiting Guarantor" || loan.status === "Awaiting Admin",
+  const pendingRequests = allLoans.filter((loan) =>
+    PENDING_LOAN_STATUSES.includes(loan.status),
   );
 
   return (

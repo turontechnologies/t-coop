@@ -25,7 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
-import type { CoopLoanRecord, CoopLoanStatus } from "@/lib/coop-data";
+import {
+  PENDING_LOAN_STATUSES,
+  type CoopLoanRecord,
+  type CoopLoanStatus,
+} from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -45,7 +49,9 @@ interface LoanRecordsTableProps {
 const STATUS_OPTIONS = [
   "All statuses",
   "Awaiting Guarantor",
-  "Awaiting Admin",
+  "Awaiting Vice President",
+  "Awaiting Treasurer",
+  "Awaiting Secretary",
   "Active",
   "Completed",
   "Rejected",
@@ -54,8 +60,7 @@ const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
 function statusBadgeVariant(status: CoopLoanStatus) {
   if (status === "Active" || status === "Completed") return "secondary";
-  if (status === "Awaiting Guarantor" || status === "Awaiting Admin")
-    return "outline";
+  if (PENDING_LOAN_STATUSES.includes(status)) return "outline";
   return "destructive";
 }
 
