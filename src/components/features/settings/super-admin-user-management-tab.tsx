@@ -31,12 +31,10 @@ type UserManagementTab = "users" | "roles";
 
 /**
  * The real, super-admin-only backend behind Settings -> User Management — platform staff
- * (support accounts), invited by email, real login only after they accept. Reuses every
- * presentational piece the mock `SettingsUserManagementTab` already built (tables/modals all
- * take data via props), swapping `useSettingsStore` for real mutations against
- * PlatformRoleController/PlatformUserController. See documentation/flows.md for the invite
- * lifecycle. Admin's own Settings still uses the original mock tab, unchanged — platform staff
- * is a platform-wide concept, not a per-co-op one.
+ * (support accounts), invited by email, real login only after they accept. Mutations go through
+ * PlatformRoleController/PlatformUserController; see documentation/flows.md for the invite
+ * lifecycle. A co-op admin's own Settings uses SettingsUserManagementTab (co-op staff) instead —
+ * platform staff is a platform-wide concept, not a per-co-op one.
  */
 export function SuperAdminUserManagementTab() {
   const [activeTab, setActiveTab] = useState<UserManagementTab>("users");

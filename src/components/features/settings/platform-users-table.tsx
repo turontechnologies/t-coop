@@ -27,8 +27,7 @@ interface PlatformUsersTableProps {
   onEdit: (user: PlatformUser) => void;
   onToggleStatus: (user: PlatformUser) => void;
   onRemove: (user: PlatformUser) => void;
-  /** Only relevant for a real "Invited" user — resend their invite email. Omit for the mock,
-   * which never produces that status. */
+  /** Only relevant for an "Invited" user — resend their invite email. */
   onResendInvite?: (user: PlatformUser) => void;
 }
 

@@ -2,8 +2,7 @@ import { apiClient } from "@/lib/axios";
 import type { AppNotification } from "@/types/notification";
 
 /**
- * Real backend only, like platform-staff.service.ts — this feature never had a mock, so there's
- * nothing to fall back to. See NotificationController: every caller only ever sees their own
+ * Real backend (NotificationController) — every caller only ever sees their own
  * notifications, scoped server-side, never a path parameter.
  */
 export const notificationService = {

@@ -16,10 +16,7 @@ export interface CreateNoticePayload {
 }
 
 /**
- * Real backend only — Notice Board moved off its old per-browser localStorage store entirely
- * (see documentation/notice-board-page.md). No mock fallback: a feature whose entire point is
- * "the right people, across devices, get the right message" can't be meaningfully simulated
- * offline.
+ * Real backend (NoticeController) — see documentation/notice-board-page.md.
  */
 export const noticeService = {
   async list(): Promise<Notice[]> {

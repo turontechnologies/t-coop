@@ -17,8 +17,8 @@ export interface CoopMember {
   bankCode: string;
   accountNumber: string;
   accountName: string;
-  /** The rest are optional — carried for "View Full Profile" (CoopMemberHeaderCard) when backed
-   * by the real API; the still-mock views that build a `CoopMember` by hand don't set these. */
+  /** The rest are optional — carried for "View Full Profile" (CoopMemberHeaderCard); views that
+   * build a `CoopMember` by hand (e.g. from an imported row) don't set these. */
   otherName?: string;
   gender?: string;
   phone?: string;
@@ -92,8 +92,7 @@ export interface CoopLoanRecord {
   numberOfRepayments: number;
   monthlyRepayment: number;
   totalRepayment: number;
-  /** Absent only in legacy mock/demo records — a real record always has it (hard FK on the
-   * backend). */
+  /** Always set by the backend (hard FK) — optional only so hand-built records type-check. */
   guarantorId?: string;
   guarantorName: string;
   date: string;

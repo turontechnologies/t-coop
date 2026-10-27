@@ -21,9 +21,7 @@ function fromRoleDto(dto: PlatformRoleDto): PlatformRole {
 
 /**
  * Settings -> User Management, super admin only — real backend (PlatformRoleController /
- * PlatformUserController). No mock fallback: this feature has always been built real-backend-
- * first, and simulating a real invite-by-email/accept-invite flow offline would be more
- * misleading than useful. Only reachable when signed in as super_admin — see
+ * PlatformUserController). Only reachable when signed in as super_admin — see
  * SuperAdminUserManagementTab.
  */
 export const platformStaffService = {

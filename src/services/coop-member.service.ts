@@ -68,7 +68,7 @@ function fromDto(dto: CoopMemberDto): CoopMember {
 }
 
 /**
- * Real backend only (CooperativeController) — no mock fallback. Backs both the super-admin co-op
+ * Real backend (CooperativeController). Backs both the super-admin co-op
  * oversight Members tab AND the admin-facing Members Directory (`/members`); same data, just a
  * different `coopId` source (a path param for super admin, the signed-in admin's own id here).
  */

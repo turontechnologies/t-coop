@@ -65,8 +65,8 @@ export const COOP_PERMISSION_MODULES = [
   "Settings",
 ] as const;
 
-/** "Invited" is a real backend state now — a super admin invited them by email but they
- * haven't accepted yet, so they can't log in. Never produced by the mock. */
+/** "Invited" — a super admin invited them by email but they haven't accepted yet, so they
+ * can't log in. */
 export type PlatformUserStatus = "Active" | "Inactive" | "Invited";
 
 export interface PlatformUser {
