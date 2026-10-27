@@ -54,7 +54,7 @@ admin and a demo co-operative; everything else is created in the app:
 | ----------- | ------------- | ---------- | ----------------------------------------------------------------------- |
 | Super Admin | `SA-0001`     | `admin123` | Creates co-operatives from `/co-operatives`                             |
 | Co-op Admin | `COOP-0001`   | `admin123` | A co-op's admin logs in with the co-op's own ID                         |
-| Member      | —             | `admin123` | Added by an admin from `/members/new`; logs in with their membership ID |
+| Member      | `MB-0001`     | `admin123` | Seeded member of `COOP-0001`; new members are added from `/members/new` |
 
 Every new co-op admin and member starts on the default password `admin123`
 and is expected to change it (Settings → password, or Forgot password).

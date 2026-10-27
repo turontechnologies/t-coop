@@ -1,5 +1,7 @@
 # My Profile
 
+> **Current state (2026-10-27):** the app has **no mock mode** — the `NEXT_PUBLIC_USE_MOCK_*` flags and mock users described below were removed. `/profile` reads and writes `GET/PATCH /api/v1/profile`; password changes go to `POST /api/v1/profile/password`. Read anything below that mentions mocks as history.
+
 ## Overview
 
 `/profile` lives inside the `(dashboard)` route group, sharing its auth

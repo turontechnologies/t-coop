@@ -1,5 +1,7 @@
 # Password Recovery (Forgot Password → OTP → New Password)
 
+> **Current state (2026-10-27):** the app has **no mock mode** — the `NEXT_PUBLIC_USE_MOCK_*` flags and mock users described below were removed. Forgot password, OTP verification and reset all call the real backend (`/api/v1/auth/forgot-password`, `/verify-otp`, `/reset-password`); the OTP is emailed and never shown on screen. Read anything below that mentions mocks as history.
+
 ## Overview
 
 Three routes under a shared `(password-recovery)` route group, all sharing
