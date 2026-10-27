@@ -24,6 +24,7 @@ interface CoopRoleDto {
   name: string;
   permissions: string[];
   status: "Active" | "Inactive";
+  office: CoopRole["office"];
   dateAdded: string; // ISO datetime
 }
 
@@ -33,6 +34,7 @@ function fromRoleDto(dto: CoopRoleDto): CoopRole {
     name: dto.name,
     permissions: dto.permissions,
     status: dto.status,
+    office: dto.office ?? null,
     dateAdded: dto.dateAdded.slice(0, 10),
   };
 }
