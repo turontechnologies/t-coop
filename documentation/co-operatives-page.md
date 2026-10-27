@@ -1,5 +1,10 @@
 # Co-operatives
 
+> **Current state (2026-10-27):** the app has **no mock mode** — every
+> service calls the real backend, and the `NEXT_PUBLIC_USE_MOCK_*` flags,
+> mock users, demo-account picker, and seed stores described below were
+> removed. New co-ops get the four officer roles (President, Vice President, Treasurer, Secretary) automatically — see [admin-settings-page.md](./admin-settings-page.md). Read anything below that mentions mocks as history.
+
 > **Real backend cutover (list/add/edit/enable-disable):** everything in
 > this doc below was written for the original mock-only build. The list,
 > "Add New Co-operative," edit, and enable/disable actions now call the real

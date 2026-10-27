@@ -1,5 +1,10 @@
 # Login Page
 
+> **Current state (2026-10-27):** the app has **no mock mode** — every
+> service calls the real backend, and the `NEXT_PUBLIC_USE_MOCK_*` flags,
+> mock users, demo-account picker, and seed stores described below were
+> removed. Login posts to `POST /api/v1/auth/login`; accounts are the backend's real members (see the root README's Accounts table). Read anything below that mentions mocks as history.
+
 ## Overview
 
 The `/login` route is the entry point to T-Coop. Visiting `/` redirects here.

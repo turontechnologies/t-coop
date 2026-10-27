@@ -55,15 +55,15 @@ log.
   pretending they're connected.
 - **Integrations tab now writes real, live credentials** — `PATCH
 /api/v1/settings/integrations` persists to the backend's
-  `PlatformSettings` singleton row (via `platform-settings.service.ts`,
-  `NEXT_PUBLIC_USE_MOCK_SETTINGS=true` still falls back to
-  `useSettingsStore`). Two different things read these values: the
-  self-service subscription checkout on `/support` reads all three
-  gateways' keys live, server-side, on every payment (see
-  `subscriptions-page.md` / the backend's `flows.md`); the separate
-  outbound bank-payout route handlers under `/api/paystack/*` are
-  unrelated and still read the server's own `PAYSTACK_SECRET_KEY`
-  environment variable, never values saved here. The secret key field
+  `PlatformSettings` singleton row (via `platform-settings.service.ts`).
+  These keys are read live, server-side, by: the self-service
+  subscription checkout on `/support` (all three gateways); every bank
+  list / account-name lookup (Paystack); and members' deposits,
+  repayments and loan payouts in any co-op that hasn't connected its own
+  gateway (Paystack) — see [payments-and-payouts.md](./payments-and-payouts.md).
+  Only the web app's savings-withdrawal payout route
+  (`/api/paystack/transfer`) still reads the `PAYSTACK_SECRET_KEY`
+  environment variable. The secret key field
   is a `PasswordInput`, but is still transmitted and stored — this
   page is meant for a trusted super admin only, same as every other
   Settings tab.

@@ -1,5 +1,10 @@
 # T-Coop — Current State (Everything We Have, In One File)
 
+> **Current state (2026-10-27):** the app has **no mock mode** — every
+> service calls the real backend, and the `NEXT_PUBLIC_USE_MOCK_*` flags,
+> mock users, demo-account picker, and seed stores described below were
+> removed. Since this snapshot was written: loans now go through a Vice President → Treasurer → Secretary approval chain with automatic server-side payout ([loans-page.md](./loans-page.md)); co-ops can connect their own payment gateways ([admin-settings-page.md](./admin-settings-page.md)); members join without a guarantor ([members-directory-page.md](./members-directory-page.md)); bank lookups go through the backend ([payments-and-payouts.md](./payments-and-payouts.md)). The API contract lives in `t-coop-backend/documentation/api-contracts.md`. Read anything below that mentions mocks as history.
+
 Snapshot of what's actually built today. This merges `README.md` and every
 file under `documentation/` into one place — those files still exist and go
 deeper on any one topic, but this is the single-file version.
@@ -651,10 +656,10 @@ src/
 - [x] Loans (member + admin unchanged; **super admin oversight now real
       backend too, mirroring Savings exactly** — platform-wide `/loans`
       page and the per-co-op drill-down both read `GET
-  /cooperatives/:id/loans/types`, `/loans`, `/loans/:recordId`; loan
+/cooperatives/:id/loans/types`, `/loans`, `/loans/:recordId`; loan
       types are seeded for every real co-op (a deliberate one-time
       backfill, unlike savings types), see `t-coop-backend/documentation/
-  flows.md`'s loans oversight section)
+flows.md`'s loans oversight section)
 - [x] Co-operatives (super admin: list, add, edit, enable/disable — all real
       backend now; onboarding provisions a real admin login and the co-op's
       own ID; drill-down into a real co-op's Members, Savings, and Loans
@@ -724,25 +729,16 @@ src/
 
 ```
 NEXT_PUBLIC_API_URL=https://<tunnel-or-real-url>/api/v1  # t-coop-backend
-NEXT_PUBLIC_USE_MOCK_LOGIN=false                # false = hit the real backend
-NEXT_PUBLIC_USE_MOCK_PASSWORD_RESET=true        # backend has no reset endpoint yet
-NEXT_PUBLIC_USE_MOCK_DASHBOARD=false            # false = hit the real backend
-NEXT_PUBLIC_USE_MOCK_PROFILE=false              # false = hit the real backend
-NEXT_PUBLIC_USE_MOCK_AUDIT_LOG=false            # false = hit the real backend
-NEXT_PUBLIC_USE_MOCK_SETTINGS=false             # false = hit the real backend
-NEXT_PUBLIC_USE_MOCK_COOPERATIVES=false         # false = hit the real backend (co-ops, oversight tabs)
-NEXT_PUBLIC_USE_MOCK_SUBSCRIPTIONS=false        # false = hit the real backend
-NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_...     # savings deposit checkout
-PAYSTACK_SECRET_KEY=sk_test_...                 # bank verification + real payouts
+PAYSTACK_SECRET_KEY=sk_test_...                 # savings-withdrawal payouts only
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
 ```
 
-`NEXT_PUBLIC_API_URL` needs updating every time the backend's Cloudflare
-tunnel restarts (see [Backend Integration](#backend-integration)) — it's
-not a stable URL yet. Flip any of the three `NEXT_PUBLIC_USE_MOCK_*` flags
-back to `true` to fall back to mock data if the backend isn't reachable.
+Payment gateway keys are entered in the app (Settings → Integrations), not
+in env vars — see [payments-and-payouts.md](./payments-and-payouts.md).
+`NEXT_PUBLIC_API_URL` needs updating whenever the backend's tunnel URL
+changes.
 
 ## Full Per-Feature Docs (deeper detail than this file)
 
@@ -761,4 +757,4 @@ back to `true` to fall back to mock data if the backend isn't reachable.
 - [currency-conversion.md](./currency-conversion.md)
 - [payments-and-payouts.md](./payments-and-payouts.md)
 - [theming-and-motion.md](./theming-and-motion.md)
-- [api-contracts.md](./api-contracts.md) — what a real backend needs to build
+- `t-coop-backend/documentation/api-contracts.md` — the API contract
