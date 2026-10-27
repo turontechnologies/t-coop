@@ -1,234 +1,103 @@
-# Payments & Payouts (Paystack Transfers, live bank data, live geo data)
+# Payments & Payouts
 
 ## Overview
 
-This app has two genuinely different Paystack integrations, and they're
-easy to conflate:
+Money moves in two directions, through two different gateway features:
 
-1. **Paystack Inline (checkout)** — collects a card payment _into_ the
-   co-op's Paystack balance. Used for a member's own savings deposit
-   (`/savings`, `src/lib/paystack.ts`). Needs only the **public** key.
-2. **Paystack Transfers (payouts)** — sends money _out_ of the co-op's
-   Paystack balance to a specific person's bank account. Used for loan
-   disbursement and savings-withdrawal approval. Needs the **secret** key,
-   server-side only, plus the recipient's real bank account details.
+1. **Collections (inline checkout)** — a member pays _in_ with a card or
+   bank transfer in a popup. Needs only a **public** key in the browser;
+   every payment is verified server-side with the matching **secret** key
+   before anything is recorded.
+2. **Payouts (Paystack Transfers)** — money goes _out_ of a Paystack
+   balance to someone's bank account. Needs the **secret** key and the
+   recipient's verified bank details.
 
-Inline checkout cannot be used for payouts — Paystack's Inline product has
-no concept of "pay this out to someone else," it only ever charges a card
-into the merchant's own balance. Realizing this replaced an earlier
-assumption (visible in the reference screenshots this feature was built
-against) that a small Paystack popup charge could stand in for
-disbursement — it can't; a real payout needed the separate Transfers API,
-which is what this document covers.
+Inline checkout can't pay anyone out; payouts need the separate Transfers
+API.
 
-This also covers the two live, keyless external data sources — the bank
-list and the country/state/city cascade — added alongside Transfers,
-since they exist to support it (a payout needs a real bank code; the
-address fields were the other place this app had static/free-text data
-worth replacing with something live).
+## Collections
 
-## Design Decisions
+| What                       | Gateway used                                                                                | Code                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Member savings deposit     | The co-op's own Paystack, else its own Flutterwave, else the platform's Paystack            | `SavingsSelfServiceController`, `member-savings-view.tsx` |
+| Loan installment repayment | Same rule as deposits                                                                       | `LoanRepaymentController`, `loan-repayment-panel.tsx`     |
+| Co-op subscription         | The platform's gateways (Paystack, Flutterwave, OPay — whichever the super admin turned on) | `SubscriptionController`, `admin-support-view.tsx`        |
 
-- **The secret key lives only in `.env.local` and is only ever read inside
-  Next.js route handlers** (`src/app/api/paystack/*`), never in a
-  client component. This is the same boundary already established for the
-  Cloudinary secret (`src/app/api/upload/route.ts`) — the app already had
-  one real server-side integration before this, so adding more route
-  handlers wasn't a new architectural pattern, just reused.
-- **Three route handlers, one per Paystack operation**:
-  - `POST /api/paystack/resolve-account` — `{ accountNumber, bankCode }` →
-    `{ accountName }`. Wraps `GET /bank/resolve`.
-  - `POST /api/paystack/transfer` — `{ accountNumber, bankCode,
-accountName, amount, reason }` → creates a Transfer Recipient, then
-    initiates the actual Transfer. Returns `{ status, transferCode,
-reference }`.
-  - `POST /api/paystack/transfer/finalize` — `{ transferCode, otp }`, for
-    the (live-mode-only, see below) OTP confirmation step.
-  - `GET /api/paystack/banks` — the live bank list, described below.
-  - Each returns a clear `{ error }` with a `503` when
-    `PAYSTACK_SECRET_KEY` isn't set, the same "tell the user exactly
-    what's missing" convention `isPaystackConfigured()` already
-    established for the public key.
-- **A withdrawal/disbursement approval attempts the real transfer
-  _before_ mutating any state, and only proceeds if it succeeds.** Both
-  `handleResolveRequest` (`admin-savings-view.tsx`) and `handleApprove`
-  (`loans/request/[recordId]/page.tsx`) call `initiateTransfer()` first;
-  a failure shows a clear error toast and returns early, leaving the
-  request `Pending` so it can be retried — never marks something Approved
-  when the money didn't actually move. Missing bank details on the
-  recipient produce a distinct, clearer error ("hasn't verified their
-  bank account yet") rather than attempting a transfer that would fail
-  anyway.
-- **Paystack's test-mode account-resolve quota is 3 real-bank lookups per
-  day** — confirmed directly from Paystack's own error message
-  (`"Test mode daily limit of 3 live bank resolves exceeded. Use test
-bank codes 001 or upgrade to live mode."`) while building this. Bank
-  code `001` ("Test Bank") is a special sandbox code: `/bank/resolve`
-  accepts it unlimited times and always returns a fake
-  `"TEST ACCOUNT {number}"` name — genuinely useful for demoing the
-  _resolve_ flow without burning the real quota. It is **not** a real
-  bank, so it's absent from Paystack's own `/bank` list and — confirmed
-  directly against the API — creating a Transfer Recipient with it fails
-  with `invalid_bank_code`. `src/app/api/paystack/banks/route.ts`
-  prepends it to the live list anyway, clearly labeled
-  "(sandbox preview only — not for payouts)", so it's available for the
-  Verify step but nobody mistakes it for a way to actually receive money.
-- **Transfer Recipient creation needs a genuinely real, resolvable
-  account — fabricated seed account numbers will never work, quota or
-  no quota.** Discovered by testing directly against Paystack: a random
-  10-digit number against a real bank code fails with
-  `"Cannot resolve account"` / `invalid_bank_code` regardless of the
-  daily resolve quota, because `/transferrecipient` validates the
-  account is real, not just correctly formatted. Every seeded
-  `CoopMember`/`ProfileRecord` was updated to use one real, confirmed-
-  working test account (OPay, bank code `999992`) so the approval flow
-  can actually be exercised end-to-end rather than always dead-ending on
-  step one. In a real product this obviously wouldn't be one shared
-  account — each member would verify their own.
-- **Even with a real recipient, an actual Transfer needs the connected
-  Paystack business to be past "Starter" tier.** Confirmed directly:
-  initiating a transfer to a real, successfully-created recipient
-  returned `"You cannot initiate third party payouts as a starter
-business... upgrade your business to a Registered Business"`. This is
-  a Paystack account-level compliance/KYB gate, entirely outside this
-  app's code — the account owner needs to complete Paystack's business
-  verification on their dashboard before _any_ third-party payout
-  (loan disbursement, savings withdrawal, or otherwise) can actually
-  complete, even in test mode, even with a perfectly valid recipient.
-  Recipient creation working end-to-end already proves the integration
-  code is correct; this remaining step is account administration, not
-  a bug to fix here.
-- **OTP finalization exists in code but wasn't exercised in test mode.**
-  A real Paystack Transfer can come back requiring OTP confirmation
-  (Paystack SMS's/emails a code to the business) before it completes —
-  `/api/paystack/transfer/finalize` and `finalizeTransfer()` in
-  `src/lib/paystack-transfer.ts` implement that path for correctness, but
-  OTP is a live-mode safety feature; every test-mode transfer attempted
-  while building this either succeeded or failed outright, never
-  returning an `otp` status. No UI currently prompts for an OTP — see
-  [Future Improvements](#future-improvements).
-- **The live bank list replaced a hand-picked ~16-bank hardcoded array.**
-  `GET /api/paystack/banks` fetches Paystack's real `/bank?currency=NGN`
-  list server-side (secret key, so it can't be called client-side
-  directly), filters to `active && !is_deleted && supports_transfer`,
-  and is cached for an hour (`revalidate = 3600`) since it barely
-  changes. This genuinely includes commercial banks, microfinance banks,
-  and payment service banks (e.g. Airtel Smartcash PSB, 9mobile PSB) —
-  confirmed by inspecting the real response — not just the "big four"
-  a hand-picked list would have covered.
-  `src/hooks/use-bank-list.ts` fetches it once per page load (a
-  module-level cache, not per-mounted-form) since the list is identical
-  for every user and doesn't need refetching each time a Select mounts.
-- **The country/state/city cascade uses countriesnow.space** — free,
-  keyless, and CORS-open (`Access-Control-Allow-Origin: *`), so
-  `src/lib/geo-lookup.ts` calls it directly from the browser rather than
-  proxying through a server route (no secret involved, nothing to hide).
-  Its documented POST-with-JSON-body form now 301-redirects to an
-  equivalent `GET .../states/q?country=...` URL — confirmed directly
-  against the API while building this — so `geo-lookup.ts` calls that GET
-  form directly instead of following a redirect on every request.
-- **`LocationFields`** (`src/components/features/shared/location-fields.tsx`)
-  is one shared component used by all four forms that capture an
-  address (Profile, Add Member, Edit Member, Add Co-operative) — the
-  cascading-clear behavior (picking a new country clears the state and
-  city; picking a new state clears the city) only needs to be right in
-  one place. It's a controlled component (`country`/`state`/`city` +
-  `onXChange` props) — it owns its own fetch/loading state for the
-  states/cities lists, but not the actual selected values, which live in
-  each host form's `react-hook-form` state via `watch`/`setValue`.
-- **Every address schema gained a required `city` field** — none of the
-  four schemas previously had one (only free-text `state`). Existing seed
-  data (`coop-data.ts`, `profile-data.ts`) was updated to use the live
-  API's exact state naming (e.g. `"Lagos State"`, not `"Lagos"`) so a
-  pre-filled record's State/City selects show a real pre-selected value
-  instead of falling back to the placeholder.
-- **The BVN identity-lookup flow was replaced with a real bank-account
-  resolve, not just relabeled.** The original Add Member "Proceed" step
-  (`src/lib/bvn-lookup.ts`, now deleted) looked a fake BVN up against a
-  small hardcoded registry and auto-filled first/last name, phone, and
-  email. A bank account resolve can only ever return an account holder's
-  _name_ — not phone or email — so `add-member-form.tsx`'s "Verify" step
-  now splits the resolved name naively into first/last
-  (`splitResolvedName`) and leaves Phone/Email as ordinary fields the
-  admin fills in themselves, rather than pretending they were verified
-  too. The Profile page's BVN field went through the same swap, but
-  stayed simpler: the resolved account name is just displayed as
-  `accountName`, nothing else auto-fills from it.
+Every collection is **initialize → pay → confirm**: the backend fixes the
+amount and returns `{ reference, gateway, publicKey }`, the browser opens
+that gateway's widget (`src/lib/coop-checkout.ts` picks Paystack or
+Flutterwave), and `confirm` verifies the reference against the gateway's
+API with the secret key that belongs to the same account. The gateway and
+key owner are stored on the payment intent, so verification still hits the
+right account even if the admin changes their settings mid-payment.
 
-## Where bank details live
+A co-op connects its own gateway in its admin's **Settings → Integrations**
+(see [admin-settings-page.md](./admin-settings-page.md)); the platform's
+keys live in the super admin's Settings → Integrations
+(see [settings-page.md](./settings-page.md)).
 
-Two different people-models, two different places bank details are
-stored — same split that already existed for savings/loans data:
+## Payouts
 
-- **`CoopMember.bankCode` / `accountNumber` / `accountName`**
-  (`coop-data.ts`) — for actual co-operative members (Jonathan Newman,
-  Amaka Chukwu, …), captured by the admin via Add Member or Edit Member.
-  Used for coop-scoped savings-withdrawal and loan-disbursement payouts.
-- **`ProfileRecord.accountNumber` / `bankCode` / `accountName`**
-  (`profile-data.ts`) — for the three demo logins' own personal details,
-  captured via `/profile`. Used for the admin's own "My Savings"
-  withdrawal payouts (the member role's own withdrawal payouts would use
-  the same field, once/if a live member login submits one).
+- **Loan disbursement — server-side, automatic.** The Secretary's approval
+  (the last step of the loan approval chain, see
+  [loans-page.md](./loans-page.md)) makes the backend register the
+  borrower as a Paystack transfer recipient and send principal minus loan
+  charges. It pays from the co-op's own Paystack if connected, else the
+  platform's. The reference is fixed per loan (`loan-<loanId>`), so a retry
+  can't pay twice. The loan only becomes Active if Paystack accepts the
+  transfer.
+- **Savings withdrawal approval — still from the web app.** The admin's
+  approval calls the Next.js route `POST /api/paystack/transfer`
+  (`src/lib/paystack-transfer.ts`), which reads `PAYSTACK_SECRET_KEY` from
+  the server environment. It runs the transfer first and only marks the
+  request Approved if it succeeds. Moving this to the backend like loans is
+  a sensible next step.
 
-## Flow
+### Paystack account requirements
 
-```
-Verify (Profile / Add Member / Edit Member):
-  pick Bank (live list) → enter Account Number →
-  "Verify" → POST /api/paystack/resolve-account → real or sandbox
-  account name shown → stored as accountName
+These are Paystack account settings, not code — payouts fail with
+Paystack's own message until they're met:
 
-Approve a withdrawal/loan-disbursement request:
-  → look up the recipient's bankCode/accountNumber/accountName
-  → missing?  error toast, request stays Pending
-  → POST /api/paystack/transfer (creates recipient, initiates transfer)
-  → failure (e.g. quota exceeded)?  error toast, request stays Pending
-  → success → mark Approved, create the ledger record, success toast
-```
+- **The business must be past "Starter" tier.** Otherwise Paystack answers
+  _"You cannot initiate third party payouts as a starter business"_, even
+  in test mode with a valid recipient.
+- **"Confirm transfers with OTP" must be off** (Paystack Settings →
+  Preferences). An automated payout can't type an OTP; the backend reports
+  this clearly instead of leaving a half-finished transfer. The web app's
+  `POST /api/paystack/transfer/finalize` + `finalizeTransfer()` exist for a
+  manual OTP step but nothing calls them.
 
-## Setup
+## Bank details and lookups
 
-Add to `.env.local` (gitignored, same as every other credential in this
-app):
+- Bank details live on the member record (`bankCode`, `accountNumber`,
+  `accountName`), captured on Profile, Add Member and Edit Member.
+- **Bank list and account-name lookup go through the backend** —
+  `GET /api/v1/paystack/banks` and `POST /api/v1/paystack/resolve-account`
+  (`PaystackUtilityController`), using the platform's Paystack secret from
+  the super admin's Settings → Integrations. Web (`src/lib/bank-lookup.ts`)
+  and mobile share them. The list is filtered to active, transfer-capable
+  NGN banks (commercial, microfinance, and payment-service banks).
+- Paystack's test mode allows only **3 real-bank account lookups per day**.
+- "Verify" on Add Member fills the account name and splits it into a first
+  and last name (`splitResolvedName`); phone and email are typed in.
 
-```
-PAYSTACK_SECRET_KEY=sk_test_REDACTED
-```
+## Addresses
 
-Use a **test-mode** secret key. Never expose this in a `NEXT_PUBLIC_*`
-variable or any client-side code — unlike the Inline public key, this one
-can move real money. Without it set, every route above fails gracefully
-with a clear "Paystack isn't configured yet" toast instead of a silent
-no-op.
+The country/state/city cascade uses countriesnow.space directly from the
+browser (keyless, CORS-open) via `src/lib/geo-lookup.ts`, shared by every
+address form through `src/components/features/shared/location-fields.tsx`.
 
-## Components
+## Key files
 
-- `src/app/api/paystack/resolve-account/route.ts`,
-  `transfer/route.ts`, `transfer/finalize/route.ts`, `banks/route.ts` —
-  the four server-side route handlers.
-- `src/lib/bank-lookup.ts` — client wrappers (`resolveBankAccount`,
-  `fetchBanks`) around the resolve and banks routes.
-- `src/lib/paystack-transfer.ts` — client wrappers (`initiateTransfer`,
-  `finalizeTransfer`) around the transfer routes.
-- `src/lib/bank-data.ts` — `BankDef`/`BankAccountDetails` types,
-  `findBankByCode`.
-- `src/hooks/use-bank-list.ts` — the cached live bank list hook.
-- `src/lib/geo-lookup.ts` — `fetchCountries`/`fetchStates`/`fetchCities`.
-- `src/components/features/shared/location-fields.tsx` — the shared
-  cascading Country/State/City component.
+- Backend: `subscription/PaymentGatewayService.java` (verify, transfer, bank
+  list/resolve), `coopgateway/CoopGatewayResolver.java` (whose keys a co-op
+  payment or payout uses).
+- Web: `src/lib/coop-checkout.ts`, `src/lib/paystack.ts`,
+  `src/lib/flutterwave.ts`, `src/lib/bank-lookup.ts`,
+  `src/lib/paystack-transfer.ts`, `src/app/api/paystack/transfer*`.
 
-## Future Improvements
+## Future improvements
 
-- **No OTP confirmation UI.** The finalize route/helper exist, but
-  nothing prompts for an OTP if Paystack ever returns that status — see
-  [Design Decisions](#design-decisions) for why this wasn't exercised in
-  test mode. Worth adding once there's a live-mode account to test it
-  against.
-- **No webhook handling.** A production integration would confirm a
-  transfer's final status via Paystack's webhook rather than trusting
-  the synchronous `initiateTransfer()` response, the same
-  client-trusted-callback honesty gap already flagged for Paystack
-  Inline in [savings-page.md](./savings-page.md#design-decisions).
-- **Bank details, once verified, aren't re-verified if the underlying
-  bank account changes ownership** — there's no periodic re-check, same
-  as any KYC field in this app.
+- Move savings-withdrawal payouts to the backend, matching loans.
+- Confirm transfers and payments by Paystack webhook rather than only the
+  synchronous response.

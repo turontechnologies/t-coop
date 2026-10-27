@@ -20,6 +20,27 @@ this file (form design, bank verification, bulk import, responsive layout)
 is still accurate as _implementation_ detail, just now backed by real
 network calls instead of a Zustand store.
 
+## What changed 2026-10-27
+
+- **No guarantor to join.** Add Member no longer asks for guarantors and
+  the backend no longer requires or emails them — a member only names a
+  guarantor when applying for a loan (see [loans-page.md](./loans-page.md)).
+  The co-op's old "Minimum Guarantors" setting is gone. Members added
+  before this keep any guarantors already on record; invites already sent
+  can still be answered at `/guarantor-invite/[token]`.
+- **All next-of-kin fields are optional**, and labelled "(optional)" —
+  name, phone, email, relationship, authority level.
+- **Edit Member's guarantor field is optional** too (kept for members who
+  already have one on record).
+- **Bulk import works again.** Every imported row used to fail the guarantor
+  check; the template's Guarantor column is removed.
+- **Suggested membership IDs no longer collide across co-ops.** IDs are
+  unique platform-wide but each co-op numbers its own; `next-id` now skips
+  any ID already taken anywhere.
+- **No mock data anywhere** — `ADMIN_DIRECTORY_COOP_ID` and
+  `lib/member-directory.ts` were deleted along with the rest of the mock
+  mode. Mentions of them below are history.
+
 ## What changed 2026-08-24
 
 - **Data source**: `/members`, `/members/new`, and `/members/[memberId]`
@@ -30,9 +51,7 @@ network calls instead of a Zustand store.
   `useUpdateCoopMemberStatus` (`src/hooks/use-coop-members.ts`). This was
   already real infrastructure, built earlier for the super admin's
   `/co-operatives/[id]` Members tab — this page just wasn't calling it yet.
-  `ADMIN_DIRECTORY_COOP_ID` itself still exists and is still load-bearing
-  for the several still-mock features that haven't been converted yet
-  (Savings, Loans, admin Settings tabs) — don't remove it.
+  (`ADMIN_DIRECTORY_COOP_ID` has since been deleted — see 2026-10-27.)
 - **`coop-member.service.ts` lost its mock fallback entirely** (was
   `NEXT_PUBLIC_USE_MOCK_COOPERATIVES`-gated) — explicit user request ("no
   mock data now, all should be from the backend"), matching how
@@ -150,7 +169,7 @@ you want to disable "{name}"?`, with the same busy-state-stays-open
   into at once, so this got the same real template-gated import flow
   `/savings` already established. `src/lib/member-import.ts` exports
   `downloadMemberImportTemplate()` (an `.xlsx` with a `Template` sheet —
-  Membership ID, First Name, Last Name, Email Address, Role, Guarantor,
+  Membership ID, First Name, Last Name, Email Address, Phone, Role,
   Country, State — plus a `Field Reference` sheet explaining each column)
   and `parseMemberImportFile(file, existingMemberIds)`. Each row is
   validated independently: a blank Membership ID skips the row silently

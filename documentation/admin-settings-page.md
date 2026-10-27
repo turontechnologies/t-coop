@@ -1,131 +1,79 @@
-# Settings (Admin)
+# Settings (Co-op admin)
 
 ## Overview
 
-`/settings` now branches by role: `super_admin` still gets the five tabs
-documented in [settings-page.md](./settings-page.md); `admin` gets a
-different five — Profile, Savings Settings, Loan Settings, Co-operative
-Settings, User Management — reflecting that an admin manages one
-co-operative's day-to-day configuration, not the whole platform. Same
-route, same shell, same auth guard; the branch lives entirely inside
-`src/app/(dashboard)/settings/page.tsx`.
+`/settings` branches by role in `src/app/(dashboard)/settings/page.tsx`:
+`super_admin` gets the platform tabs in [settings-page.md](./settings-page.md);
+members and support staff get a single Account tab; a **co-op admin** (and
+co-op staff) gets the co-operative's own settings:
 
-## Purpose
+| Tab                       | What it manages                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Profile**               | User (own profile, photo, optional password change) · Bank Accounts (own personal payout account)                  |
+| **Savings Settings**      | The co-op's savings types — create, edit, enable/disable                                                           |
+| **Loan Settings**         | The co-op's loan types — full-page editor at `/settings/loans/new` (`?id=` to edit)                                |
+| **Co-operative Settings** | Co-operative (details, logo, currency, member ID format, charges, withdrawal fee) · Bank Accounts · Transfer Admin |
+| **Integrations**          | The co-op's own payment gateways (Paystack, Flutterwave)                                                           |
+| **User Management**       | Co-op staff: assign existing members to roles, including the four officer roles                                    |
 
-Give an admin one place to manage their own account (profile + personal
-bank account), the co-operative's savings and loan product catalog
-(create/edit/enable/disable savings types and loan types), the
-co-operative's own profile and bank account, and the same platform-staff
-user/role management super admin has.
+Everything reads and writes the real backend. Co-op staff only see the tabs
+their role grants (`useTabAccess("Settings", "<tab>")`), and a read-only
+grant shows the tab without save buttons.
 
-## Design Decisions
+## Integrations
 
-- **Reuse over rebuild, wherever the design is genuinely the same
-  thing.** `AdminSettingsProfileTab`'s "User" sub-tab renders the exact
-  same `SettingsProfileTab` component super admin uses (it's already
-  generic over `member: AuthenticatedMember`) — same avatar upload, same
-  inline optional password change, same live country dropdown. The
-  "User Management" tab is the literal same `SettingsUserManagementTab`
-  component, unmodified — admin and super admin currently share one
-  platform-staff list (`useSettingsStore`), which is honest given this
-  app has no per-co-op staff scoping mechanism yet; building one would
-  be a real architecture change out of scope for a settings screen.
-- **Two "Bank Accounts" screens, two different real data sources, same
-  UI pattern.** Profile → Bank Accounts is the _admin's own personal_
-  payout account — it reads/writes the same `ProfileRecord.bankCode/
-accountNumber/accountName` fields `/profile` already manages
-  (`admin-bank-account-form.tsx`), so there's exactly one source of
-  truth for "this person's bank details," not two drifting copies.
-  Co-operative Settings → Bank Accounts is the _co-operative's own_
-  collections account — new state in `useAdminSettingsStore`
-  (`coop-bank-account-form.tsx`). Both reuse the real Paystack
-  bank-list + "Verify" flow (`useBankList`, `resolveBankAccount`) used
-  everywhere else in the app that captures a bank account — no new
-  verification mechanism invented. The two forms are near-identical by
-  design (same fields, same flow) rather than sharing one generic
-  component, to avoid touching the already-shipped, already-verified
-  `CollectionAccountForm` super admin uses.
-- **Savings/Loan Settings are seeded from the real, existing catalogs
-  and are honestly illustrative, not yet wired back into them.**
-  `INITIAL_SAVINGS_TYPE_SETTINGS`/`INITIAL_LOAN_TYPE_SETTINGS`
-  (`src/lib/admin-settings-data.ts`) are generated directly from the
-  app-wide `SAVINGS_TYPES`/`LOAN_TYPES` constants so this screen starts
-  showing the same three savings types and three loan types a member
-  sees when saving or applying for a loan. Editing a type here (name,
-  min/max, eligibility, interest, approvers, status) updates a separate
-  `useAdminSettingsStore` slice — it does **not** currently change what
-  `SAVINGS_TYPES`/`LOAN_TYPES` return elsewhere in the app. This is the
-  same pattern already established for the super admin's Fees &
-  Charges: a real, working settings UI, honestly not yet the source of
-  truth for the live calculations that use the original constants.
-  Making the whole app read from a store instead of static constants
-  would be a legitimate, larger follow-up — not attempted here to avoid
-  a wide, risky rewire for a single settings page.
-- **New Loan Type is a full page, not a modal** — the mockup's form has
-  far more fields (name, eligibility, duration, repayment interval,
-  auto-calculated installment count, interest type/amount, two
-  approvers, loan terms, a separate Guarantor Requirements section)
-  than a modal comfortably holds, and the reference itself shows it as
-  a dedicated screen. `src/app/(dashboard)/settings/loans/new/page.tsx`
-  handles both create and edit (`?id=` query param, matching the
-  `?tab=`/`?id=` deep-linking convention already used elsewhere, e.g.
-  `co-operatives/[id]?tab=savings`) rather than a separate edit route.
-  "No of installments" is a real computed value
-  (`computeInstallments(durationMonths, repaymentInterval)`), not a
-  placeholder — Weekly ≈ 4×duration, Monthly = duration, Quarterly =
-  duration/3.
-- **Approval Group / Approver 1 / Approver 2 pull from real co-op
-  members**, not a fabricated list — `getDirectoryMembers(cooperatives)`
-  (the same function `/members` already uses to scope to the admin's
-  one co-operative) feeds both the savings-type modal's multi-select
-  (reusing the `DropdownMenuCheckboxItem` pattern from the super admin's
-  role-permissions picker) and the loan-type page's two approver
-  `Select`s.
-- **Status toggle reuses `ConfirmToggleDialog` and the Edit/Toggle
-  pattern from `coop-members-table.tsx`** — same "Disable"/"Activate"
-  wording, same confirm-dialog behavior — for a savings type, loan type
-  (table row, plus row-click opens the same full-page editor used for
-  create), and co-operative bank account, rather than three different
-  ad hoc toggle implementations.
+The co-op's own Paystack and/or Flutterwave account
+(`admin-integrations-tab.tsx` → `GET/PATCH /cooperatives/{id}/integrations`).
+When one is on, members' **savings deposits and loan repayments are paid
+into it**, and **loan payouts are sent from it** (Paystack only). With
+nothing on, the platform's Paystack is used. If both are on, Paystack wins.
 
-## Components
+- Secret keys are write-only: the page shows "Saved — leave blank to keep
+  it", and the backend never returns them.
+- Saving checks the key format (`pk_`/`sk_`, `FLWPUBK`/`FLWSECK`), that both
+  keys are present to turn a gateway on, and that test and live keys
+  aren't mixed.
+- Only the co-op admin, or co-op staff granted Settings → Integrations, can
+  open it. Super admins can't — these keys move the co-op's money.
+- OPay and SMS aren't offered here: deposits/repayments use in-page
+  checkout widgets, which OPay doesn't support, and SMS is a platform
+  setting.
 
-- `src/app/(dashboard)/settings/page.tsx` — role branch (super_admin vs
-  admin tab sets).
-- `src/app/(dashboard)/settings/loans/new/page.tsx` — full-page Loan
-  Type Creation/Edit form.
-- `src/components/features/admin-settings/admin-settings-profile-tab.tsx`,
-  `admin-bank-account-form.tsx` — Profile tab (User sub-tab reuses
-  `SettingsProfileTab`; Bank Accounts is new).
-- `src/components/features/admin-settings/admin-savings-settings-tab.tsx`,
-  `savings-type-settings-table.tsx`, `savings-type-modal.tsx` — Savings
-  Settings tab (table + create/edit modal).
-- `src/components/features/admin-settings/admin-loan-settings-tab.tsx`,
-  `loan-type-settings-table.tsx` — Loan Settings tab (table; "New"/row
-  click routes to the full-page form).
-- `src/components/features/admin-settings/admin-cooperative-settings-tab.tsx`,
-  `cooperative-details-form.tsx`, `coop-bank-account-form.tsx` —
-  Co-operative Settings tab (Co-operative + Bank Accounts sub-tabs).
-- `src/lib/admin-settings-data.ts`, `src/lib/validations/
-admin-settings.schema.ts` — types, seed data, zod schemas.
-- `src/store/admin-settings.store.ts` — cooperative settings, co-op bank
-  account, savings/loan type settings; every mutation logs to the audit
-  trail (module `Settings`).
-- Reused unmodified: `src/components/features/settings/
-settings-profile-tab.tsx`, `settings-user-management-tab.tsx`,
-  `src/components/features/coop/confirm-toggle-dialog.tsx`,
-  `src/hooks/use-bank-list.ts`, `src/lib/bank-lookup.ts`,
-  `src/lib/member-directory.ts`.
+## User Management and officer roles
 
-## Future Improvements
+Co-op staff are existing members given a co-op role (they keep their own
+member account). Roles are named sets of module/tab permissions with read or
+write access.
 
-- Savings/Loan type edits here don't flow back into the app-wide
-  `SAVINGS_TYPES`/`LOAN_TYPES` constants — a real backend would make
-  these the actual source of truth instead of a parallel settings view.
-- Platform staff (User Management) is shared between super admin and
-  admin — no per-co-operative scoping exists yet.
-- The co-operative's own bank account and the `Cooperative` object
-  itself (name/address/contact fields shown on `/co-operatives/[id]`)
-  aren't connected — Co-operative Settings writes to its own
-  `useAdminSettingsStore` slice rather than updating the actual
-  `Cooperative` record the super admin's oversight pages read.
+Every co-op also has four **officer roles** — President, Vice President,
+Treasurer, Secretary — created automatically. They drive loan approval (see
+[loans-page.md](./loans-page.md)):
+
+- Each office is held by **one member at a time**; assigning a second
+  person is refused until the first is removed.
+- They can't be renamed, deactivated, or deleted; their permissions can be
+  edited like any role. The roles table marks them "Officer" and shows who
+  holds each one (or "Vacant — admin covers it").
+
+## Design decisions
+
+- **Two bank-account screens, two different accounts.** Profile → Bank
+  Accounts is the admin's own personal account (the member record);
+  Co-operative Settings → Bank Accounts is the co-operative's account. Both
+  use the same live bank list and "Verify" lookup.
+- **No guarantor rule for joining.** The old "Minimum Guarantors"
+  membership rule is gone — members don't need a guarantor to join, only to
+  take a loan.
+- **Loan Type is a full page, not a modal** — it has too many fields for a
+  dialog. "No. of installments" is computed from duration and repayment
+  interval.
+
+## Key files
+
+- `src/app/(dashboard)/settings/page.tsx`, `settings/loans/new/page.tsx`
+- `src/components/features/admin-settings/*` — one component per tab/form,
+  including `admin-integrations-tab.tsx`
+- `src/components/features/settings/settings-user-management-tab.tsx`,
+  `coop-roles-table.tsx`, `create-coop-role-modal.tsx`
+- `src/hooks/use-coop-integrations.ts`, `src/services/coop-integrations.service.ts`,
+  `src/services/coop-staff.service.ts`
