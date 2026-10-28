@@ -14,6 +14,7 @@ import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
 import { useApplyForLoan } from "@/hooks/use-loans-self";
+import type { LoanApplicationPayload } from "@/services/loan-self.service";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
@@ -88,18 +89,11 @@ export function MemberLoansView({
   const [successOpen, setSuccessOpen] = useState(false);
   const [lastAmount, setLastAmount] = useState(0);
 
-  const handleProceed = async (
-    loanTypeId: string,
-    amount: number,
-    guarantorMemberId: string,
-  ) => {
+  const handleProceed = async (application: LoanApplicationPayload) => {
+    const { amount } = application;
     setBusy(true);
     try {
-      await applyForLoan.mutateAsync({
-        loanTypeId,
-        amount,
-        guarantorMemberId,
-      });
+      await applyForLoan.mutateAsync(application);
       setTakeOpen(false);
       setLastAmount(amount);
       setSuccessOpen(true);

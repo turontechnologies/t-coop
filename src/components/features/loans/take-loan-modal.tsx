@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { computeEligibleAmount, computeLoanTerms } from "@/lib/loans-data";
+import {
+  computeEligibleAmount,
+  computeLoanTerms,
+  describeInterest,
+  LOAN_MODES,
+  type LoanMode,
+} from "@/lib/loans-data";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -34,11 +41,12 @@ interface TakeLoanModalProps {
   memberId: string;
   members: CoopMember[];
   totalSavings: number;
-  onProceed: (
-    loanTypeId: string,
-    amount: number,
-    guarantorMemberId: string,
-  ) => void;
+  onProceed: (application: {
+    loanTypeId: string;
+    amount: number;
+    loanMode: LoanMode;
+    guarantorMemberId?: string;
+  }) => void;
 }
 
 export function TakeLoanModal({
@@ -55,6 +63,7 @@ export function TakeLoanModal({
   const amountId = useId();
   const guarantorId = useId();
   const currency = useCurrency();
+  const [loanMode, setLoanMode] = useState<LoanMode>("TimesTwo");
   const [loanTypeId, setLoanTypeId] = useState("");
   const [amount, setAmount] = useState("");
   const [guarantorMemberId, setGuarantorMemberId] = useState("");
@@ -66,7 +75,7 @@ export function TakeLoanModal({
   );
   const selectedType = loanTypes.find((type) => type.id === loanTypeId);
   const eligibleAmount = selectedType
-    ? computeEligibleAmount(totalSavings, selectedType)
+    ? computeEligibleAmount(totalSavings, selectedType, loanMode)
     : 0;
   const amountNumber = Number(amount);
   const terms = useMemo(
@@ -77,6 +86,7 @@ export function TakeLoanModal({
     [selectedType, amountNumber],
   );
 
+  const needsGuarantor = loanMode === "TimesTwo";
   // A guarantor has to be an active member of this co-op (the backend enforces it too).
   const guarantorOptions = members.filter(
     (member) => member.id !== memberId && member.status === "Active",
@@ -84,12 +94,13 @@ export function TakeLoanModal({
 
   const isValid =
     !!selectedType &&
-    !!guarantorMemberId &&
+    (!needsGuarantor || !!guarantorMemberId) &&
     amountNumber > 0 &&
     amountNumber <= eligibleAmount;
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
+      setLoanMode("TimesTwo");
       setLoanTypeId("");
       setAmount("");
       setGuarantorMemberId("");
@@ -105,6 +116,43 @@ export function TakeLoanModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>How are you borrowing?</Label>
+            <RadioGroup
+              value={loanMode}
+              onValueChange={(value) => setLoanMode(value as LoanMode)}
+              disabled={busy}
+            >
+              {LOAN_MODES.map((mode) => {
+                const optionId = `${typeId}-${mode.value}`;
+                return (
+                  <label
+                    key={mode.value}
+                    htmlFor={optionId}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3",
+                      loanMode === mode.value && "border-primary bg-accent/40",
+                    )}
+                  >
+                    <RadioGroupItem
+                      id={optionId}
+                      value={mode.value}
+                      className="mt-0.5"
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block text-sm font-medium text-foreground">
+                        {mode.label}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {mode.description}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </RadioGroup>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor={typeId}>Loan Type</Label>
             <Select
@@ -125,9 +173,11 @@ export function TakeLoanModal({
             </Select>
             {selectedType ? (
               <p className="text-xs text-muted-foreground">
-                Eligible amount: {formatMoney(eligibleAmount, currency)} ·{" "}
-                {selectedType.interestRate}% interest over{" "}
-                {selectedType.durationMonths} months
+                You can borrow up to {formatMoney(eligibleAmount, currency)} ·{" "}
+                {describeInterest(selectedType, (value) =>
+                  formatMoney(value, currency),
+                )}{" "}
+                over {selectedType.durationMonths} months
               </p>
             ) : null}
           </div>
@@ -146,31 +196,36 @@ export function TakeLoanModal({
             />
             {selectedType && amountNumber > eligibleAmount ? (
               <p className="text-xs text-destructive">
-                Amount exceeds your eligible amount of{" "}
-                {formatMoney(eligibleAmount, currency)}
+                {loanMode === "Within"
+                  ? "A Within loan can't be more than your savings"
+                  : "A Times two loan can't be more than half your savings"}{" "}
+                (or this loan type&apos;s maximum) —{" "}
+                {formatMoney(eligibleAmount, currency)} here.
               </p>
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor={guarantorId}>Guarantor</Label>
-            <Select
-              value={guarantorMemberId}
-              onValueChange={(value) => setGuarantorMemberId(value ?? "")}
-              disabled={busy}
-            >
-              <SelectTrigger id={guarantorId} className="h-11 w-full">
-                <SelectValue placeholder="Select a member of your co-operative" />
-              </SelectTrigger>
-              <SelectContent>
-                {guarantorOptions.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {coopMemberFullName(member)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {needsGuarantor ? (
+            <div className="space-y-2">
+              <Label htmlFor={guarantorId}>Guarantor</Label>
+              <Select
+                value={guarantorMemberId}
+                onValueChange={(value) => setGuarantorMemberId(value ?? "")}
+                disabled={busy}
+              >
+                <SelectTrigger id={guarantorId} className="h-11 w-full">
+                  <SelectValue placeholder="Select a member of your co-operative" />
+                </SelectTrigger>
+                <SelectContent>
+                  {guarantorOptions.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {coopMemberFullName(member)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           {terms ? (
             <div className="space-y-2 rounded-xl bg-accent/60 p-4">
@@ -190,6 +245,10 @@ export function TakeLoanModal({
                 <dd className="text-right font-medium text-foreground">
                   {formatMoney(amountNumber, currency)}
                 </dd>
+                <dt className="text-muted-foreground">Interest</dt>
+                <dd className="text-right font-medium text-foreground">
+                  {formatMoney(terms.totalInterest, currency)}
+                </dd>
                 <dt className="text-muted-foreground">Total Repayment</dt>
                 <dd className="text-right font-medium text-foreground">
                   {formatMoney(terms.totalRepayment, currency)}
@@ -199,6 +258,13 @@ export function TakeLoanModal({
                   {formatMoney(terms.monthlyRepayment, currency)}
                 </dd>
               </dl>
+              {loanMode === "Within" ? (
+                <p className="text-xs text-muted-foreground">
+                  {formatMoney(amountNumber, currency)} comes out of your
+                  savings when the loan is paid out, and the principal part of
+                  each repayment goes back into them.
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -223,7 +289,14 @@ export function TakeLoanModal({
             className={cn(busy && "pointer-events-none opacity-50")}
             onClick={() => {
               if (busy) return;
-              onProceed(loanTypeId, amountNumber, guarantorMemberId);
+              onProceed({
+                loanTypeId,
+                amount: amountNumber,
+                loanMode,
+                guarantorMemberId: needsGuarantor
+                  ? guarantorMemberId
+                  : undefined,
+              });
             }}
           >
             {busy ? (

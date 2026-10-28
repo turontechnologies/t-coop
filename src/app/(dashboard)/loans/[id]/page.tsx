@@ -27,6 +27,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
+import { loanModeLabel } from "@/lib/loans-data";
 
 interface LoanDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -235,7 +236,11 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
               </Link>
             }
           />
-          <Field label="Guarantor" value={record.guarantorName} />
+          <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
+          <Field
+            label="Guarantor"
+            value={record.guarantorName ?? "None (Within loan)"}
+          />
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Status</p>
             <Badge

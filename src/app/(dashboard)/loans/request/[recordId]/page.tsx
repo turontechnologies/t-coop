@@ -57,6 +57,7 @@ import type { LoanApprovalStatus } from "@/services/loan-self.service";
 import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
+import { loanModeLabel } from "@/lib/loans-data";
 
 interface LoanRequestPageProps {
   params: Promise<{ recordId: string }>;
@@ -206,7 +207,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
         {showGuarantorCard ? (
           <div className="lg:col-span-1">
             <GuarantorProfileCard
-              name={record.guarantorName}
+              name={record.guarantorName ?? ""}
               member={guarantorMember}
             />
           </div>
@@ -296,7 +297,11 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                   </Link>
                 }
               />
-              <Field label="Guarantor" value={record.guarantorName} />
+              <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
+              <Field
+                label="Guarantor"
+                value={record.guarantorName ?? "None (Within loan)"}
+              />
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Status</p>
                 <Badge variant={coopLoanStatusBadgeVariant(record.status)}>

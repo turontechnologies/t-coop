@@ -14,6 +14,7 @@ import { formatDateLong, formatMoney } from "@/lib/format";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
 import { cn } from "@/lib/utils";
+import { loanModeLabel } from "@/lib/loans-data";
 
 interface CoopLoanRecordPageProps {
   params: Promise<{ id: string; recordId: string }>;
@@ -111,7 +112,11 @@ export default function CoopLoanRecordPage({
                 </Link>
               }
             />
-            <Field label="Guarantor" value={record.guarantorName} />
+            <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
+            <Field
+              label="Guarantor"
+              value={record.guarantorName ?? "None (Within loan)"}
+            />
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Status</p>
               <Badge

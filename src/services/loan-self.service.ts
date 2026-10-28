@@ -1,10 +1,13 @@
 import { apiClient } from "@/lib/axios";
 import type { CoopLoanRecord } from "@/lib/coop-data";
+import type { LoanMode } from "@/lib/loans-data";
 
 export interface LoanApplicationPayload {
   loanTypeId: string;
   amount: number;
-  guarantorMemberId: string;
+  loanMode: LoanMode;
+  /** Required for a "TimesTwo" loan; a "Within" loan has no guarantor. */
+  guarantorMemberId?: string;
 }
 
 export interface DisbursementPreview {
@@ -15,6 +18,53 @@ export interface DisbursementPreview {
 
 export type CoopOffice =
   "PRESIDENT" | "VICE_PRESIDENT" | "TREASURER" | "SECRETARY";
+
+/** A member's whole borrowing record — what officers check before approving a loan. */
+export interface LoanHistory {
+  memberId: string;
+  memberName: string;
+  totalSavings: number;
+  summary: {
+    activeLoans: number;
+    completedLoans: number;
+    rejectedLoans: number;
+    pendingLoans: number;
+    outstandingBalance: number;
+    totalBorrowed: number;
+    totalRepaid: number;
+    repaymentsMade: number;
+    onTimeRepayments: number;
+    lateRepayments: number;
+    /** 0–100, null with no repayments yet. */
+    onTimeRate: number | null;
+    overdueInstallments: number;
+    lastRepaymentDate: string | null;
+  };
+  loans: {
+    id: string;
+    loanType: string;
+    loanMode: LoanMode;
+    status: string;
+    amount: number;
+    totalRepayment: number;
+    repaid: number;
+    outstanding: number;
+    numberOfRepayments: number;
+    repaymentsMade: number;
+    overdueInstallments: number;
+    appliedOn: string;
+    paidOutOn: string | null;
+    nextDueDate: string | null;
+    repayments: {
+      installmentNumber: number;
+      amount: number;
+      method: string;
+      paidOn: string;
+      dueDate: string;
+      daysLate: number;
+    }[];
+  }[];
+}
 
 /** Where a loan is in the officer approval chain, as the signed-in member sees it. */
 export interface LoanApprovalStatus {
@@ -75,6 +125,13 @@ export const loanSelfService = {
   ): Promise<DisbursementPreview> {
     const { data } = await apiClient.get<DisbursementPreview>(
       `/cooperatives/${coopId}/loans/${loanId}/disbursement`,
+    );
+    return data;
+  },
+
+  async getLoanHistory(coopId: string, memberId: string): Promise<LoanHistory> {
+    const { data } = await apiClient.get<LoanHistory>(
+      `/cooperatives/${coopId}/members/${memberId}/loan-history`,
     );
     return data;
   },

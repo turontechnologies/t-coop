@@ -92,7 +92,9 @@ export function LoanRecordsTable({ records, viewerId }: LoanRecordsTableProps) {
         search.trim() === "" ||
         record.loanType.toLowerCase().includes(search.toLowerCase()) ||
         record.memberName.toLowerCase().includes(search.toLowerCase()) ||
-        record.guarantorName.toLowerCase().includes(search.toLowerCase());
+        (record.guarantorName ?? "")
+          .toLowerCase()
+          .includes(search.toLowerCase());
       const matchesStatus =
         status === "All statuses" || record.status === status;
       const matchesType = type === "All types" || record.loanType === type;

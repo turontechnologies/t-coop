@@ -118,8 +118,11 @@ export interface CoopLoanRecord {
   monthlyRepayment: number;
   totalRepayment: number;
   /** Always set by the backend (hard FK) — optional only so hand-built records type-check. */
-  guarantorId?: string;
-  guarantorName: string;
+  guarantorId?: string | null;
+  /** Null for a "Within" loan, which has no guarantor. */
+  guarantorName: string | null;
+  /** "TimesTwo" (up to half your savings, guarantor) or "Within" (from your own savings). */
+  loanMode?: "TimesTwo" | "Within";
   date: string;
   status: CoopLoanStatus;
   repaymentsMade: number;
