@@ -61,6 +61,7 @@ export const COOP_PERMISSION_MODULES = [
   "Notice Board",
   "Savings & Contributions",
   "Loans",
+  "Reports",
   "Support",
   "Settings",
 ] as const;

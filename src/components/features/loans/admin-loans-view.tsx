@@ -30,7 +30,6 @@ const MODULE = "Loans";
 
 const TYPE_EXPORT_COLUMNS: ExportColumn<CoopLoanTypeSummary>[] = [
   { header: "Loan Type", accessor: (row) => row.name },
-  { header: "Eligibility %", accessor: (row) => row.eligibilityPercent },
   { header: "Loan Duration", accessor: (row) => row.durationMonths },
   { header: "No of Repayments", accessor: (row) => row.numberOfRepayments },
   { header: "Interest", accessor: (row) => row.interestRate },

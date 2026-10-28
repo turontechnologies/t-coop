@@ -9,7 +9,6 @@ import { formatMoney } from "@/lib/format";
 
 interface LoanTypeSummary {
   name: string;
-  eligibilityPercent: number;
   durationMonths: number;
   numberOfRepayments: number;
   interestRate: number;
@@ -42,9 +41,6 @@ export function CoopLoansSummaryTable({
                 Loan Type
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
-                Eligibility %
-              </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
                 Loan Duration
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
@@ -69,9 +65,6 @@ export function CoopLoansSummaryTable({
               >
                 <td className="px-4 py-3 font-medium text-foreground">
                   {type.name}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">
-                  {type.eligibilityPercent}%
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
                   {type.durationMonths} Months
@@ -103,7 +96,6 @@ export function CoopLoansSummaryTable({
             }
             title={type.name}
             fields={[
-              { label: "Eligibility %", value: `${type.eligibilityPercent}%` },
               {
                 label: "Loan Duration",
                 value: `${type.durationMonths} Months`,

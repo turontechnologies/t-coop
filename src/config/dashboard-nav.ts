@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Building2,
+  ChartColumn,
   CreditCard,
   LayoutGrid,
   Landmark,
@@ -50,6 +51,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Notice Board", href: "/notice-board", icon: Megaphone },
     { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
     { label: "Loans", href: "/loans", icon: Landmark },
+    { label: "Reports", href: "/reports", icon: ChartColumn },
     { label: "Support", href: "/support", icon: LifeBuoy },
     { label: "Settings", href: "/settings", icon: Settings },
   ],

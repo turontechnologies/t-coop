@@ -9,6 +9,7 @@ import {
   MobileRecordList,
 } from "@/components/ui/mobile-record-card";
 import { formatMoney } from "@/lib/format";
+import { describeInterest } from "@/lib/loans-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { cn } from "@/lib/utils";
 import type { CoopLoanTypeSummary } from "@/types/coop-loans";
@@ -35,7 +36,7 @@ export function LoanTypeSettingsTable({
                 Loan Type
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
-                Eligibility %
+                Interest
               </th>
               <th className="px-4 py-2.5 font-medium text-foreground">
                 Duration
@@ -76,7 +77,9 @@ export function LoanTypeSettingsTable({
                       {setting.name}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {setting.eligibilityPercent}% of savings
+                      {describeInterest(setting, (value) =>
+                        formatMoney(value, currency),
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {setting.durationMonths} Months
@@ -145,8 +148,10 @@ export function LoanTypeSettingsTable({
               }
               fields={[
                 {
-                  label: "Eligibility %",
-                  value: `${setting.eligibilityPercent}% of savings`,
+                  label: "Interest",
+                  value: describeInterest(setting, (value) =>
+                    formatMoney(value, currency),
+                  ),
                 },
                 {
                   label: "Duration",

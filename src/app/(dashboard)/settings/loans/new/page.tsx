@@ -66,7 +66,6 @@ export default function LoanTypeCreationPage() {
   const isEditing = !!editingSetting;
 
   const nameId = useId();
-  const eligibilityId = useId();
   const maxAmountId = useId();
   const interestAmountId = useId();
 
@@ -180,17 +179,14 @@ export default function LoanTypeCreationPage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor={eligibilityId}>Eligibility %</Label>
-                <Input
-                  id={eligibilityId}
-                  type="number"
-                  inputMode="decimal"
-                  placeholder="Enter amount"
-                  disabled={busy}
-                  aria-invalid={!!errors.eligibilityPercent}
-                  className="h-11"
-                  {...register("eligibilityPercent", { valueAsNumber: true })}
-                />
+                <Label>How much members can borrow</Label>
+                <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  Set by the mode the member picks when applying —{" "}
+                  <span className="font-medium text-foreground">Times two</span>
+                  : up to half their savings;{" "}
+                  <span className="font-medium text-foreground">Within</span>:
+                  up to their savings. Both are capped at the maximum amount.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor={maxAmountId}>Maximum Loan Amount</Label>
