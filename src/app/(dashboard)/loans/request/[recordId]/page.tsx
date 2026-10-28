@@ -58,6 +58,7 @@ import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 import { loanModeLabel } from "@/lib/loans-data";
+import { BorrowerHistoryCard } from "@/components/features/loans/borrower-history-card";
 
 interface LoanRequestPageProps {
   params: Promise<{ recordId: string }>;
@@ -331,6 +332,13 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
           {approvals ? (
             <ApprovalTimeline approvals={approvals} status={record.status} />
           ) : null}
+
+          <BorrowerHistoryCard
+            coopId={coopId}
+            memberId={record.memberId}
+            currency={coop.currency}
+            excludeLoanId={record.id}
+          />
         </div>
       </div>
     </div>

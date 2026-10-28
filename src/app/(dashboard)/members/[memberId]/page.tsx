@@ -19,6 +19,8 @@ import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
 import { useAuthStore } from "@/store/auth.store";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { BorrowerHistoryCard } from "@/components/features/loans/borrower-history-card";
 
 interface MemberDetailsPageProps {
   params: Promise<{ memberId: string }>;
@@ -42,6 +44,7 @@ export default function MemberDetailsPage({ params }: MemberDetailsPageProps) {
     memberId,
   });
   const { data: loanRecords = [] } = useCoopLoanRecords(coopId, { memberId });
+  const currency = useCurrency();
 
   if (!authMember) return null;
 
@@ -79,6 +82,7 @@ export default function MemberDetailsPage({ params }: MemberDetailsPageProps) {
               <TabsList>
                 <TabsTab value="savings">Savings</TabsTab>
                 <TabsTab value="loans">Loans</TabsTab>
+                <TabsTab value="history">Loan History</TabsTab>
                 <TabsIndicator />
               </TabsList>
               <TabsPanel value="savings">
@@ -91,6 +95,13 @@ export default function MemberDetailsPage({ params }: MemberDetailsPageProps) {
                 <CoopMemberLoansTable
                   coopId={coopId as string}
                   records={loanRecords}
+                />
+              </TabsPanel>
+              <TabsPanel value="history">
+                <BorrowerHistoryCard
+                  coopId={authMember.cooperativeId ?? coopId}
+                  memberId={member.id}
+                  currency={currency}
                 />
               </TabsPanel>
             </Tabs>

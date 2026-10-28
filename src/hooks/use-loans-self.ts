@@ -56,6 +56,21 @@ export function useLoanDisbursementPreview(
   });
 }
 
+/** A member's full borrowing record — co-op staff, or the member themselves. */
+export function useLoanHistory(
+  coopId: string | undefined,
+  memberId: string | undefined,
+) {
+  return useQuery({
+    queryKey: ["coop-loans", coopId, "history", memberId],
+    queryFn: () =>
+      loanSelfService.getLoanHistory(coopId as string, memberId as string),
+    enabled: Boolean(coopId) && Boolean(memberId),
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
 export function useLoanApprovals(
   coopId: string | undefined,
   loanId: string | undefined,
