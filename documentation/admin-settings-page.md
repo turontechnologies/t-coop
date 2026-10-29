@@ -7,14 +7,14 @@
 members and support staff get a single Account tab; a **co-op admin** (and
 co-op staff) gets the co-operative's own settings:
 
-| Tab                       | What it manages                                                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **Profile**               | User (own profile, photo, optional password change) · Bank Accounts (own personal payout account)                  |
-| **Savings Settings**      | The co-op's savings types — create, edit, enable/disable                                                           |
-| **Loan Settings**         | The co-op's loan types — full-page editor at `/settings/loans/new` (`?id=` to edit)                                |
-| **Co-operative Settings** | Co-operative (details, logo, currency, member ID format, charges, withdrawal fee) · Bank Accounts · Transfer Admin |
-| **Integrations**          | The co-op's own payment gateways (Paystack, Flutterwave)                                                           |
-| **User Management**       | Co-op staff: assign existing members to roles, including the four officer roles                                    |
+| Tab                       | What it manages                                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Profile**               | User (own profile, photo, optional password change) · Bank Accounts (own personal payout account)                              |
+| **Savings Settings**      | The co-op's savings types — create, edit, enable/disable                                                                       |
+| **Loan Settings**         | The co-op's loan types (every co-op starts with a Household Loan) — full-page editor at `/settings/loans/new` (`?id=` to edit) |
+| **Co-operative Settings** | Co-operative (details, logo, currency, member ID format, charges, withdrawal fee) · Bank Accounts · Transfer Admin             |
+| **Integrations**          | The co-op's own payment gateways (Paystack, Flutterwave)                                                                       |
+| **User Management**       | Co-op staff: assign existing members to roles, including the four officer roles                                                |
 
 Everything reads and writes the real backend. Co-op staff only see the tabs
 their role grants (`useTabAccess("Settings", "<tab>")`), and a read-only
@@ -52,7 +52,8 @@ Treasurer, Secretary — created automatically. They drive loan approval (see
 - Each office is held by **one member at a time**; assigning a second
   person is refused until the first is removed.
 - They can't be renamed, deactivated, or deleted; their permissions can be
-  edited like any role. The roles table marks them "Officer" and shows who
+  edited like any role. By default they can work the loan Requests queue and
+  read the financial report (Reports module — see [reports-page.md](./reports-page.md)). The roles table marks them "Officer" and shows who
   holds each one (or "Vacant — admin covers it").
 
 ## Design decisions
@@ -64,6 +65,11 @@ Treasurer, Secretary — created automatically. They drive loan approval (see
 - **No guarantor rule for joining.** The old "Minimum Guarantors"
   membership rule is gone — members don't need a guarantor to join, only to
   take a loan.
+- **A loan type no longer has an "eligibility %".** How much a member can
+  borrow comes from the mode they pick (Times two: half their savings;
+  Within: their savings), capped by the type's maximum — see
+  [loans-page.md](./loans-page.md). Interest can be a percentage, a fixed
+  amount, or none.
 - **Loan Type is a full page, not a modal** — it has too many fields for a
   dialog. "No. of installments" is computed from duration and repayment
   interval.

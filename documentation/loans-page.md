@@ -27,14 +27,25 @@ Awaiting Guarantor → Awaiting Vice President → Awaiting Treasurer
           any open stage → Rejected
 ```
 
-1. **Apply.** A member picks a loan type, an amount within their
-   eligibility, and a **guarantor**. The guarantor must be an _active member
-   of the same co-op_ and not the applicant — the picker only lists those,
-   and the backend rejects anything else. This is the only place a
-   guarantor is named; joining the co-op needs none (see
-   [members-directory-page.md](./members-directory-page.md)).
-2. **Guarantor.** Only the named guarantor can accept (optionally attaching
-   proof of income) or decline. Declining rejects the loan.
+1. **Apply.** A member picks a **mode**, a loan type and an amount:
+   - **Times two** — up to half their savings (their savings must be at
+     least twice the loan). Needs a **guarantor**: an _active member of the
+     same co-op_, not the applicant — the picker only lists those, and the
+     backend rejects anything else.
+   - **Within** — borrowed from their own savings, up to what they've
+     saved. No guarantor: it goes straight to the Vice President. The
+     payout is deducted from their savings and the principal part of each
+     repayment goes back into them.
+
+   Both are capped by the loan type's maximum, and **every loan charges the
+   loan type's interest** — a percentage, a fixed amount, or none for a
+   "No Interest" type. Every co-op has a **Household Loan** type by default.
+   This is the only place a guarantor is named; joining the co-op needs
+   none (see [members-directory-page.md](./members-directory-page.md)).
+
+2. **Guarantor** (Times two only). Only the named guarantor can accept
+   (optionally attaching proof of income) or decline. Declining rejects the
+   loan.
 3. **Officer approvals.** The loan then goes to the co-op's **Vice
    President**, then **Treasurer**, then **Secretary** — one approval each,
    in that order. Each officer is notified when it's their turn.
@@ -70,6 +81,17 @@ Settings → Integrations), otherwise the platform's. The transfer reference
 is fixed per loan (`loan-<loanId>`), so retrying an approval can never pay
 the same loan twice. The paying account must allow API transfers without an
 OTP (Paystack Settings → Preferences).
+
+## Borrower history
+
+Before approving, officers see the **borrower history** on the request page
+(and on a member's profile → Loan History tab, web; under the approvals
+timeline on mobile): savings, outstanding balance, active loans, on-time
+repayment rate, late repayments, overdue installments, and every past loan
+with its full repayment record (paid date vs due date). A warning appears
+when the member already owes money — in red when something is overdue.
+(`GET /cooperatives/{id}/members/{memberId}/loan-history`,
+`borrower-history-card.tsx`.)
 
 ## Screens
 
@@ -117,11 +139,12 @@ buttons always match what the backend will accept.
 
 ## Design decisions
 
-- **Eligibility is computed server-side** from the member's real savings:
-  `min(maxAmount, max(totalSavings × eligibilityPercent / 100, minimum))`
-  (`LoanEligibility`). The modal mirrors it for a live hint.
-- **Interest is flat** over the term, split evenly across installments, and
-  every repayment is exactly one installment — no partial amounts.
+- **The limit comes from the mode**, computed server-side from the member's
+  real savings (`LoanEligibility`); the loan type's old "eligibility %" no
+  longer applies and isn't shown. The modal mirrors it for a live hint.
+- **Interest follows the loan type** (percentage, fixed amount, or none),
+  flat over the term and split evenly across installments; every repayment
+  is exactly one installment — no partial amounts.
 - **No bulk loan import.** A loan is an application with an eligibility
   check and a guarantor, not a ledger row.
 - **Payout happens on the server, not in the browser,** so an officer can't

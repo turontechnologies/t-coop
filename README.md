@@ -95,6 +95,7 @@ and is expected to change it (Settings → password, or Forgot password).
 | `/subscriptions/[id]`                           | One co-op's full subscription payment history                                                                                                                    | [subscriptions-page.md](./documentation/subscriptions-page.md)                                                         |
 | `/settings`                                     | Role-branched: super admin (profile, fees, integrations, staff, logs) / admin (profile, savings & loan settings, co-op settings, integrations, staff & officers) | [settings-page.md](./documentation/settings-page.md), [admin-settings-page.md](./documentation/admin-settings-page.md) |
 | `/settings/loans/new`                           | Admin: create/edit a loan type (full page)                                                                                                                       | [admin-settings-page.md](./documentation/admin-settings-page.md)                                                       |
+| `/reports`                                      | Co-op admin & officers: financial report (savings, loans, income, overdue) with Excel/PDF export                                                                 | [reports-page.md](./documentation/reports-page.md)                                                                     |
 
 Cross-cutting systems (theming, fonts, animation, the branded loading
 system, and two real bugs worth knowing about before touching menu or
@@ -179,6 +180,8 @@ contract lives in the backend repo:
 - [x] Settings (super admin: profile + password, fees & collections account, dual Paystack/Flutterwave integration toggles, platform staff users/roles with full edit/disable/remove actions, real app-wide audit log with live IP-resolved location — see [settings-page.md](./documentation/settings-page.md). admin: profile + personal bank account, savings/loan type catalog management (add/edit/enable/disable), co-operative profile + bank account + currency, own payment gateways (Integrations), co-op staff roles including the four officer roles — see [admin-settings-page.md](./documentation/admin-settings-page.md))
 - [x] Per-co-op currency with live conversion (admin sets their co-op's currency from ~160 real ISO 4217 options; super admin sees it read-only with a genuinely live rate against NGN, refreshed on a timer, everywhere a co-op shows up; every displayed savings/loans amount app-wide is formatted in that co-op's own currency, isolated per co-op on the super-admin side, with cross-co-op aggregates genuinely converted and summed — see [currency-conversion.md](./documentation/currency-conversion.md))
 - [x] Light/dark theme
+- [x] Loan modes (Times two: up to half your savings with a guarantor; Within: from your own savings, no guarantor, reflected in savings), interest by loan type (percentage, fixed, or none), Household Loan in every co-op
+- [x] Borrower history for officers (outstanding, on-time rate, every loan and repayment) and a financial report with Excel/PDF export — see [reports-page.md](./documentation/reports-page.md)
 - [x] Real backend for everything — no mock mode; payments verified server-side
 - [ ] Confirm payments and transfers by Paystack webhook, not only the synchronous response
 
