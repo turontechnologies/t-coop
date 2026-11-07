@@ -53,7 +53,12 @@ const MEMBER_CARD_STYLE: Array<
   Pick<SummaryCard, "tone" | "icon" | "action" | "actionHref">
 > = [
   { tone: "brand", icon: PiggyBank, action: "Top up", actionHref: "/savings" },
-  { tone: "amber", icon: Landmark, action: "Loan", actionHref: "/loans" },
+  {
+    tone: "amber",
+    icon: Landmark,
+    action: "Request Loan",
+    actionHref: "/loans",
+  },
   { tone: "violet", icon: TrendingUp, action: "Save", actionHref: "/savings" },
   { tone: "sky", icon: Percent },
 ];
