@@ -66,6 +66,7 @@ const MEMBER_CARD_STYLE: Array<
 function toSummaryCards(
   role: UserRole,
   cards: DashboardSummaryResponse["cards"],
+  dataLoanEligibilityByType: DashboardSummaryResponse["loanEligibilityByType"],
   currency: string,
 ): SummaryCard[] {
   const style =
@@ -81,9 +82,21 @@ function toSummaryCards(
     };
     const isCount =
       card.label.includes("Co-operatives") || card.label.includes("Members");
+    const loanEligibilityByType =
+      role === "member" && card.label.includes("Loan Eligibility")
+        ? (dataLoanEligibilityByType ?? []).map((eligibility) => ({
+            loanTypeName: eligibility.loanTypeName,
+            timesTwo: formatMoney(eligibility.timesTwo, currency),
+            within: formatMoney(eligibility.within, currency),
+          }))
+        : undefined;
     return {
-      label: card.label,
+      label:
+        loanEligibilityByType !== undefined
+          ? "Loan Eligibility by Type"
+          : card.label,
       value: isCount ? String(card.value) : formatMoney(card.value, currency),
+      loanEligibilityByType,
       ...presentation,
     };
   });
@@ -124,7 +137,12 @@ export const dashboardService = {
       await apiClient.get<DashboardSummaryResponse>("/dashboard/summary");
 
     return {
-      cards: toSummaryCards(role, data.cards, currency),
+      cards: toSummaryCards(
+        role,
+        data.cards,
+        data.loanEligibilityByType,
+        currency,
+      ),
       chart: data.chart,
       chartSeries: getChartSeries(role),
       activityRate: toActivityRate(data.cards),

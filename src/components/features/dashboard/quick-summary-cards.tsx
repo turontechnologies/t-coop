@@ -28,9 +28,47 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
               <p className="truncate text-sm text-muted-foreground">
                 {card.label}
               </p>
-              <p className="text-xl font-semibold text-foreground sm:text-2xl">
-                {card.value}
-              </p>
+              {card.loanEligibilityByType ? (
+                <div className="space-y-2.5 pt-1">
+                  <p className="text-xs text-muted-foreground">
+                    Based on your current savings
+                  </p>
+                  {card.loanEligibilityByType.length > 0 ? (
+                    card.loanEligibilityByType.map((eligibility) => (
+                      <div
+                        key={eligibility.loanTypeName}
+                        className="space-y-1 border-t pt-2 first:border-0 first:pt-0"
+                      >
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {eligibility.loanTypeName}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <p className="text-muted-foreground">
+                            Times two
+                            <span className="block font-semibold text-foreground">
+                              {eligibility.timesTwo}
+                            </span>
+                          </p>
+                          <p className="text-muted-foreground">
+                            Within
+                            <span className="block font-semibold text-foreground">
+                              {eligibility.within}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No active loan types are available.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xl font-semibold text-foreground sm:text-2xl">
+                  {card.value}
+                </p>
+              )}
               {card.action ? (
                 <button
                   type="button"

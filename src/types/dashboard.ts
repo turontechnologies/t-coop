@@ -3,6 +3,12 @@ export interface DashboardSummaryCard {
   value: number;
 }
 
+export interface DashboardLoanTypeEligibility {
+  loanTypeName: string;
+  timesTwo: number;
+  within: number;
+}
+
 export interface DashboardActivityPoint {
   hour: string;
   savings: number;
@@ -22,4 +28,5 @@ export interface DashboardSummaryResponse {
   cards: DashboardSummaryCard[];
   chart: DashboardActivityPoint[];
   recentActivity: DashboardRecentActivity[];
+  loanEligibilityByType?: DashboardLoanTypeEligibility[];
 }

@@ -1,11 +1,17 @@
 import type { LucideIcon } from "lucide-react";
 import type { UserRole } from "@/types/auth";
+import type { DashboardLoanTypeEligibility } from "@/types/dashboard";
 
 export interface SummaryCard {
   label: string;
   value: string;
   action?: string;
   actionHref?: string;
+  loanEligibilityByType?: Array<{
+    loanTypeName: string;
+    timesTwo: string;
+    within: string;
+  }>;
   tone: "brand" | "violet" | "sky" | "amber";
   icon: LucideIcon;
 }
