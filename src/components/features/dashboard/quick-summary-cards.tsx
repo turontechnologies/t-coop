@@ -60,7 +60,9 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                             aria-label="Select loan type"
                             className="h-9 w-full"
                           >
-                            <SelectValue placeholder="Select loan type" />
+                            <SelectValue placeholder="Select loan type">
+                              {selectedEligibility.loanTypeName}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {card.loanEligibilityByType.map((eligibility) => (
