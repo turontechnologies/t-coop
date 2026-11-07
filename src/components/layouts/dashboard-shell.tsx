@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { DashboardSidebar } from "@/components/layouts/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/layouts/dashboard-topbar";
@@ -26,6 +27,7 @@ export function DashboardShell({
   children,
 }: DashboardShellProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const logout = useAuthStore((state) => state.logout);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -46,6 +48,7 @@ export function DashboardShell({
         onComplete={() => {
           void authService.logout();
           logout();
+          queryClient.clear();
           router.push("/login");
         }}
       />

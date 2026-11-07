@@ -8,9 +8,12 @@ interface AuthState {
   token: string | null;
   keepLoggedIn: boolean;
   hasHydrated: boolean;
+  setSession: (
+    member: AuthenticatedMember,
+    token: string,
+    keepLoggedIn: boolean,
+  ) => void;
   setMember: (member: AuthenticatedMember | null) => void;
-  setToken: (token: string | null) => void;
-  setKeepLoggedIn: (keepLoggedIn: boolean) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
   setAvatarUrl: (avatarUrl: string) => void;
   logout: () => void;
@@ -23,9 +26,9 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       keepLoggedIn: false,
       hasHydrated: false,
+      setSession: (member, token, keepLoggedIn) =>
+        set({ member, token, keepLoggedIn }),
       setMember: (member) => set({ member }),
-      setToken: (token) => set({ token }),
-      setKeepLoggedIn: (keepLoggedIn) => set({ keepLoggedIn }),
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       setAvatarUrl: (avatarUrl) =>
         set((state) =>

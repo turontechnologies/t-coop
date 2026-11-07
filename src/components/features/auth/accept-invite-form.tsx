@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
@@ -28,9 +29,8 @@ export function AcceptInviteForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
-  const setMember = useAuthStore((state) => state.setMember);
-  const setToken = useAuthStore((state) => state.setToken);
-  const setKeepLoggedIn = useAuthStore((state) => state.setKeepLoggedIn);
+  const setSession = useAuthStore((state) => state.setSession);
+  const queryClient = useQueryClient();
 
   const [invite, setInvite] = useState<InviteInfo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -83,9 +83,8 @@ export function AcceptInviteForm() {
         lastName: values.lastName,
         password: values.password,
       });
-      setKeepLoggedIn(true);
-      setMember(result.member);
-      setToken(result.token);
+      queryClient.clear();
+      setSession(result.member, result.token, true);
       setAccepted(true);
     } catch (error) {
       toast.error("Couldn't accept invite", {

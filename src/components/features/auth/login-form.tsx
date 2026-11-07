@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
@@ -31,10 +32,9 @@ export function LoginForm() {
   const passwordInputId = useId();
 
   const router = useRouter();
-  const setKeepLoggedIn = useAuthStore((state) => state.setKeepLoggedIn);
-  const setMember = useAuthStore((state) => state.setMember);
-  const setToken = useAuthStore((state) => state.setToken);
+  const setSession = useAuthStore((state) => state.setSession);
   const clearResetSession = usePasswordResetStore((state) => state.clear);
+  const queryClient = useQueryClient();
   const login = useLogin();
 
   useEffect(() => {
@@ -55,9 +55,8 @@ export function LoginForm() {
     login.reset();
     try {
       const response = await login.mutateAsync(values);
-      setKeepLoggedIn(values.keepLoggedIn);
-      setMember(response.member);
-      setToken(response.token);
+      queryClient.clear();
+      setSession(response.member, response.token, values.keepLoggedIn);
       setSignedInName(response.member.name);
     } catch (error) {
       toast.error("Sign in failed", {
