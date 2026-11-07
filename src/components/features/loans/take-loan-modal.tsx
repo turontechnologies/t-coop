@@ -68,7 +68,14 @@ export function TakeLoanModal({
   const [amount, setAmount] = useState("");
   const [guarantorMemberId, setGuarantorMemberId] = useState("");
 
-  const { data: types } = useCoopLoanTypes(coopId);
+  const {
+    data: types,
+    isLoading: isLoadingTypes,
+    isFetching: isFetchingTypes,
+    isError: hasTypesError,
+    error: typesError,
+    refetch: refetchTypes,
+  } = useCoopLoanTypes(coopId);
   const loanTypes = useMemo(
     () => (types ?? []).filter((type) => type.status === "Active"),
     [types],
@@ -178,6 +185,32 @@ export function TakeLoanModal({
                   formatMoney(value, currency),
                 )}{" "}
                 over {selectedType.durationMonths} months
+              </p>
+            ) : null}
+            {isLoadingTypes ? (
+              <p className="text-xs text-muted-foreground" aria-live="polite">
+                Loading loan types…
+              </p>
+            ) : hasTypesError ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-destructive" role="alert">
+                  {typesError instanceof Error
+                    ? typesError.message
+                    : "Couldn't load loan types."}
+                </p>
+                <button
+                  type="button"
+                  className="shrink-0 text-xs font-medium text-primary underline underline-offset-4 disabled:opacity-50"
+                  onClick={() => void refetchTypes()}
+                  disabled={isFetchingTypes}
+                >
+                  {isFetchingTypes ? "Retrying…" : "Retry"}
+                </button>
+              </div>
+            ) : loanTypes.length === 0 ? (
+              <p className="text-xs text-muted-foreground" role="status">
+                No active loan types are available. Ask your co-op admin to
+                activate or add one.
               </p>
             ) : null}
           </div>

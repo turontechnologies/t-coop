@@ -44,7 +44,14 @@ export function AddSavingsModal({
   const [amount, setAmount] = useState("");
   const currency = useCurrency();
 
-  const { data: types } = useCoopSavingsTypes(coopId);
+  const {
+    data: types,
+    isLoading: isLoadingTypes,
+    isFetching: isFetchingTypes,
+    isError: hasTypesError,
+    error: typesError,
+    refetch: refetchTypes,
+  } = useCoopSavingsTypes(coopId);
   const savingsTypes = useMemo(
     () => (types ?? []).filter((type) => type.status === "Active"),
     [types],
@@ -95,6 +102,32 @@ export function AddSavingsModal({
               <p className="text-xs text-muted-foreground">
                 Save between {formatMoney(selectedType.min, currency)} and{" "}
                 {formatMoney(selectedType.max, currency)}
+              </p>
+            ) : null}
+            {isLoadingTypes ? (
+              <p className="text-xs text-muted-foreground" aria-live="polite">
+                Loading savings types…
+              </p>
+            ) : hasTypesError ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-destructive" role="alert">
+                  {typesError instanceof Error
+                    ? typesError.message
+                    : "Couldn't load savings types."}
+                </p>
+                <button
+                  type="button"
+                  className="shrink-0 text-xs font-medium text-primary underline underline-offset-4 disabled:opacity-50"
+                  onClick={() => void refetchTypes()}
+                  disabled={isFetchingTypes}
+                >
+                  {isFetchingTypes ? "Retrying…" : "Retry"}
+                </button>
+              </div>
+            ) : savingsTypes.length === 0 ? (
+              <p className="text-xs text-muted-foreground" role="status">
+                No active savings types are available. Ask your co-op admin to
+                activate or add one.
               </p>
             ) : null}
           </div>
