@@ -20,7 +20,7 @@ import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
 
 export function AdminSavingsSettingsTab() {
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const typesQuery = useCoopSavingsTypes(coopId);
   const mutations = useCoopSavingsTypeMutations(coopId ?? "");
 

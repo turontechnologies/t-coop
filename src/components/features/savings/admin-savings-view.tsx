@@ -64,7 +64,7 @@ interface AdminSavingsViewProps {
 }
 
 export function AdminSavingsView({ member }: AdminSavingsViewProps) {
-  const coopId = member.id;
+  const coopId = member.cooperativeId ?? member.id;
   const { data: coop } = useCooperative(coopId);
   const { data: members = [] } = useCoopMembers(coopId);
   const { data: totalsByType = [] } = useCoopSavingsTypes(coopId);

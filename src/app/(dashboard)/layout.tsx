@@ -72,7 +72,7 @@ export default function DashboardRouteLayout({
   // to the platform base (NGN); per-co-op super-admin screens (e.g.
   // /co-operatives/[id]/**) nest their own narrower CurrencyProvider.
   const brandingCoopId =
-    member?.role === "admin" ? member.id : (member?.cooperativeId ?? null);
+    member?.cooperativeId ?? (member?.role === "admin" ? member.id : null);
   const { data: branding } = useCooperativeBranding(brandingCoopId);
   const currency = branding?.currency ?? "NGN";
 

@@ -29,7 +29,7 @@ const FEE_TYPES = ["Fixed", "Percentage"] as const;
 
 export function WithdrawalFeeForm() {
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const { data: coop, isLoading } = useCooperative(coopId);
   const { data: profile } = useProfile(coopId);
   const updateCooperative = useUpdateCooperative(coopId ?? "");

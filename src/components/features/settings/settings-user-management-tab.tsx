@@ -39,7 +39,7 @@ type UserManagementTab = "users" | "roles";
  */
 export function SettingsUserManagementTab() {
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
 
   const [activeTab, setActiveTab] = useState<UserManagementTab>("users");
   const membersQuery = useCoopMembers(coopId);

@@ -32,7 +32,7 @@ import { useAuthStore } from "@/store/auth.store";
 
 export function CooperativeDetailsForm() {
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const { data: coop, isLoading } = useCooperative(coopId);
   const { data: profile } = useProfile(coopId);
   const updateCooperative = useUpdateCooperative(coopId ?? "");

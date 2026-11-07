@@ -35,7 +35,7 @@ import { useAuthStore } from "@/store/auth.store";
 export function TransferAdminForm() {
   const router = useRouter();
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const logout = useAuthStore((state) => state.logout);
   const transferAdmin = useTransferAdmin(coopId ?? "");
 

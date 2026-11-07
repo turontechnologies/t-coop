@@ -10,7 +10,7 @@ import { useAuthStore } from "@/store/auth.store";
 export default function NewMemberPage() {
   const router = useRouter();
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const { data: existingMembers = [] } = useCoopMembers(coopId);
 
   if (!member) return null;

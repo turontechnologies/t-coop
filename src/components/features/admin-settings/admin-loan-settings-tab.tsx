@@ -18,7 +18,7 @@ import type { CoopLoanTypeSummary } from "@/types/coop-loans";
 export function AdminLoanSettingsTab() {
   const router = useRouter();
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const typesQuery = useCoopLoanTypes(coopId);
   const mutations = useCoopLoanTypeMutations(coopId ?? "");
   const [search, setSearch] = useState("");

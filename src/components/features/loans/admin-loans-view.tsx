@@ -51,7 +51,7 @@ interface AdminLoansViewProps {
 }
 
 export function AdminLoansView({ member }: AdminLoansViewProps) {
-  const coopId = member.id;
+  const coopId = member.cooperativeId ?? member.id;
   const { data: coop } = useCooperative(coopId);
   const { data: totalsByType = [] } = useCoopLoanTypes(coopId);
   const { data: allLoans = [] } = useCoopLoanRecords(coopId);

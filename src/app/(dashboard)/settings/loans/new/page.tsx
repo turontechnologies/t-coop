@@ -55,7 +55,7 @@ export default function LoanTypeCreationPage() {
   const editingId = searchParams.get("id");
 
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const typesQuery = useCoopLoanTypes(coopId);
   const mutations = useCoopLoanTypeMutations(coopId ?? "");
 

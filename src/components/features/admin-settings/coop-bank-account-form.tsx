@@ -21,7 +21,7 @@ import { useAuthStore } from "@/store/auth.store";
 
 export function CoopBankAccountForm() {
   const member = useAuthStore((state) => state.member);
-  const coopId = member?.id;
+  const coopId = member?.cooperativeId ?? member?.id;
   const { data: coop, isLoading } = useCooperative(coopId);
   const updateBankAccount = useUpdateCooperativeBankAccount(coopId ?? "");
   const { banks, loading: banksLoading } = useBankList();

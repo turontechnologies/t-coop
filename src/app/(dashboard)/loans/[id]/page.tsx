@@ -47,7 +47,7 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
   const currency = useCurrency();
 
   const coopId =
-    member?.role === "admin" ? member.id : (member?.cooperativeId ?? "");
+    member?.cooperativeId ?? (member?.role === "admin" ? member.id : "");
   const guarantorResponse = useGuarantorResponse(coopId);
   const { data: approvals } = useLoanApprovals(coopId || undefined, id);
 

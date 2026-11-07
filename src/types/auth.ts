@@ -12,9 +12,8 @@ export interface AuthenticatedMember {
   email: string;
   role: UserRole;
   avatarUrl?: string;
-  /** Null for super_admin/support. For "admin" this equals the member's own id (the co-op id
-   * invariant) — for "member" it's a separate co-op id. Lets the dashboard show which
-   * co-operative this member belongs to. */
+  /** Null for super_admin/support. The co-op identifier can differ from an admin's login id;
+   * regular members also use this to identify their co-operative. */
   cooperativeId?: string | null;
   /** Only ever set for role "admin" — null for super_admin/member. */
   subscriptionActive?: boolean | null;
