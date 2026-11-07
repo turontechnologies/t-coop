@@ -83,8 +83,10 @@ function toSummaryCards(
     const isCount =
       card.label.includes("Co-operatives") || card.label.includes("Members");
     const loanEligibilityByType =
-      role === "member" && card.label.includes("Loan Eligibility")
-        ? (dataLoanEligibilityByType ?? []).map((eligibility) => ({
+      role === "member" &&
+      card.label.includes("Loan Eligibility") &&
+      dataLoanEligibilityByType !== undefined
+        ? dataLoanEligibilityByType.map((eligibility) => ({
             loanTypeId: eligibility.loanTypeId,
             loanTypeName: eligibility.loanTypeName,
             timesTwo: formatMoney(eligibility.timesTwo, currency),
