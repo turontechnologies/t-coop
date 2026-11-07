@@ -35,7 +35,14 @@ export interface ImportConfig<TImportRow> {
   parseFile: (
     file: File,
   ) => Promise<{ rows: TImportRow[]; errors: ImportRowError[] }>;
-  onImport: (rows: TImportRow[]) => void;
+  onImport: (
+    rows: TImportRow[],
+  ) => void | ImportResult | Promise<void | ImportResult>;
+}
+
+export interface ImportResult {
+  imported: number;
+  errors: ImportRowError[];
 }
 
 interface ExportImportMenuProps<T, TImportRow> {
@@ -58,6 +65,7 @@ export function ExportImportMenu<T, TImportRow = never>({
 }: ExportImportMenuProps<T, TImportRow>) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     if (!importConfig) return;
@@ -102,33 +110,53 @@ export function ExportImportMenu<T, TImportRow = never>({
     event.target.value = "";
     if (!file || !importConfig) return;
 
+    let parsedRows: TImportRow[];
+    let errors: ImportRowError[];
     try {
-      const { rows: parsedRows, errors } = await importConfig.parseFile(file);
-
-      if (parsedRows.length > 0) {
-        importConfig.onImport(parsedRows);
-      }
-
-      if (errors.length === 0 && parsedRows.length > 0) {
-        toast.success("Import complete", {
-          description: `${parsedRows.length} ${plural(parsedRows.length)} imported.`,
-        });
-      } else if (parsedRows.length > 0 && errors.length > 0) {
-        toast.warning("Import finished with some rows skipped", {
-          description: `${parsedRows.length} imported, ${errors.length} skipped — row ${errors[0].row}: ${errors[0].message}${errors.length > 1 ? `, +${errors.length - 1} more` : ""}`,
-        });
-      } else {
-        toast.error("Nothing imported", {
-          description:
-            errors[0]?.message ??
-            "The file didn't match the template — download it again and fill it in without changing the headers.",
-        });
-      }
+      ({ rows: parsedRows, errors } = await importConfig.parseFile(file));
     } catch {
       toast.error("Couldn't read that file", {
         description:
           "Make sure it's the downloaded template (.xlsx) or a .csv exported from it.",
       });
+      return;
+    }
+
+    if (parsedRows.length === 0) {
+      toast.error("Nothing imported", {
+        description:
+          errors[0]?.message ??
+          "The file didn't match the template — download it again and fill it in without changing the headers.",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const result = await importConfig.onImport(parsedRows);
+      const imported = result?.imported ?? parsedRows.length;
+      const importErrors = [...errors, ...(result?.errors ?? [])];
+
+      if (importErrors.length === 0) {
+        toast.success("Import complete", {
+          description: `${imported} ${plural(imported)} imported.`,
+        });
+      } else if (imported > 0) {
+        toast.warning("Import finished with some rows skipped", {
+          description: `${imported} imported, ${importErrors.length} skipped — row ${importErrors[0].row}: ${importErrors[0].message}${importErrors.length > 1 ? `, +${importErrors.length - 1} more` : ""}`,
+        });
+      } else {
+        toast.error("Nothing imported", {
+          description: `${importErrors.length} row${importErrors.length === 1 ? "" : "s"} skipped — row ${importErrors[0].row}: ${importErrors[0].message}`,
+        });
+      }
+    } catch (error) {
+      toast.error("Import failed", {
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -136,7 +164,14 @@ export function ExportImportMenu<T, TImportRow = never>({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="outline" size="sm" className="gap-1.5" />}
+          render={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={isImporting}
+            />
+          }
         >
           <Upload className="size-3.5" aria-hidden="true" />
           Export / Import

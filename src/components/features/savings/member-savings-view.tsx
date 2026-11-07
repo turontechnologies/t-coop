@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AddSavingsModal } from "@/components/features/savings/add-savings-modal";
-import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import {
+  ExportImportMenu,
+  type ImportConfig,
+} from "@/components/features/shared/export-import-menu";
 import { PaymentSuccessModal } from "@/components/features/savings/payment-success-modal";
 import {
   RequestWithdrawalModal,
@@ -47,6 +50,10 @@ interface MemberSavingsViewProps {
   /** Same idea as `addOpen`, for the Request Withdrawal modal. */
   withdrawOpen?: boolean;
   onWithdrawOpenChange?: (open: boolean) => void;
+  /** Passed only from the admin's own-savings tab; member views never receive import access. */
+  importConfig?: ImportConfig<
+    import("@/lib/savings-import").ImportedSavingsRow
+  >;
 }
 
 export function MemberSavingsView({
@@ -60,6 +67,7 @@ export function MemberSavingsView({
   onAddOpenChange,
   withdrawOpen: withdrawOpenProp,
   onWithdrawOpenChange,
+  importConfig,
 }: MemberSavingsViewProps) {
   const currency = useCurrency();
   const { data: memberRecords = [] } = useCoopSavingsRecords(coopId, {
@@ -199,6 +207,7 @@ export function MemberSavingsView({
               filenamePrefix={`savings-${memberId}`}
               exportTitle={`${memberName} — Savings & Contributions`}
               entityLabel="savings record"
+              importConfig={importConfig}
             />
           </div>
           <SavingsRecordsTable records={memberRecords} />

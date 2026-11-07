@@ -8,7 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoanRecordsTable } from "@/components/features/loans/loan-records-table";
 import { LoanSuccessModal } from "@/components/features/loans/loan-success-modal";
 import { TakeLoanModal } from "@/components/features/loans/take-loan-modal";
-import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import {
+  ExportImportMenu,
+  type ImportConfig,
+} from "@/components/features/shared/export-import-menu";
 import { PENDING_LOAN_STATUSES, type CoopLoanRecord } from "@/lib/coop-data";
 import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 import { useCoopMembers } from "@/hooks/use-coop-members";
@@ -41,6 +44,10 @@ interface MemberLoansViewProps {
   /** Controls the Take Loan modal from outside, for use alongside `showSummary={false}`. Falls back to internal state when omitted. */
   takeOpen?: boolean;
   onTakeOpenChange?: (open: boolean) => void;
+  /** Passed only from the admin's own-loans tab; member views never receive import access. */
+  importConfig?: ImportConfig<
+    import("@/lib/loan-import").ImportedLoanApplicationRow
+  >;
 }
 
 export function MemberLoansView({
@@ -51,6 +58,7 @@ export function MemberLoansView({
   showSummary = true,
   takeOpen: takeOpenProp,
   onTakeOpenChange,
+  importConfig,
 }: MemberLoansViewProps) {
   const { data: memberRecords = [] } = useCoopLoanRecords(coopId, {
     memberId,
@@ -143,6 +151,7 @@ export function MemberLoansView({
               columns={EXPORT_COLUMNS}
               filenamePrefix={`loans-${memberId}`}
               exportTitle={`${memberName} — Loans`}
+              importConfig={importConfig}
             />
           </div>
           <LoanRecordsTable records={memberRecords} viewerId={memberId} />
