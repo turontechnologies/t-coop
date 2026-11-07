@@ -63,7 +63,7 @@ export function UploadTellerModal({
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const currency = useCurrency();
 
-  const { data: types } = useCoopSavingsTypes(coopId);
+  const { data: types } = useCoopSavingsTypes(coopId, open);
   const savingsTypes = useMemo(
     () => (types ?? []).filter((type) => type.status === "Active"),
     [types],

@@ -4,13 +4,19 @@ import {
   type CoopSavingsRecordFilters,
 } from "@/services/coop-savings.service";
 import type { SavingsTypeSettingFormValues } from "@/lib/validations/admin-settings.schema";
+import { useAuthStore } from "@/store/auth.store";
 
-export function useCoopSavingsTypes(coopId: string | undefined) {
+export function useCoopSavingsTypes(
+  coopId: string | undefined,
+  enabled = true,
+) {
+  const role = useAuthStore((state) => state.member?.role);
+
   return useQuery({
-    queryKey: ["coop-savings", coopId, "types"],
+    queryKey: ["coop-savings", coopId, "types", role ?? "signed-out"],
     queryFn: () => coopSavingsService.getSavingsTypes(coopId as string),
-    enabled: Boolean(coopId),
-    staleTime: 30_000,
+    enabled: Boolean(coopId) && enabled,
+    staleTime: 0,
   });
 }
 

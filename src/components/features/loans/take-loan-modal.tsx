@@ -75,7 +75,7 @@ export function TakeLoanModal({
     isError: hasTypesError,
     error: typesError,
     refetch: refetchTypes,
-  } = useCoopLoanTypes(coopId);
+  } = useCoopLoanTypes(coopId, open);
   const loanTypes = useMemo(
     () => (types ?? []).filter((type) => type.status === "Active"),
     [types],

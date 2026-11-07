@@ -84,7 +84,7 @@ export function RequestWithdrawalModal({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  const { data: types } = useCoopSavingsTypes(coopId);
+  const { data: types } = useCoopSavingsTypes(coopId, open);
   const savingsTypes = useMemo(
     () => (types ?? []).filter((type) => type.status === "Active"),
     [types],

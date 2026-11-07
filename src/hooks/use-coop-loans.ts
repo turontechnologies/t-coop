@@ -4,13 +4,16 @@ import {
   type CoopLoanRecordFilters,
 } from "@/services/coop-loan.service";
 import type { LoanTypeSettingFormValues } from "@/lib/validations/admin-settings.schema";
+import { useAuthStore } from "@/store/auth.store";
 
-export function useCoopLoanTypes(coopId: string | undefined) {
+export function useCoopLoanTypes(coopId: string | undefined, enabled = true) {
+  const role = useAuthStore((state) => state.member?.role);
+
   return useQuery({
-    queryKey: ["coop-loans", coopId, "types"],
+    queryKey: ["coop-loans", coopId, "types", role ?? "signed-out"],
     queryFn: () => coopLoanService.getLoanTypes(coopId as string),
-    enabled: Boolean(coopId),
-    staleTime: 30_000,
+    enabled: Boolean(coopId) && enabled,
+    staleTime: 0,
   });
 }
 

@@ -51,7 +51,7 @@ export function AddSavingsModal({
     isError: hasTypesError,
     error: typesError,
     refetch: refetchTypes,
-  } = useCoopSavingsTypes(coopId);
+  } = useCoopSavingsTypes(coopId, open);
   const savingsTypes = useMemo(
     () => (types ?? []).filter((type) => type.status === "Active"),
     [types],
