@@ -11,6 +11,7 @@ function invalidateSavings(
   coopId: string,
 ) {
   queryClient.invalidateQueries({ queryKey: ["savings-self", coopId] });
+  queryClient.invalidateQueries({ queryKey: ["coop-savings", coopId] });
   queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 }
 

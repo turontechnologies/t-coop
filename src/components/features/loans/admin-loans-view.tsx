@@ -12,18 +12,15 @@ import {
 } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-summary-table";
-import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import { LoanRequestsTable } from "@/components/features/loans/loan-requests-table";
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
-import { PENDING_LOAN_STATUSES, type CoopLoanRecord } from "@/lib/coop-data";
+import { PENDING_LOAN_STATUSES } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { useApplyForLoan } from "@/hooks/use-loans-self";
 import { formatMoney } from "@/lib/format";
-import type { ExportColumn } from "@/lib/table-export";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
-import type { CoopLoanTypeSummary } from "@/types/coop-loans";
 import {
   downloadLoanImportTemplate,
   parseLoanImportFile,
@@ -37,24 +34,6 @@ import {
 type AdminLoansTab = "requests" | "members" | "my";
 
 const MODULE = "Loans";
-
-const TYPE_EXPORT_COLUMNS: ExportColumn<CoopLoanTypeSummary>[] = [
-  { header: "Loan Type", accessor: (row) => row.name },
-  { header: "Loan Duration", accessor: (row) => row.durationMonths },
-  { header: "No of Repayments", accessor: (row) => row.numberOfRepayments },
-  { header: "Interest", accessor: (row) => row.interestRate },
-  { header: "Earnings on Loan", accessor: (row) => row.earnings },
-];
-
-const REQUEST_EXPORT_COLUMNS: ExportColumn<CoopLoanRecord>[] = [
-  { header: "Members Id", accessor: (row) => row.memberId },
-  { header: "Full Name", accessor: (row) => row.memberName },
-  { header: "Loan Type", accessor: (row) => row.loanType },
-  { header: "Loan Amount", accessor: (row) => row.amount },
-  { header: "No of Repayments", accessor: (row) => row.numberOfRepayments },
-  { header: "Date", accessor: (row) => row.date },
-  { header: "Status", accessor: (row) => row.status },
-];
 
 interface AdminLoansViewProps {
   member: AuthenticatedMember;
@@ -200,23 +179,6 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
                 ) : null}
                 <TabsIndicator />
               </TabsList>
-              {activeTab === "requests" ? (
-                <ExportImportMenu
-                  rows={pendingRequests}
-                  columns={REQUEST_EXPORT_COLUMNS}
-                  filenamePrefix={`${coop.id}-loan-requests`}
-                  exportTitle={`${coop.name} — Loan Requests`}
-                  entityLabel="request"
-                />
-              ) : null}
-              {activeTab === "members" ? (
-                <ExportImportMenu
-                  rows={totalsByType}
-                  columns={TYPE_EXPORT_COLUMNS}
-                  filenamePrefix={`${coop.id}-loans-summary`}
-                  exportTitle={`${coop.name} — Loans`}
-                />
-              ) : null}
             </div>
 
             {requestsAccess !== null ? (

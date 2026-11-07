@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/tabs";
 import { CoopSavingsSummaryTable } from "@/components/features/coop/coop-savings-summary-table";
 import {
-  ExportImportMenu,
   type ImportConfig,
   type ImportResult,
 } from "@/components/features/shared/export-import-menu";
@@ -24,7 +23,6 @@ import {
   type UploadTellerPayload,
 } from "@/components/features/savings/upload-teller-modal";
 import { SavingsRequestsTable } from "@/components/features/savings/savings-requests-table";
-import type { SavingsRequest } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import {
@@ -37,10 +35,8 @@ import {
   useWithdrawalRequests,
 } from "@/hooks/use-savings-self";
 import { formatMoney } from "@/lib/format";
-import type { ExportColumn } from "@/lib/table-export";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
-import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
 import {
   downloadSavingsImportTemplate,
   parseSavingsImportFile,
@@ -50,23 +46,6 @@ import {
 type AdminSavingsTab = "members" | "my" | "request";
 
 const MODULE = "Savings & Contributions";
-
-const TYPE_EXPORT_COLUMNS: ExportColumn<CoopSavingsTypeSummary>[] = [
-  { header: "Savings Type", accessor: (row) => row.name },
-  { header: "Minimum Savings", accessor: (row) => row.min },
-  { header: "Maximum Savings", accessor: (row) => row.max },
-  { header: "Earnings on Savings", accessor: (row) => row.earnings },
-  { header: "Total Savings & Contributions", accessor: (row) => row.total },
-];
-
-const REQUEST_EXPORT_COLUMNS: ExportColumn<SavingsRequest>[] = [
-  { header: "Member", accessor: (row) => row.memberName },
-  { header: "Type", accessor: (row) => row.type },
-  { header: "Savings Type", accessor: (row) => row.savingsType },
-  { header: "Amount", accessor: (row) => row.amount },
-  { header: "Requested", accessor: (row) => row.requestedAt },
-  { header: "Status", accessor: (row) => row.status },
-];
 
 interface AdminSavingsViewProps {
   member: AuthenticatedMember;
@@ -266,23 +245,6 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
                 ) : null}
                 <TabsIndicator />
               </TabsList>
-              {activeTab === "members" ? (
-                <ExportImportMenu
-                  rows={totalsByType}
-                  columns={TYPE_EXPORT_COLUMNS}
-                  filenamePrefix={`${coop.id}-savings-summary`}
-                  exportTitle={`${coop.name} — Savings & Contributions`}
-                />
-              ) : null}
-              {activeTab === "request" ? (
-                <ExportImportMenu
-                  rows={allRequests}
-                  columns={REQUEST_EXPORT_COLUMNS}
-                  filenamePrefix={`${coop.id}-savings-requests`}
-                  exportTitle={`${coop.name} — Savings Requests`}
-                  entityLabel="request"
-                />
-              ) : null}
             </div>
 
             {membersAccess !== null ? (
