@@ -54,6 +54,19 @@ import type { AuthenticatedMember } from "@/types/auth";
 
 const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024;
 
+/** The picked calendar day as `yyyy-MM-dd` in the user's own timezone — `toISOString()` would
+ * shift it to UTC (8 Nov at midnight in Lagos is 7 Nov 23:00 UTC). */
+function toLocalDateString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** Reads a `yyyy-MM-dd` value back as local midnight (`new Date("yyyy-MM-dd")` is UTC). */
+function fromLocalDateString(value: string): Date {
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 interface CreateNoticeFormProps {
   member: AuthenticatedMember;
 }
@@ -147,7 +160,8 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
         message: values.message.trim(),
         recipient: values.recipient,
         medium: values.medium,
-        meetingDate: values.meetingDate,
+        meetingDate:
+          values.type === "Meeting Notice" ? values.meetingDate : undefined,
         attachment,
         sendAt,
         targetCoopIds: values.targetCoopIds,
@@ -256,17 +270,21 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                     >
                       <CalendarIcon className="size-4" aria-hidden="true" />
                       {field.value
-                        ? formatDateLong(new Date(field.value))
+                        ? formatDateLong(fromLocalDateString(field.value))
                         : "Pick the meeting date"}
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
                         selected={
-                          field.value ? new Date(field.value) : undefined
+                          field.value
+                            ? fromLocalDateString(field.value)
+                            : undefined
                         }
                         onSelect={(date) =>
-                          field.onChange(date ? date.toISOString() : undefined)
+                          field.onChange(
+                            date ? toLocalDateString(date) : undefined,
+                          )
                         }
                         autoFocus
                       />
@@ -534,20 +552,20 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                         >
                           <CalendarIcon className="size-4" aria-hidden="true" />
                           {field.value
-                            ? formatDateLong(new Date(field.value))
+                            ? formatDateLong(fromLocalDateString(field.value))
                             : "Pick a date"}
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
                             selected={
-                              field.value ? new Date(field.value) : undefined
+                              field.value
+                                ? fromLocalDateString(field.value)
+                                : undefined
                             }
                             onSelect={(date) =>
                               field.onChange(
-                                date
-                                  ? date.toISOString().slice(0, 10)
-                                  : undefined,
+                                date ? toLocalDateString(date) : undefined,
                               )
                             }
                             autoFocus
