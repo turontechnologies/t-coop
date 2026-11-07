@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { SummaryCard } from "@/lib/dashboard-data";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +26,7 @@ interface QuickSummaryCardsProps {
 
 export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
   const router = useRouter();
+  const [selectedLoanTypeId, setSelectedLoanTypeId] = useState("");
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -34,30 +43,54 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                     Based on your current savings
                   </p>
                   {card.loanEligibilityByType.length > 0 ? (
-                    card.loanEligibilityByType.map((eligibility) => (
-                      <div
-                        key={eligibility.loanTypeName}
-                        className="space-y-1 border-t pt-2 first:border-0 first:pt-0"
-                      >
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {eligibility.loanTypeName}
-                        </p>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <p className="text-muted-foreground">
-                            Times two
-                            <span className="block font-semibold text-foreground">
-                              {eligibility.timesTwo}
-                            </span>
-                          </p>
-                          <p className="text-muted-foreground">
-                            Within
-                            <span className="block font-semibold text-foreground">
-                              {eligibility.within}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                    ))
+                    (() => {
+                      const selectedEligibility =
+                        card.loanEligibilityByType.find(
+                          (eligibility) =>
+                            eligibility.loanTypeId === selectedLoanTypeId,
+                        ) ?? card.loanEligibilityByType[0];
+                      return (
+                        <>
+                          <Select
+                            value={selectedEligibility.loanTypeId}
+                            onValueChange={(value) =>
+                              setSelectedLoanTypeId(value ?? "")
+                            }
+                          >
+                            <SelectTrigger
+                              aria-label="Select loan type"
+                              className="h-9 w-full"
+                            >
+                              <SelectValue placeholder="Select loan type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {card.loanEligibilityByType.map((eligibility) => (
+                                <SelectItem
+                                  key={eligibility.loanTypeId}
+                                  value={eligibility.loanTypeId}
+                                >
+                                  {eligibility.loanTypeName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="grid grid-cols-2 gap-2 border-t pt-2 text-xs">
+                            <p className="text-muted-foreground">
+                              Times two
+                              <span className="block font-semibold text-foreground">
+                                {selectedEligibility.timesTwo}
+                              </span>
+                            </p>
+                            <p className="text-muted-foreground">
+                              Within
+                              <span className="block font-semibold text-foreground">
+                                {selectedEligibility.within}
+                              </span>
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()
                   ) : (
                     <p className="text-sm text-muted-foreground">
                       No active loan types are available.

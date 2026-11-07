@@ -4,6 +4,7 @@ export interface DashboardSummaryCard {
 }
 
 export interface DashboardLoanTypeEligibility {
+  loanTypeId: string;
   loanTypeName: string;
   timesTwo: number;
   within: number;

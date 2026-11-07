@@ -85,6 +85,7 @@ function toSummaryCards(
     const loanEligibilityByType =
       role === "member" && card.label.includes("Loan Eligibility")
         ? (dataLoanEligibilityByType ?? []).map((eligibility) => ({
+            loanTypeId: eligibility.loanTypeId,
             loanTypeName: eligibility.loanTypeName,
             timesTwo: formatMoney(eligibility.timesTwo, currency),
             within: formatMoney(eligibility.within, currency),
