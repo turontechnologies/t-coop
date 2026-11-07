@@ -104,7 +104,7 @@ export function AddSavingsModal({
                 {formatMoney(selectedType.max, currency)}
               </p>
             ) : null}
-            {isLoadingTypes ? (
+            {isLoadingTypes || isFetchingTypes ? (
               <p className="text-xs text-muted-foreground" aria-live="polite">
                 Loading savings types…
               </p>

@@ -187,7 +187,7 @@ export function TakeLoanModal({
                 over {selectedType.durationMonths} months
               </p>
             ) : null}
-            {isLoadingTypes ? (
+            {isLoadingTypes || isFetchingTypes ? (
               <p className="text-xs text-muted-foreground" aria-live="polite">
                 Loading loan types…
               </p>
