@@ -164,6 +164,16 @@ export function RequestWithdrawalModal({
             <Label htmlFor={typeId}>Withdraw from</Label>
             <Select
               value={savingsSelection}
+              items={[
+                {
+                  value: TOTAL_SAVINGS_WITHDRAWAL,
+                  label: "Total Savings (all types)",
+                },
+                ...savingsTypes.map((type) => ({
+                  value: type.id,
+                  label: type.name,
+                })),
+              ]}
               onValueChange={(value) => {
                 setSavingsSelection(value ?? "");
                 setAmount("");

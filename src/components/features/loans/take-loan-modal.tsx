@@ -164,6 +164,10 @@ export function TakeLoanModal({
             <Label htmlFor={typeId}>Loan Type</Label>
             <Select
               value={loanTypeId}
+              items={loanTypes.map((type) => ({
+                value: type.id,
+                label: type.name,
+              }))}
               onValueChange={(value) => setLoanTypeId(value ?? "")}
               disabled={busy}
             >
@@ -243,6 +247,10 @@ export function TakeLoanModal({
               <Label htmlFor={guarantorId}>Guarantor</Label>
               <Select
                 value={guarantorMemberId}
+                items={guarantorOptions.map((member) => ({
+                  value: member.id,
+                  label: coopMemberFullName(member),
+                }))}
                 onValueChange={(value) => setGuarantorMemberId(value ?? "")}
                 disabled={busy}
               >

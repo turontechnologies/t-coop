@@ -84,6 +84,10 @@ export function AddSavingsModal({
             <Label htmlFor={typeId}>Savings Type</Label>
             <Select
               value={savingsTypeId}
+              items={savingsTypes.map((type) => ({
+                value: type.id,
+                label: type.name,
+              }))}
               onValueChange={(value) => setSavingsTypeId(value ?? "")}
               disabled={busy}
             >
