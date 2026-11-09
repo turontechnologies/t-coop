@@ -12,7 +12,7 @@ export const createNoticeSchema = z
       .min(1, "Select at least one co-operative"),
     meetingDate: z.string().optional(),
     meetingTime: z.string().optional(),
-    meetingDurationMinutes: z.number().int().min(1).max(1440).default(120),
+    meetingDurationMinutes: z.number().int().min(1).max(1440),
     schedule: z.enum(["now", "later"]),
     scheduleDate: z.string().optional(),
     scheduleTime: z.string().optional(),

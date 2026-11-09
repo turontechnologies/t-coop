@@ -13,7 +13,7 @@ export default function SavingsPage() {
     <div className="pt-6">
       {member.role === "super_admin" ? (
         <SuperAdminSavingsView />
-      ) : member.role === "member" ? (
+      ) : member.role === "member" && member.permissionModules == null ? (
         <MemberSavingsView
           coopId={member.cooperativeId as string}
           memberId={member.id}

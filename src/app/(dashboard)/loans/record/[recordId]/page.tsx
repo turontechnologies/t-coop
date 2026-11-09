@@ -28,9 +28,8 @@ export default function AdminLoanRecordPage({
   const router = useRouter();
   const authMember = useAuthStore((state) => state.member);
   const coopId =
-    authMember?.role === "admin"
-      ? authMember.id
-      : (authMember?.cooperativeId ?? undefined);
+    authMember?.cooperativeId ??
+    (authMember?.role === "admin" ? authMember.id : undefined);
   const { data: coop } = useCooperative(coopId);
   const { data: record, isLoading } = useCoopLoanRecord(recordId);
   const { data: members = [] } = useCoopMembers(coopId);

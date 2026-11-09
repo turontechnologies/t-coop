@@ -25,9 +25,8 @@ export default function AdminSavingsRecordPage({
   const router = useRouter();
   const authMember = useAuthStore((state) => state.member);
   const coopId =
-    authMember?.role === "admin"
-      ? authMember.id
-      : (authMember?.cooperativeId ?? undefined);
+    authMember?.cooperativeId ??
+    (authMember?.role === "admin" ? authMember.id : undefined);
   const { data: coop } = useCooperative(coopId);
   const { data: record, isLoading } = useCoopSavingsRecord(recordId);
   const { data: members = [] } = useCoopMembers(coopId);

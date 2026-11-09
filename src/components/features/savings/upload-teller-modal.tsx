@@ -131,6 +131,10 @@ export function UploadTellerModal({
             <Label htmlFor={memberId_}>Member</Label>
             <Select
               value={memberId}
+              items={members.map((member) => ({
+                value: member.id,
+                label: coopMemberFullName(member),
+              }))}
               onValueChange={(value) => setMemberId(value ?? "")}
               disabled={busy}
             >
@@ -165,6 +169,10 @@ export function UploadTellerModal({
             <Label htmlFor={typeId}>Savings Type</Label>
             <Select
               value={savingsTypeId}
+              items={savingsTypes.map((type) => ({
+                value: type.id,
+                label: type.name,
+              }))}
               onValueChange={(value) => setSavingsTypeId(value ?? "")}
               disabled={busy}
             >

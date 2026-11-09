@@ -84,6 +84,11 @@ export function EditCoopUserModal({
             <Label htmlFor={roleId}>Role</Label>
             <Select
               value={selectedRoleId}
+              // Every role (not just active ones) so the current one always shows by name.
+              items={roles.map((role) => ({
+                value: role.id,
+                label: role.name,
+              }))}
               onValueChange={(value) => setSelectedRoleId(value ?? "")}
               disabled={busy}
             >

@@ -109,6 +109,10 @@ export function ManualSubscriptionPaymentModal({
               <Label htmlFor={coopId_}>Co-operative</Label>
               <Select
                 value={coopId}
+                items={cooperatives.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                }))}
                 onValueChange={(value) => setCoopId(value ?? "")}
                 disabled={busy}
               >
@@ -130,6 +134,10 @@ export function ManualSubscriptionPaymentModal({
             <Label htmlFor={planId_}>Subscription Plan</Label>
             <Select
               value={planId}
+              items={activePlans.map((option) => ({
+                value: option.id,
+                label: `${option.label} (${option.type}) — ${formatNaira(option.amount)}`,
+              }))}
               onValueChange={handlePlanChange}
               disabled={busy}
             >

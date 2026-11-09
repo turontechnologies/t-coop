@@ -48,9 +48,8 @@ export default function AdminSavingsTypePage({
   const router = useRouter();
   const authMember = useAuthStore((state) => state.member);
   const coopId =
-    authMember?.role === "admin"
-      ? authMember.id
-      : (authMember?.cooperativeId ?? undefined);
+    authMember?.cooperativeId ??
+    (authMember?.role === "admin" ? authMember.id : undefined);
   const { data: coop } = useCooperative(coopId);
   const { data: records = [] } = useCoopSavingsRecords(coopId, {
     type: savingsType,
@@ -68,7 +67,7 @@ export default function AdminSavingsTypePage({
     "Members Savings",
   );
   const canImport =
-    authMember?.role !== "member" &&
+    (authMember?.role !== "member" || authMember.permissionModules != null) &&
     authMember?.role !== "super_admin" &&
     membersSavingsAccess === "write";
   const { data: savingsTypes = [] } = useCoopSavingsTypes(coopId, canImport);

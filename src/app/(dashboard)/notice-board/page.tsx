@@ -21,12 +21,14 @@ import { MemberNoticeList } from "@/components/features/notice-board/member-noti
 import { NoticeListTable } from "@/components/features/notice-board/notice-list-table";
 import { useCooperatives } from "@/hooks/use-cooperatives";
 import { useNotices } from "@/hooks/use-notices";
+import { useModuleAccess } from "@/hooks/use-permission";
 import { useAuthStore } from "@/store/auth.store";
 
 type NoticeBoardTab = "notices" | "attendance" | "my-attendance";
 
 export default function NoticeBoardPage() {
   const member = useAuthStore((state) => state.member);
+  const noticeBoardAccess = useModuleAccess("Notice Board");
   const {
     data: notices = [],
     isLoading,
@@ -41,10 +43,15 @@ export default function NoticeBoardPage() {
   if (!member) return null;
 
   const isSuperAdmin = member.role === "super_admin";
+  const isRoleRestrictedStaff =
+    member.role === "member" && member.permissionModules != null;
   // Officers: the co-op admin, or a member holding a co-op role (permissionModules set).
   const isCoopOfficer =
     member.role === "admin" ||
-    (member.role === "member" && member.permissionModules != null);
+    (isRoleRestrictedStaff && noticeBoardAccess !== null);
+  const canCreateNotice =
+    (member.role !== "member" || isRoleRestrictedStaff) &&
+    noticeBoardAccess === "write";
   const coopId = member.cooperativeId ?? member.id;
 
   const noticeList = (
@@ -56,7 +63,7 @@ export default function NoticeBoardPage() {
       isRetrying={isRefetching}
       errorTitle="Couldn't load the notice board"
     >
-      {member.role === "member" ? (
+      {member.role === "member" && !isRoleRestrictedStaff ? (
         <MemberNoticeList notices={notices} />
       ) : (
         <NoticeListTable notices={notices} cooperatives={cooperatives} />
@@ -68,7 +75,7 @@ export default function NoticeBoardPage() {
     <div className="space-y-6 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Notice Board</h2>
-        {member.role !== "member" && tab === "notices" ? (
+        {canCreateNotice && tab === "notices" ? (
           <Button
             nativeButton={false}
             render={<Link href="/notice-board/new" />}

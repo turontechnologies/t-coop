@@ -124,6 +124,10 @@ export function AssignCoopUserModal({
               render={({ field }) => (
                 <Select
                   value={field.value}
+                  items={roles.map((role) => ({
+                    value: role.id,
+                    label: role.name,
+                  }))}
                   onValueChange={(value) => field.onChange(value ?? "")}
                   disabled={busy}
                 >

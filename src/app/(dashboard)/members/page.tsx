@@ -8,6 +8,7 @@ import { ExportImportMenu } from "@/components/features/shared/export-import-men
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { MembersDirectoryTable } from "@/components/features/members-directory/members-directory-table";
 import { useAddCoopMember, useCoopMembers } from "@/hooks/use-coop-members";
+import { useModuleAccess } from "@/hooks/use-permission";
 import type { CoopMember } from "@/lib/coop-data";
 import {
   downloadMemberImportTemplate,
@@ -27,7 +28,8 @@ const EXPORT_COLUMNS: ExportColumn<CoopMember>[] = [
 
 export default function MembersDirectoryPage() {
   const authMember = useAuthStore((state) => state.member);
-  const coopId = authMember?.id;
+  const access = useModuleAccess("Members Directory");
+  const coopId = authMember?.cooperativeId ?? authMember?.id;
   const {
     data: members = [],
     isLoading,
@@ -39,6 +41,13 @@ export default function MembersDirectoryPage() {
   const addMember = useAddCoopMember(coopId as string);
 
   if (!authMember) return null;
+  if (access === null) {
+    return (
+      <p className="pt-6 text-sm text-muted-foreground">
+        Your role doesn&apos;t have access to Members Directory.
+      </p>
+    );
+  }
 
   const handleImport = async (importedRows: ImportedMemberRow[]) => {
     let succeeded = 0;
@@ -90,21 +99,30 @@ export default function MembersDirectoryPage() {
               filenamePrefix="members-directory"
               exportTitle="Members Directory"
               entityLabel="member"
-              importConfig={{
-                templateStorageKey: "members-template-downloaded",
-                downloadTemplate: downloadMemberImportTemplate,
-                parseFile: (file) =>
-                  parseMemberImportFile(
-                    file,
-                    members.map((member) => member.id),
-                  ),
-                onImport: handleImport,
-              }}
+              importConfig={
+                access === "write"
+                  ? {
+                      templateStorageKey: "members-template-downloaded",
+                      downloadTemplate: downloadMemberImportTemplate,
+                      parseFile: (file) =>
+                        parseMemberImportFile(
+                          file,
+                          members.map((member) => member.id),
+                        ),
+                      onImport: handleImport,
+                    }
+                  : undefined
+              }
             />
-            <Button nativeButton={false} render={<Link href="/members/new" />}>
-              <Plus className="size-4" aria-hidden="true" />
-              Add New Members
-            </Button>
+            {access === "write" ? (
+              <Button
+                nativeButton={false}
+                render={<Link href="/members/new" />}
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                Add New Members
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -117,7 +135,11 @@ export default function MembersDirectoryPage() {
         isRetrying={isRefetching}
         errorTitle="Couldn't load the members directory"
       >
-        <MembersDirectoryTable coopId={coopId as string} members={members} />
+        <MembersDirectoryTable
+          coopId={coopId as string}
+          members={members}
+          readOnly={access !== "write"}
+        />
       </QueryBoundary>
     </div>
   );

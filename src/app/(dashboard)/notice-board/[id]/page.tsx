@@ -223,13 +223,19 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                       .join(", ")}
                   />
                   {notice.meetingDate ? (
-                    <Field
-                      label="Meeting"
-                      value={formatMeetingWhen(
-                        notice.meetingDate,
-                        notice.meetingTime,
-                      )}
-                    />
+                    <>
+                      <Field
+                        label="Meeting"
+                        value={formatMeetingWhen(
+                          notice.meetingDate,
+                          notice.meetingTime,
+                        )}
+                      />
+                      <Field
+                        label="Duration"
+                        value={`${notice.meetingDurationMinutes} minutes`}
+                      />
+                    </>
                   ) : null}
                 </div>
 

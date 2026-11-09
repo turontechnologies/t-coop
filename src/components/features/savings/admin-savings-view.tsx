@@ -89,6 +89,19 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     );
   }
 
+  // A role that doesn't grant other members' savings (Members Savings or withdrawal Requests)
+  // sees only their own — exactly what a plain member sees, no co-op totals or member tabs.
+  if (membersAccess === null && requestAccess === null) {
+    return (
+      <MemberSavingsView
+        coopId={coopId}
+        memberId={member.id}
+        memberName={member.name}
+        memberEmail={member.email}
+      />
+    );
+  }
+
   const handlePrimaryAction = () => {
     if (activeTab === "members") setTellerOpen(true);
     else if (activeTab === "my") setMyAddOpen(true);

@@ -35,7 +35,10 @@ export default function SettingsPage() {
   const integrationsAccess = useTabAccess(MODULE, "Integrations");
   if (!member) return null;
 
-  if (member.role === "member" || member.role === "support") {
+  if (
+    member.role === "support" ||
+    (member.role === "member" && member.permissionModules == null)
+  ) {
     // Platform staff (support) have no co-operative of their own — same single-tab Settings
     // view as a member, not the co-op-scoped Savings/Loans/Co-operative/User Management tabs
     // the admin branch below renders. Personal details (name, address, bank account, etc.) live

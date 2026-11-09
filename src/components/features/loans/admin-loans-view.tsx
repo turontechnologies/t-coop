@@ -79,6 +79,18 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
     );
   }
 
+  // A role that doesn't grant other members' loans (Members Loans or loan Requests) sees only
+  // their own — exactly what a plain member sees, no co-op totals or member tabs.
+  if (requestsAccess === null && membersAccess === null) {
+    return (
+      <MemberLoansView
+        coopId={coopId}
+        memberId={member.id}
+        memberName={member.name}
+      />
+    );
+  }
+
   const pendingRequests = allLoans.filter((loan) =>
     PENDING_LOAN_STATUSES.includes(loan.status),
   );

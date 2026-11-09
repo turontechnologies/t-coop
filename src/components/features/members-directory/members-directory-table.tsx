@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 interface MembersDirectoryTableProps {
   coopId: string;
   members: CoopMember[];
+  readOnly?: boolean;
 }
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
@@ -31,6 +32,7 @@ const PAGE_SIZE_OPTIONS = [5, 10, 25];
 export function MembersDirectoryTable({
   coopId,
   members,
+  readOnly = false,
 }: MembersDirectoryTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -117,16 +119,18 @@ export function MembersDirectoryTable({
               <th className="px-4 py-2.5 font-medium text-foreground">
                 Status
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
-                <span className="sr-only">Actions</span>
-              </th>
+              {!readOnly ? (
+                <th className="px-4 py-2.5 font-medium text-foreground">
+                  <span className="sr-only">Actions</span>
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {pageMembers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={readOnly ? 6 : 7}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No members match your search.
@@ -167,13 +171,15 @@ export function MembersDirectoryTable({
                         {member.status}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
-                      <MemberRowActions
-                        member={member}
-                        onEdit={() => setEditingMember(member)}
-                        onToggle={() => handleToggleStatus(member)}
-                      />
-                    </td>
+                    {!readOnly ? (
+                      <td className="px-4 py-3">
+                        <MemberRowActions
+                          member={member}
+                          onEdit={() => setEditingMember(member)}
+                          onToggle={() => handleToggleStatus(member)}
+                        />
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })
@@ -217,11 +223,13 @@ export function MembersDirectoryTable({
                 { label: "Email Address", value: member.email },
               ]}
               actions={
-                <MemberRowActions
-                  member={member}
-                  onEdit={() => setEditingMember(member)}
-                  onToggle={() => handleToggleStatus(member)}
-                />
+                !readOnly ? (
+                  <MemberRowActions
+                    member={member}
+                    onEdit={() => setEditingMember(member)}
+                    onToggle={() => handleToggleStatus(member)}
+                  />
+                ) : undefined
               }
             />
           );
@@ -242,7 +250,7 @@ export function MembersDirectoryTable({
         />
       ) : null}
 
-      {editingMember ? (
+      {!readOnly && editingMember ? (
         <EditMemberModal
           member={editingMember}
           open={true}

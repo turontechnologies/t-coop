@@ -72,9 +72,8 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   const authMember = useAuthStore((state) => state.member);
   const requestsAccess = useTabAccess("Loans", "Requests");
   const coopId =
-    authMember?.role === "admin"
-      ? authMember.id
-      : (authMember?.cooperativeId ?? undefined);
+    authMember?.cooperativeId ??
+    (authMember?.role === "admin" ? authMember.id : undefined);
 
   const { data: record, isLoading } = useCoopLoanRecord(recordId);
   const { data: coop } = useCooperative(coopId);

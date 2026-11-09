@@ -13,7 +13,7 @@ export default function LoansPage() {
     <div className="pt-6">
       {member.role === "super_admin" ? (
         <SuperAdminLoansView />
-      ) : member.role === "member" ? (
+      ) : member.role === "member" && member.permissionModules == null ? (
         <MemberLoansView
           coopId={member.cooperativeId as string}
           memberId={member.id}
