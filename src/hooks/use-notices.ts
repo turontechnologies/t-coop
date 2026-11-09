@@ -3,6 +3,7 @@ import {
   noticeService,
   type CreateNoticePayload,
 } from "@/services/notice.service";
+import type { MeetingAttendanceMark, MeetingResponse } from "@/types/notice";
 
 const NOTICES_KEY = ["notices"];
 const noticeKey = (id: string) => ["notices", id];
@@ -62,12 +63,104 @@ export function useNoticeMutations() {
   });
 
   const addReply = useMutation({
-    mutationFn: ({ noticeId, message }: { noticeId: string; message: string }) =>
-      noticeService.addReply(noticeId, message),
+    mutationFn: ({
+      noticeId,
+      message,
+    }: {
+      noticeId: string;
+      message: string;
+    }) => noticeService.addReply(noticeId, message),
     onSuccess: (_reply, { noticeId }) => {
       queryClient.invalidateQueries({ queryKey: repliesKey(noticeId) });
     },
   });
 
   return { uploadAttachment, create, resend, remove, addReply };
+}
+
+const myResponseKey = (noticeId: string) => [
+  "notices",
+  noticeId,
+  "my-response",
+];
+const registerKey = (noticeId: string) => ["notices", noticeId, "attendance"];
+const ATTENDANCE_KEY = ["attendance"];
+
+/** The signed-in member's RSVP for a meeting notice. */
+export function useMyMeetingResponse(
+  noticeId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: myResponseKey(noticeId as string),
+    queryFn: () => noticeService.getMyResponse(noticeId as string),
+    enabled: Boolean(noticeId) && enabled,
+    staleTime: 15_000,
+  });
+}
+
+export function useRespondToMeeting(noticeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      response,
+      reason,
+    }: {
+      response: MeetingResponse;
+      reason?: string;
+    }) => noticeService.respond(noticeId, response, reason),
+    onSuccess: (data) => {
+      queryClient.setQueryData(myResponseKey(noticeId), data);
+      queryClient.invalidateQueries({ queryKey: registerKey(noticeId) });
+      queryClient.invalidateQueries({ queryKey: ATTENDANCE_KEY });
+    },
+  });
+}
+
+/** A meeting's register (RSVPs + attendance) — officers only. */
+export function useMeetingRegister(
+  noticeId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: registerKey(noticeId as string),
+    queryFn: () => noticeService.getRegister(noticeId as string),
+    enabled: Boolean(noticeId) && enabled,
+    staleTime: 15_000,
+  });
+}
+
+export function useMarkAttendance(noticeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      entries: {
+        memberId: string;
+        attendance: MeetingAttendanceMark | null;
+        note: string | null;
+      }[],
+    ) => noticeService.markAttendance(noticeId, entries),
+    onSuccess: (register) => {
+      queryClient.setQueryData(registerKey(noticeId), register);
+      queryClient.invalidateQueries({ queryKey: ATTENDANCE_KEY });
+    },
+  });
+}
+
+export function useMyAttendance(enabled = true) {
+  return useQuery({
+    queryKey: [...ATTENDANCE_KEY, "me"],
+    queryFn: () => noticeService.getMyAttendance(),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useCoopAttendance(coopId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: [...ATTENDANCE_KEY, "coop", coopId],
+    queryFn: () => noticeService.getCoopAttendance(coopId as string),
+    enabled: Boolean(coopId) && enabled,
+    staleTime: 30_000,
+  });
 }

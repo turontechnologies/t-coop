@@ -86,6 +86,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
   const messageId = useId();
   const typeId = useId();
   const meetingDateId = useId();
+  const meetingTimeId = useId();
   const scheduleDateId = useId();
   const scheduleTimeId = useId();
 
@@ -162,6 +163,8 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
         medium: values.medium,
         meetingDate:
           values.type === "Meeting Notice" ? values.meetingDate : undefined,
+        meetingTime:
+          values.type === "Meeting Notice" ? values.meetingTime : undefined,
         attachment,
         sendAt,
         targetCoopIds: values.targetCoopIds,
@@ -250,49 +253,87 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
           </div>
 
           {type === "Meeting Notice" ? (
-            <div className="space-y-2">
-              <Label htmlFor={meetingDateId}>Meeting Date</Label>
-              <Controller
-                control={control}
-                name="meetingDate"
-                render={({ field }) => (
-                  <Popover>
-                    <PopoverTrigger
-                      render={
-                        <Button
-                          id={meetingDateId}
-                          type="button"
-                          variant="outline"
-                          className="h-11 w-full justify-start font-normal text-muted-foreground data-[has-value=true]:text-foreground"
-                          data-has-value={!!field.value}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={meetingDateId}>Meeting Date</Label>
+                <Controller
+                  control={control}
+                  name="meetingDate"
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger
+                        render={
+                          <Button
+                            id={meetingDateId}
+                            type="button"
+                            variant="outline"
+                            className="h-11 w-full justify-start font-normal text-muted-foreground data-[has-value=true]:text-foreground"
+                            data-has-value={!!field.value}
+                          />
+                        }
+                      >
+                        <CalendarIcon className="size-4" aria-hidden="true" />
+                        {field.value
+                          ? formatDateLong(fromLocalDateString(field.value))
+                          : "Pick the meeting date"}
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={
+                            field.value
+                              ? fromLocalDateString(field.value)
+                              : undefined
+                          }
+                          onSelect={(date) =>
+                            field.onChange(
+                              date ? toLocalDateString(date) : undefined,
+                            )
+                          }
+                          autoFocus
                         />
-                      }
-                    >
-                      <CalendarIcon className="size-4" aria-hidden="true" />
-                      {field.value
-                        ? formatDateLong(fromLocalDateString(field.value))
-                        : "Pick the meeting date"}
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={
-                          field.value
-                            ? fromLocalDateString(field.value)
-                            : undefined
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
+                <FieldError message={errors.meetingDate?.message} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={meetingTimeId}>Meeting Time</Label>
+                <Controller
+                  control={control}
+                  name="meetingTime"
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger
+                        render={
+                          <Button
+                            id={meetingTimeId}
+                            type="button"
+                            variant="outline"
+                            disabled={isSubmitting}
+                            className="h-11 w-full justify-start font-normal text-muted-foreground data-[has-value=true]:text-foreground"
+                            data-has-value={!!field.value}
+                            aria-invalid={!!errors.meetingTime}
+                          />
                         }
-                        onSelect={(date) =>
-                          field.onChange(
-                            date ? toLocalDateString(date) : undefined,
-                          )
-                        }
-                        autoFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
-              />
-              <FieldError message={errors.meetingDate?.message} />
+                      >
+                        <ClockIcon className="size-4" aria-hidden="true" />
+                        {field.value
+                          ? formatTimeLabel(field.value)
+                          : "Pick the meeting time"}
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <TimePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
+                <FieldError message={errors.meetingTime?.message} />
+              </div>
             </div>
           ) : null}
 

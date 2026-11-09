@@ -11,6 +11,7 @@ export const createNoticeSchema = z
       .array(z.string())
       .min(1, "Select at least one co-operative"),
     meetingDate: z.string().optional(),
+    meetingTime: z.string().optional(),
     schedule: z.enum(["now", "later"]),
     scheduleDate: z.string().optional(),
     scheduleTime: z.string().optional(),
@@ -18,6 +19,10 @@ export const createNoticeSchema = z
   .refine(
     (values) => values.type !== "Meeting Notice" || !!values.meetingDate,
     { message: "Enter the meeting date", path: ["meetingDate"] },
+  )
+  .refine(
+    (values) => values.type !== "Meeting Notice" || !!values.meetingTime,
+    { message: "Pick the meeting time", path: ["meetingTime"] },
   )
   .refine((values) => values.schedule !== "later" || !!values.scheduleDate, {
     message: "Pick a date to send on",
