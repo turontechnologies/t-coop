@@ -14,6 +14,12 @@ export const profileSchema = z.object({
     .trim()
     .length(11, "NIN must be 11 digits")
     .regex(/^\d+$/, "NIN must contain numbers only"),
+  /** Optional typed-in second ID (e.g. a staff number), unique within the co-op. */
+  alternativeId: z
+    .string()
+    .trim()
+    .max(50, "Keep it under 50 characters")
+    .optional(),
   firstName: z.string().trim().min(1, "Enter your first name"),
   lastName: z.string().trim().min(1, "Enter your last name"),
   otherName: z.string().trim().optional(),

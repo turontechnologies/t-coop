@@ -217,6 +217,12 @@ export function ProfileDetailsForm({
             }
           />
           <ProfileField
+            label="Alternative ID"
+            registration={register("alternativeId")}
+            error={errors.alternativeId?.message}
+            disabled={busy}
+          />
+          <ProfileField
             label="First Name"
             required
             registration={register("firstName")}
@@ -427,6 +433,10 @@ function ProfileReadOnlyView({
                 ? verifiedBadge
                 : undefined
             }
+          />
+          <ProfileViewField
+            label="Alternative ID"
+            value={profile.alternativeId || undefined}
           />
           <ProfileViewField label="First Name" value={profile.firstName} />
           <ProfileViewField label="Last Name" value={profile.lastName} />
