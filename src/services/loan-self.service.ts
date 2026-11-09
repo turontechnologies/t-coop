@@ -6,8 +6,8 @@ export interface LoanApplicationPayload {
   loanTypeId: string;
   amount: number;
   loanMode: LoanMode;
-  /** Required for a "TimesTwo" loan; a "Within" loan has no guarantor. */
-  guarantorMemberId?: string;
+  /** Two or more, required for a "TimesTwo" loan; a "Within" loan has no guarantor. */
+  guarantorMemberIds?: string[];
 }
 
 export interface DisbursementPreview {

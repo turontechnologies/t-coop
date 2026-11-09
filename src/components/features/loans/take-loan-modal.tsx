@@ -32,6 +32,10 @@ import { useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { GuarantorMultiSelect } from "@/components/features/loans/guarantor-multi-select";
+
+/** A Times two loan needs at least this many guarantors (the backend enforces it too). */
+const MIN_GUARANTORS = 2;
 
 interface TakeLoanModalProps {
   open: boolean;
@@ -45,7 +49,7 @@ interface TakeLoanModalProps {
     loanTypeId: string;
     amount: number;
     loanMode: LoanMode;
-    guarantorMemberId?: string;
+    guarantorMemberIds?: string[];
   }) => void;
 }
 
@@ -66,7 +70,7 @@ export function TakeLoanModal({
   const [loanMode, setLoanMode] = useState<LoanMode>("TimesTwo");
   const [loanTypeId, setLoanTypeId] = useState("");
   const [amount, setAmount] = useState("");
-  const [guarantorMemberId, setGuarantorMemberId] = useState("");
+  const [guarantorMemberIds, setGuarantorMemberIds] = useState<string[]>([]);
 
   const {
     data: types,
@@ -94,14 +98,19 @@ export function TakeLoanModal({
   );
 
   const needsGuarantor = loanMode === "TimesTwo";
-  // A guarantor has to be an active member of this co-op (the backend enforces it too).
-  const guarantorOptions = members.filter(
-    (member) => member.id !== memberId && member.status === "Active",
-  );
+  // Anyone active in this co-op — a member or the admin — can stand as guarantor, except the
+  // borrower themselves (the backend enforces it too).
+  const guarantorOptions = members
+    .filter((member) => member.id !== memberId && member.status === "Active")
+    .map((member) => ({
+      id: member.id,
+      name: coopMemberFullName(member),
+      tag: member.role === "Admin" ? "Admin" : undefined,
+    }));
 
   const isValid =
     !!selectedType &&
-    (!needsGuarantor || !!guarantorMemberId) &&
+    (!needsGuarantor || guarantorMemberIds.length >= MIN_GUARANTORS) &&
     amountNumber > 0 &&
     amountNumber <= eligibleAmount;
 
@@ -110,7 +119,7 @@ export function TakeLoanModal({
       setLoanMode("TimesTwo");
       setLoanTypeId("");
       setAmount("");
-      setGuarantorMemberId("");
+      setGuarantorMemberIds([]);
     }
     onOpenChange(next);
   };
@@ -244,27 +253,15 @@ export function TakeLoanModal({
 
           {needsGuarantor ? (
             <div className="space-y-2">
-              <Label htmlFor={guarantorId}>Guarantor</Label>
-              <Select
-                value={guarantorMemberId}
-                items={guarantorOptions.map((member) => ({
-                  value: member.id,
-                  label: coopMemberFullName(member),
-                }))}
-                onValueChange={(value) => setGuarantorMemberId(value ?? "")}
+              <Label htmlFor={guarantorId}>Guarantors</Label>
+              <GuarantorMultiSelect
+                id={guarantorId}
+                options={guarantorOptions}
+                value={guarantorMemberIds}
+                onChange={setGuarantorMemberIds}
+                min={MIN_GUARANTORS}
                 disabled={busy}
-              >
-                <SelectTrigger id={guarantorId} className="h-11 w-full">
-                  <SelectValue placeholder="Select a member of your co-operative" />
-                </SelectTrigger>
-                <SelectContent>
-                  {guarantorOptions.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {coopMemberFullName(member)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
           ) : null}
 
@@ -334,8 +331,8 @@ export function TakeLoanModal({
                 loanTypeId,
                 amount: amountNumber,
                 loanMode,
-                guarantorMemberId: needsGuarantor
-                  ? guarantorMemberId
+                guarantorMemberIds: needsGuarantor
+                  ? guarantorMemberIds
                   : undefined,
               });
             }}
