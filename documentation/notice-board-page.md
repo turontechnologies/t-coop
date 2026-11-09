@@ -80,6 +80,34 @@ t-coop/notice-attachments`, `resource_type: auto` so PDFs/Word docs work, not ju
   checkboxes select rows, Resend/Delete operate on the selection via `Promise.all` over the real
   mutations, Delete opens a real confirmation dialog first.
 
+## Meetings: RSVP and attendance
+
+A **Meeting Notice** needs a date and a **time** (time picker on web, `HH:MM` on mobile). When it's
+sent, the backend creates its **attendance register** — one line per active member it reaches
+(`meeting_attendance`, V42, `MeetingAttendanceService`).
+
+- **Members answer (optional):** on the notice page, "Will you attend?" — _Attending in person_,
+  _Attending online_, or _Not attending_ with a required reason. They can change it until the
+  meeting starts (Africa/Lagos time), then it's closed.
+- **A "not attending" answer fills the register automatically:** that member shows as **Absent**
+  with their reason as the note ("From their apology"). Everyone else starts blank.
+- **Officers take attendance:** the co-op admin, and members holding a co-op role, see the
+  **Attendance** card on the notice — counts (invited, in person, online, not attending, no
+  response, present, absent) and a row per member to mark Present/Absent with a note. An officer's
+  mark always wins over the automatic one; if a member switches back to attending, the automatic
+  Absent is cleared.
+- **History:** Notice Board → **My Attendance** (everyone; mobile: Notice Board → Attendance →
+  Mine) and **Members Attendance** (officers): a per-member summary — meetings, present, absent,
+  apologies, attendance rate — with each member's full history one click away.
+- Meeting notices sent before this existed get their register the first time it's opened.
+
+Backend: `MeetingAttendanceController` — `GET/PUT /notices/{id}/my-response`,
+`GET/PUT /notices/{id}/attendance`, `GET /attendance/me`, `GET /cooperatives/{id}/attendance`
+(see the backend's `api-contracts.md` §7). Web: `meeting-rsvp-card.tsx`,
+`meeting-register-card.tsx`, `attendance-history.tsx`, `src/lib/meeting.ts`. Mobile:
+`components/features/notice-board/meeting-rsvp.tsx`, `meeting-register.tsx`,
+`app/(app)/notice-board/attendance.tsx`.
+
 ## Routes
 
 | Route                | Purpose                                                                                                                                             |
