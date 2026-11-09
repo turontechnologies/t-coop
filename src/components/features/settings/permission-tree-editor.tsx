@@ -13,6 +13,21 @@ import {
 } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
+/** Tabs every member always has, whatever role they hold (backend CoopPermissions.BASELINE) —
+ * shown ticked and locked so nobody thinks they can take them away or needs to grant them. */
+const ALWAYS_ON: Record<string, string[]> = {
+  "Savings & Contributions": ["My Savings"],
+  Loans: ["My Loans"],
+};
+
+function isAlwaysOn(module: string, tab: string): boolean {
+  return ALWAYS_ON[module]?.includes(tab) ?? false;
+}
+
+function tabPrefix(module: string): string {
+  return `${module}::`;
+}
+
 interface PermissionTreeEditorProps {
   tree: MenuNode[];
   value: string[];
@@ -30,7 +45,23 @@ export function PermissionTreeEditor({
   onChange,
   disabled,
 }: PermissionTreeEditorProps) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Modules granted only some of their tabs start open, so those grants are never hidden.
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () =>
+      new Set(
+        tree
+          .filter(
+            (node) =>
+              moduleAccess(value, node.label) === null &&
+              (node.tabs ?? []).some(
+                (tab) =>
+                  !isAlwaysOn(node.label, tab) &&
+                  tabAccess(value, node.label, tab) !== null,
+              ),
+          )
+          .map((node) => node.label),
+      ),
+  );
 
   const toggleExpand = (label: string) => {
     setExpanded((prev) => {
@@ -47,7 +78,9 @@ export function PermissionTreeEditor({
         raw === module ||
         raw === `${module}::read` ||
         raw === `${module}::write`;
-      return !isModuleLevel;
+      // Unticking a module removes all of it — its tab grants too.
+      const isTabLevel = !access && raw.startsWith(tabPrefix(module));
+      return !isModuleLevel && !isTabLevel;
     });
     onChange(
       access
@@ -78,6 +111,14 @@ export function PermissionTreeEditor({
       {tree.map((node) => {
         const access = moduleAccess(value, node.label);
         const hasTabs = (node.tabs?.length ?? 0) > 0;
+        // Granted only some tabs (not counting the always-on ones): shown part-ticked.
+        const partial =
+          access === null &&
+          (node.tabs ?? []).some(
+            (tab) =>
+              !isAlwaysOn(node.label, tab) &&
+              tabAccess(value, node.label, tab) !== null,
+          );
         const isExpanded = expanded.has(node.label);
         return (
           <div key={node.label}>
@@ -100,13 +141,23 @@ export function PermissionTreeEditor({
               )}
               <Checkbox
                 checked={access !== null}
+                indeterminate={partial}
                 disabled={disabled}
                 onCheckedChange={(checked) =>
-                  setModuleGrant(node.label, checked === true ? "write" : null)
+                  // A part-ticked module clears on click, like any ticked one.
+                  setModuleGrant(
+                    node.label,
+                    checked === true && !partial ? "write" : null,
+                  )
                 }
               />
               <span className="flex-1 text-sm text-foreground">
                 {node.label}
+                {partial ? (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    Some tabs
+                  </span>
+                ) : null}
               </span>
               {access !== null ? (
                 <AccessToggle
@@ -120,6 +171,19 @@ export function PermissionTreeEditor({
             {hasTabs && isExpanded ? (
               <div className="mb-1 ml-8 space-y-0.5 border-l border-border pl-3">
                 {node.tabs?.map((tab) => {
+                  if (isAlwaysOn(node.label, tab)) {
+                    return (
+                      <div key={tab} className="flex items-center gap-2 py-1">
+                        <Checkbox checked disabled />
+                        <span className="flex-1 text-xs text-muted-foreground">
+                          {tab}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Always on — every member
+                        </span>
+                      </div>
+                    );
+                  }
                   const tabLevelAccess = tabAccess(value, node.label, tab);
                   return (
                     <div key={tab} className="flex items-center gap-2 py-1">
