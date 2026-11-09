@@ -30,6 +30,7 @@ interface CoopMemberDto {
   accountNumber: string | null;
   accountName: string | null;
   avatarUrl: string | null;
+  alternativeId: string | null;
 }
 
 function toRole(role: CoopMemberDto["role"]): CoopMemberRole {
@@ -64,6 +65,7 @@ function fromDto(dto: CoopMemberDto): CoopMember {
     accountNumber: dto.accountNumber ?? "",
     accountName: dto.accountName ?? "",
     avatarUrl: dto.avatarUrl ?? "",
+    alternativeId: dto.alternativeId ?? "",
   };
 }
 

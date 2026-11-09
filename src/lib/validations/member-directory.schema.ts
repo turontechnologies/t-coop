@@ -30,8 +30,16 @@ export const addMemberSchema = z.object({
   city: z.string().trim().optional(),
   facebook: z.string().trim().optional(),
   membershipId: z.string().trim().min(1, "Enter a membership ID"),
-  // No guarantor to join — a member only names one when applying for a loan. Next-of-kin details
-  // are all optional.
+  /** Optional typed-in second ID (e.g. a staff or old register number), unique within the co-op. */
+  alternativeId: z
+    .string()
+    .trim()
+    .max(50, "Keep it under 50 characters")
+    .optional(),
+  /** Optional unless the co-op turned on "Require a guarantor for new members" (checked on
+   * submit, since it depends on the co-op's setting). Loan guarantors are separate. */
+  guarantor: z.string().trim().optional(),
+  // Next-of-kin details are all optional.
   nextOfKinName: z.string().trim().optional(),
   nextOfKinPhone: z.string().trim().optional(),
   nextOfKinEmail: z.string().trim().optional(),

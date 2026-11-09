@@ -34,6 +34,8 @@ export interface CooperativeSummary {
   memberIdPadding: number;
   memberIdType: IdGenerationType;
   minGuarantors: number;
+  /** Settings → Co-operative: a new member must name a guarantor. Off by default. */
+  requireMemberGuarantors?: boolean;
   memberCount: number;
   savingsTypeCount: number;
   loanTypeCount: number;

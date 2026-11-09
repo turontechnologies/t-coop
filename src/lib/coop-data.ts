@@ -32,6 +32,8 @@ export interface CoopMember {
   nextOfKinEmail?: string;
   nextOfKinRelationship?: string;
   nextOfKinAuthorityLevel?: string;
+  /** Optional typed-in second ID (e.g. a staff number), unique within the co-op. */
+  alternativeId?: string;
 }
 
 export type CoopSavingsStatus = "Success" | "Pending" | "Failed";

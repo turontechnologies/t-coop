@@ -24,6 +24,7 @@ import { LocationFields } from "@/components/features/shared/location-fields";
 import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { useAddCoopMember } from "@/hooks/use-coop-members";
+import { useCooperative } from "@/hooks/use-cooperative";
 import { useNextMemberId } from "@/hooks/use-next-id";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import {
@@ -54,6 +55,9 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const router = useRouter();
   const addMember = useAddCoopMember(coopId);
   const { banks, loading: banksLoading } = useBankList();
+  const { data: coop } = useCooperative(coopId);
+  // Settings → Co-operative: "Require a guarantor for new members".
+  const requireGuarantor = !!coop?.requireMemberGuarantors;
   const { data: nextMemberId, isLoading: loadingNextId } =
     useNextMemberId(coopId);
 
@@ -69,6 +73,8 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const homeAddressId = useId();
   const facebookId = useId();
   const membershipIdId = useId();
+  const alternativeIdId = useId();
+  const guarantorId = useId();
   const roleId = useId();
   const twitterId = useId();
   const nextOfKinNameId = useId();
@@ -103,6 +109,8 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
       city: "",
       facebook: "",
       membershipId: "",
+      alternativeId: "",
+      guarantor: "",
       nextOfKinName: "",
       nextOfKinPhone: "",
       nextOfKinEmail: "",
@@ -138,6 +146,12 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   });
 
   const onSubmit = handleSubmit(async (values) => {
+    if (requireGuarantor && !values.guarantor?.trim()) {
+      setError("guarantor", {
+        message: "Your co-operative requires a guarantor for every new member",
+      });
+      return;
+    }
     const isTaken = existingMembers.some(
       (member) =>
         member.id.toLowerCase() === values.membershipId.trim().toLowerCase(),
@@ -164,6 +178,14 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
     } catch (error) {
       if (error instanceof Error && /membership id/i.test(error.message)) {
         setError("membershipId", { message: error.message });
+        return;
+      }
+      if (error instanceof Error && /alternative id/i.test(error.message)) {
+        setError("alternativeId", { message: error.message });
+        return;
+      }
+      if (error instanceof Error && /guarantor/i.test(error.message)) {
+        setError("guarantor", { message: error.message });
         return;
       }
       toast.error("Couldn't add that member", {
@@ -408,6 +430,33 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
               Auto-generated — change the format in Settings.
             </p>
             <FieldError message={errors.membershipId?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={alternativeIdId}>Alternative ID (optional)</Label>
+            <Input
+              id={alternativeIdId}
+              placeholder="e.g. staff number or old register number"
+              disabled={isSubmitting}
+              maxLength={50}
+              aria-invalid={!!errors.alternativeId}
+              className="h-11"
+              {...register("alternativeId")}
+            />
+            <FieldError message={errors.alternativeId?.message} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={guarantorId}>
+              Guarantor{requireGuarantor ? "" : " (optional)"}
+            </Label>
+            <Input
+              id={guarantorId}
+              placeholder="Guarantor's full name"
+              disabled={isSubmitting}
+              aria-invalid={!!errors.guarantor}
+              className="h-11"
+              {...register("guarantor")}
+            />
+            <FieldError message={errors.guarantor?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor={nextOfKinNameId}>Next of Kin Name (optional)</Label>
