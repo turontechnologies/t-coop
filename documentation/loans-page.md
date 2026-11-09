@@ -145,8 +145,19 @@ buttons always match what the backend will accept.
 - **Interest follows the loan type** (percentage, fixed amount, or none),
   flat over the term and split evenly across installments; every repayment
   is exactly one installment — no partial amounts.
-- **No bulk loan import.** A loan is an application with an eligibility
-  check and a guarantor, not a ledger row.
+- **Import brings in existing loans, on the members' side only.** Members
+  Loans → a loan type → Export / Import offers CSV/Excel/PDF export plus
+  "Download import template" and "Import from template" — for the co-op
+  admin and staff with write access to Members Loans. Each row (Membership
+  ID, Amount, Loan Mode, optional Guarantor, Start Date, Repayments Made) is
+  a loan already paid out offline: `POST /cooperatives/{id}/loans/import`
+  (`LoanImportController`) creates it Active — Completed when every
+  installment is paid — skips the guarantor/officer chain and payout, and
+  records a repayment row per installment already paid so balances, overdue
+  and borrower history are right. It doesn't touch the savings ledger.
+  A member's own loans, and the admin's My Loans tab, are **export only**.
+  New loans still go through Take a Loan.
+  (`src/lib/loan-import.ts`, `src/app/(dashboard)/loans/type/[type]/page.tsx`.)
 - **Payout happens on the server, not in the browser,** so an officer can't
   skip a step or double-pay, and the approval is only recorded once money
   has actually left.

@@ -13,10 +13,6 @@ import {
   TabsTab,
 } from "@/components/ui/tabs";
 import { CoopSavingsSummaryTable } from "@/components/features/coop/coop-savings-summary-table";
-import {
-  type ImportConfig,
-  type ImportResult,
-} from "@/components/features/shared/export-import-menu";
 import { MemberSavingsView } from "@/components/features/savings/member-savings-view";
 import {
   UploadTellerModal,
@@ -37,11 +33,6 @@ import {
 import { formatMoney } from "@/lib/format";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
-import {
-  downloadSavingsImportTemplate,
-  parseSavingsImportFile,
-  type ImportedSavingsRow,
-} from "@/lib/savings-import";
 
 type AdminSavingsTab = "members" | "my" | "request";
 
@@ -119,42 +110,6 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     } finally {
       setTellerBusy(false);
     }
-  };
-
-  const handleImportSavings = async (
-    rows: ImportedSavingsRow[],
-  ): Promise<ImportResult> => {
-    let imported = 0;
-    const errors: ImportResult["errors"] = [];
-
-    for (const row of rows) {
-      try {
-        await manualDeposit.mutateAsync({
-          memberId: member.id,
-          savingsTypeId: row.savingsTypeId,
-          amount: row.amount,
-        });
-        imported += 1;
-      } catch (error) {
-        errors.push({
-          row: row.rowNumber,
-          message:
-            error instanceof Error ? error.message : "Could not import deposit",
-        });
-      }
-    }
-
-    return { imported, errors };
-  };
-
-  const activeSavingsTypes = totalsByType.filter(
-    (type) => type.status === "Active",
-  );
-  const savingsImportConfig: ImportConfig<ImportedSavingsRow> = {
-    templateStorageKey: `admin-savings-${member.id}-template-downloaded`,
-    downloadTemplate: () => downloadSavingsImportTemplate(activeSavingsTypes),
-    parseFile: (file) => parseSavingsImportFile(file, activeSavingsTypes),
-    onImport: handleImportSavings,
   };
 
   const handleResolveRequest = async (
@@ -271,9 +226,6 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
                   onAddOpenChange={setMyAddOpen}
                   withdrawOpen={myWithdrawOpen}
                   onWithdrawOpenChange={setMyWithdrawOpen}
-                  importConfig={
-                    member.role === "admin" ? savingsImportConfig : undefined
-                  }
                 />
               </TabsPanel>
             ) : null}

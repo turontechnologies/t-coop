@@ -6,10 +6,24 @@ import { ArrowLeft, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopSavingsTypeRecordsTable } from "@/components/features/coop/coop-savings-type-records-table";
-import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import {
+  ExportImportMenu,
+  type ImportConfig,
+  type ImportResult,
+} from "@/components/features/shared/export-import-menu";
 import { useCooperative } from "@/hooks/use-cooperative";
-import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
+import {
+  useCoopSavingsRecords,
+  useCoopSavingsTypes,
+} from "@/hooks/use-coop-savings";
+import { useTabAccess } from "@/hooks/use-permission";
+import { useManualSavingsDeposit } from "@/hooks/use-savings-self";
 import { formatMoney } from "@/lib/format";
+import {
+  downloadSavingsImportTemplate,
+  parseSavingsImportFile,
+  type ImportedSavingsRow,
+} from "@/lib/savings-import";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
 import { useAuthStore } from "@/store/auth.store";
@@ -46,6 +60,59 @@ export default function AdminSavingsTypePage({
     () => records.reduce((sum, record) => sum + record.amount, 0),
     [records],
   );
+
+  // Import is for whoever can manage members' savings (the admin, or staff with write access to
+  // Members Savings) — never on a member's own savings, which only export.
+  const membersSavingsAccess = useTabAccess(
+    "Savings & Contributions",
+    "Members Savings",
+  );
+  const canImport =
+    authMember?.role !== "member" &&
+    authMember?.role !== "super_admin" &&
+    membersSavingsAccess === "write";
+  const { data: savingsTypes = [] } = useCoopSavingsTypes(coopId, canImport);
+  const savingsTypeSummary = savingsTypes.find(
+    (item) => item.name === savingsType,
+  );
+  const manualDeposit = useManualSavingsDeposit(coopId ?? "");
+
+  const handleImport = async (
+    rows: ImportedSavingsRow[],
+  ): Promise<ImportResult> => {
+    let imported = 0;
+    const errors: ImportResult["errors"] = [];
+    for (const row of rows) {
+      try {
+        await manualDeposit.mutateAsync({
+          memberId: row.memberId,
+          savingsTypeId: row.savingsTypeId,
+          amount: row.amount,
+        });
+        imported += 1;
+      } catch (error) {
+        errors.push({
+          row: row.rowNumber,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Could not import this row",
+        });
+      }
+    }
+    return { imported, errors };
+  };
+
+  const importConfig: ImportConfig<ImportedSavingsRow> | undefined =
+    canImport && savingsTypeSummary?.status === "Active"
+      ? {
+          templateStorageKey: `members-savings-${coopId}-${savingsTypeSummary.id}-template-downloaded`,
+          downloadTemplate: () =>
+            downloadSavingsImportTemplate(savingsTypeSummary),
+          parseFile: (file) => parseSavingsImportFile(file, savingsTypeSummary),
+          onImport: handleImport,
+        }
+      : undefined;
 
   if (!coop) {
     return (
@@ -103,6 +170,7 @@ export default function AdminSavingsTypePage({
                 columns={EXPORT_COLUMNS}
                 filenamePrefix={`${coop.id}-${savingsType}`}
                 exportTitle={`${coop.name} — ${savingsType}`}
+                importConfig={importConfig}
               />
             </div>
             <CoopSavingsTypeRecordsTable

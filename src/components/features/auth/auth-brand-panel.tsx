@@ -47,7 +47,7 @@ export function AuthBrandPanel() {
             T-Cooperative Platform
           </p>
           <h1 className="text-3xl font-semibold leading-tight text-balance">
-            The operating system for your co-operative.
+            A Software Management system for your Co-operative society
           </h1>
           <p className="text-base leading-relaxed text-white/70">
             Savings, contributions, loans, and dividends — managed with the

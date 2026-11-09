@@ -196,16 +196,17 @@ deleted in a future cleanup once nobody's relying on it as reference.
   is deliberately template-gated: "Import from template" stays disabled
   (with a session-scoped `sessionStorage` flag, not a hard block that
   would annoy repeat use) until "Download import template" has been
-  clicked at least once, so a member can't upload an arbitrary file and
-  guess at the expected shape. `src/lib/savings-import.ts` generates that
-  template (an `.xlsx` with a `Template` sheet + a `Valid Savings Types`
-  reference sheet) and parses/validates whatever gets re-uploaded — unknown
-  Savings Type names, out-of-range amounts, and unparseable dates are
-  rejected per-row (not the whole file) with a toast summarizing how many
-  rows imported vs. were skipped and why. Imported records are tagged
-  `method: "Manual Upload"` (the value already existed on
-  `SavingsRecord.method`, unused until now) so they're visually
-  distinguishable from a real Paystack payment on the details page.
+  clicked at least once, so nobody uploads an arbitrary file and guesses at
+  the expected shape. **Import is only on the members' side:** Members
+  Savings → a savings type, for the co-op admin and staff with write access
+  to Members Savings. A member's own savings, and the admin's My Savings
+  tab, are **export only**. `src/lib/savings-import.ts` generates the
+  template for that type (an `.xlsx` with `Membership ID` + `Amount` and a
+  `Field Reference` sheet) and validates the upload per-row (not the whole
+  file); each valid row is recorded for that member through the admin
+  manual-deposit endpoint (`method: "Manual Upload"`, savings charges
+  deducted as for a teller upload), and a toast summarizes how many rows
+  imported vs. were skipped and why.
 
 ## Flow
 
