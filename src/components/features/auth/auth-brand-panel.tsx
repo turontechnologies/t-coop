@@ -7,7 +7,7 @@ import { Logo } from "@/components/brand/logo";
 const HIGHLIGHTS = [
   {
     icon: Users,
-    label: "9 co-operatives, 900+ members",
+    label: "9 co‑operatives, 900+ members",
     description: "Every society on one ledger.",
   },
   {
@@ -18,7 +18,7 @@ const HIGHLIGHTS = [
   {
     icon: ShieldCheck,
     label: "Bank-grade security",
-    description: "OTP verification on every session.",
+    description: "OTP verification on every sign-in.",
   },
 ];
 
@@ -47,11 +47,12 @@ export function AuthBrandPanel() {
             T-Cooperative Platform
           </p>
           <h1 className="text-3xl font-semibold leading-tight text-balance">
-            A Software Management system for your Co-operative society
+            A software management system for your{" "}
+            <span className="whitespace-nowrap">co-operative</span> society
           </h1>
           <p className="text-base leading-relaxed text-white/70">
-            Savings, contributions, loans, and dividends — managed with the
-            precision your members expect.
+            Savings, contributions, loans and dividends, managed with the
+            precision to meet your members&apos; expectations.
           </p>
         </div>
 
