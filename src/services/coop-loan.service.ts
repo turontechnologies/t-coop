@@ -76,6 +76,26 @@ export const coopLoanService = {
     );
     return data;
   },
+
+  /** Brings in one member's existing loan (admin import — LoanImportController). */
+  async importLoan(
+    coopId: string,
+    row: {
+      memberId: string;
+      loanTypeId: string;
+      amount: number;
+      loanMode: string;
+      guarantorMemberId?: string;
+      startDate?: string;
+      repaymentsMade: number;
+    },
+  ): Promise<CoopLoanRecord> {
+    const { data } = await apiClient.post<CoopLoanRecord>(
+      `/cooperatives/${coopId}/loans/import`,
+      row,
+    );
+    return data;
+  },
 };
 
 // LoanTypeCreateRequest on the backend names two fields differently from the response DTO

@@ -6,10 +6,24 @@ import { ArrowLeft, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CoopLoanTypeRecordsTable } from "@/components/features/coop/coop-loan-type-records-table";
-import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import {
+  ExportImportMenu,
+  type ImportConfig,
+  type ImportResult,
+} from "@/components/features/shared/export-import-menu";
 import { useCooperative } from "@/hooks/use-cooperative";
-import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
+import {
+  useCoopLoanRecords,
+  useCoopLoanTypes,
+  useImportCoopLoan,
+} from "@/hooks/use-coop-loans";
+import { useTabAccess } from "@/hooks/use-permission";
 import { formatMoney } from "@/lib/format";
+import {
+  downloadLoanImportTemplate,
+  parseLoanImportFile,
+  type ImportedLoanRow,
+} from "@/lib/loan-import";
 import type { ExportColumn } from "@/lib/table-export";
 import type { CoopLoanRecord } from "@/lib/coop-data";
 import { useAuthStore } from "@/store/auth.store";
@@ -44,6 +58,57 @@ export default function AdminLoanTypePage({ params }: AdminLoanTypePageProps) {
     () => records.reduce((sum, record) => sum + record.amount, 0),
     [records],
   );
+
+  // Import is for whoever can manage members' loans (the admin, or staff with write access to
+  // Members Loans) — never on a member's own loans, which only export.
+  const membersLoansAccess = useTabAccess("Loans", "Members Loans");
+  const canImport =
+    authMember?.role !== "member" &&
+    authMember?.role !== "super_admin" &&
+    membersLoansAccess === "write";
+  const { data: loanTypes = [] } = useCoopLoanTypes(coopId, canImport);
+  const loanTypeSummary = loanTypes.find((item) => item.name === loanType);
+  const importLoan = useImportCoopLoan(coopId);
+
+  const handleImport = async (
+    rows: ImportedLoanRow[],
+  ): Promise<ImportResult> => {
+    let imported = 0;
+    const errors: ImportResult["errors"] = [];
+    for (const row of rows) {
+      try {
+        await importLoan.mutateAsync({
+          memberId: row.memberId,
+          loanTypeId: row.loanTypeId,
+          amount: row.amount,
+          loanMode: row.loanMode,
+          guarantorMemberId: row.guarantorMemberId,
+          startDate: row.startDate,
+          repaymentsMade: row.repaymentsMade,
+        });
+        imported += 1;
+      } catch (error) {
+        errors.push({
+          row: row.rowNumber,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Could not import this loan",
+        });
+      }
+    }
+    return { imported, errors };
+  };
+
+  const importConfig: ImportConfig<ImportedLoanRow> | undefined =
+    canImport && loanTypeSummary
+      ? {
+          templateStorageKey: `members-loans-${coopId}-${loanTypeSummary.id}-template-downloaded`,
+          downloadTemplate: () => downloadLoanImportTemplate(loanTypeSummary),
+          parseFile: (file) => parseLoanImportFile(file, loanTypeSummary),
+          onImport: handleImport,
+        }
+      : undefined;
 
   if (!coop) {
     return (
@@ -99,6 +164,7 @@ export default function AdminLoanTypePage({ params }: AdminLoanTypePageProps) {
                 columns={EXPORT_COLUMNS}
                 filenamePrefix={`${coop.id}-${loanType}`}
                 exportTitle={`${coop.name} — ${loanType}`}
+                importConfig={importConfig}
               />
             </div>
             <CoopLoanTypeRecordsTable

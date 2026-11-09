@@ -17,19 +17,9 @@ import { MemberLoansView } from "@/components/features/loans/member-loans-view";
 import { PENDING_LOAN_STATUSES } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
-import { useApplyForLoan } from "@/hooks/use-loans-self";
 import { formatMoney } from "@/lib/format";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
-import {
-  downloadLoanImportTemplate,
-  parseLoanImportFile,
-  type ImportedLoanApplicationRow,
-} from "@/lib/loan-import";
-import {
-  type ImportConfig,
-  type ImportResult,
-} from "@/components/features/shared/export-import-menu";
 
 type AdminLoansTab = "requests" | "members" | "my";
 
@@ -47,7 +37,6 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
   const { data: myRecords = [] } = useCoopLoanRecords(coopId, {
     memberId: member.id,
   });
-  const applyForLoan = useApplyForLoan(coopId);
 
   const myTotal = useMemo(
     () =>
@@ -93,45 +82,6 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
   const pendingRequests = allLoans.filter((loan) =>
     PENDING_LOAN_STATUSES.includes(loan.status),
   );
-
-  const handleImportLoans = async (
-    rows: ImportedLoanApplicationRow[],
-  ): Promise<ImportResult> => {
-    let imported = 0;
-    const errors: ImportResult["errors"] = [];
-
-    for (const row of rows) {
-      try {
-        await applyForLoan.mutateAsync({
-          loanTypeId: row.loanTypeId,
-          amount: row.amount,
-          loanMode: row.loanMode,
-          guarantorMemberId: row.guarantorMemberId,
-        });
-        imported += 1;
-      } catch (error) {
-        errors.push({
-          row: row.rowNumber,
-          message:
-            error instanceof Error
-              ? error.message
-              : "Could not submit loan application",
-        });
-      }
-    }
-
-    return { imported, errors };
-  };
-
-  const activeLoanTypes = totalsByType.filter(
-    (type) => type.status === "Active",
-  );
-  const loanImportConfig: ImportConfig<ImportedLoanApplicationRow> = {
-    templateStorageKey: `admin-loans-${member.id}-template-downloaded`,
-    downloadTemplate: () => downloadLoanImportTemplate(activeLoanTypes),
-    parseFile: (file) => parseLoanImportFile(file, activeLoanTypes),
-    onImport: handleImportLoans,
-  };
 
   return (
     <div className="space-y-6">
@@ -208,9 +158,6 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
                   showSummary={false}
                   takeOpen={myTakeOpen}
                   onTakeOpenChange={setMyTakeOpen}
-                  importConfig={
-                    member.role === "admin" ? loanImportConfig : undefined
-                  }
                 />
               </TabsPanel>
             ) : null}

@@ -117,7 +117,7 @@ export function TakeLoanModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Take a Loan</DialogTitle>
         </DialogHeader>

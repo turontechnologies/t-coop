@@ -38,6 +38,19 @@ export function useCoopLoanRecord(recordId: string | undefined) {
   });
 }
 
+/** Admin import of members' existing loans; refreshes loan lists and totals when a batch ends. */
+export function useImportCoopLoan(coopId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (row: Parameters<typeof coopLoanService.importLoan>[1]) =>
+      coopLoanService.importLoan(coopId as string, row),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["coop-loans", coopId] });
+      void queryClient.invalidateQueries({ queryKey: ["cooperative", coopId] });
+    },
+  });
+}
+
 export function useCoopLoanTypeMutations(coopId: string) {
   const queryClient = useQueryClient();
   const invalidate = () =>
