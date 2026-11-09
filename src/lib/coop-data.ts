@@ -121,7 +121,7 @@ export interface CoopLoanRecord {
   guarantorId?: string | null;
   /** Null for a "Within" loan, which has no guarantor. */
   guarantorName: string | null;
-  /** "TimesTwo" (up to half your savings, guarantor) or "Within" (from your own savings). */
+  /** "TimesTwo" (up to twice your savings, two or more guarantors) or "Within" (from your own savings). */
   loanMode?: "TimesTwo" | "Within";
   date: string;
   status: CoopLoanStatus;

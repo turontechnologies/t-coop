@@ -183,7 +183,7 @@ export default function LoanTypeCreationPage() {
                 <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
                   Set by the mode the member picks when applying —{" "}
                   <span className="font-medium text-foreground">Times two</span>
-                  : up to half their savings;{" "}
+                  : up to twice their savings;{" "}
                   <span className="font-medium text-foreground">Within</span>:
                   up to their savings. Both are capped at the maximum amount.
                 </p>

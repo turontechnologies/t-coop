@@ -1,7 +1,6 @@
 import type { InterestType } from "@/types/coop-loans";
 
-/** "TimesTwo": borrow up to half your savings (your savings must be at least twice the loan) —
- * needs a guarantor. "Within": borrow from your own savings, up to your savings — no guarantor;
+/** "TimesTwo": borrow up to twice your savings — needs at least two guarantors. "Within": borrow from your own savings, up to your savings — no guarantor;
  * the payout comes out of your savings and repaid principal goes back in. Mirrors the backend's
  * LoanEligibility. */
 export type LoanMode = "TimesTwo" | "Within";
@@ -15,7 +14,7 @@ export const LOAN_MODES: {
     value: "TimesTwo",
     label: "Times two",
     description:
-      "Borrow up to half of your savings — your savings must be at least twice the loan. Needs a guarantor.",
+      "Borrow up to twice your savings (₦100 saved → up to ₦200). Needs at least two guarantors.",
   },
   {
     value: "Within",
@@ -47,7 +46,7 @@ export function computeEligibleAmount(
   mode: LoanMode,
 ): number {
   const savings = Math.max(totalSavings, 0);
-  const byMode = mode === "Within" ? savings : savings / 2;
+  const byMode = mode === "Within" ? savings : savings * 2;
   return Math.floor(Math.min(byMode, loanType.maxAmount) * 100) / 100;
 }
 

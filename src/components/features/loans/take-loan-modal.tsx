@@ -235,7 +235,7 @@ export function TakeLoanModal({
               <p className="text-xs text-destructive">
                 {loanMode === "Within"
                   ? "A Within loan can't be more than your savings"
-                  : "A Times two loan can't be more than half your savings"}{" "}
+                  : "A Times two loan can't be more than twice your savings"}{" "}
                 (or this loan type&apos;s maximum) —{" "}
                 {formatMoney(eligibleAmount, currency)} here.
               </p>
