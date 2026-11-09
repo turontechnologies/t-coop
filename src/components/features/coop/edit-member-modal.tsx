@@ -53,6 +53,7 @@ export function EditMemberModal({
   const emailId = useId();
   const roleId = useId();
   const guarantorId = useId();
+  const alternativeIdId = useId();
   const bankId = useId();
   const accountNumberId = useId();
 
@@ -72,6 +73,7 @@ export function EditMemberModal({
       email: member.email,
       role: member.role,
       guarantor: member.guarantor,
+      alternativeId: member.alternativeId ?? "",
       country: member.country,
       state: member.state,
       city: member.city,
@@ -190,6 +192,19 @@ export function EditMemberModal({
                 {...register("guarantor")}
               />
               <FieldError message={errors.guarantor?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={alternativeIdId}>Alternative ID (optional)</Label>
+              <Input
+                id={alternativeIdId}
+                placeholder="e.g. staff number"
+                maxLength={50}
+                disabled={isSubmitting}
+                aria-invalid={!!errors.alternativeId}
+                className="h-11"
+                {...register("alternativeId")}
+              />
+              <FieldError message={errors.alternativeId?.message} />
             </div>
           </div>
 

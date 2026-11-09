@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -45,6 +46,7 @@ export function CooperativeDetailsForm() {
   const memberIdPrefixId = useId();
   const memberIdPaddingId = useId();
   const memberIdTypeId = useId();
+  const requireGuarantorId = useId();
 
   const {
     control,
@@ -77,6 +79,7 @@ export function CooperativeDetailsForm() {
       memberIdPrefix: coop.memberIdPrefix,
       memberIdPadding: coop.memberIdPadding,
       memberIdType: coop.memberIdType,
+      requireMemberGuarantors: !!coop.requireMemberGuarantors,
     });
   }, [coop, profile, reset]);
 
@@ -297,6 +300,42 @@ export function CooperativeDetailsForm() {
         </div>
       </div>
 
+      <div className="h-px bg-border" />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">New members</p>
+          <p className="text-xs text-muted-foreground">
+            Whether adding a member needs a guarantor. Loans always need at
+            least two guarantors, whatever this is set to.
+          </p>
+        </div>
+        <Controller
+          control={control}
+          name="requireMemberGuarantors"
+          render={({ field }) => (
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-4 sm:max-w-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor={requireGuarantorId}>
+                  Require a guarantor when adding a member
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {field.value
+                    ? "The guarantor field is required on Add Member."
+                    : "The guarantor field is optional on Add Member."}
+                </p>
+              </div>
+              <Switch
+                id={requireGuarantorId}
+                checked={!!field.value}
+                onCheckedChange={(checked) => field.onChange(checked)}
+                disabled={busy}
+              />
+            </div>
+          )}
+        />
+      </div>
+
       <div className="flex justify-end gap-3">
         <Button
           type="button"
@@ -319,6 +358,7 @@ export function CooperativeDetailsForm() {
               memberIdPrefix: coop.memberIdPrefix,
               memberIdPadding: coop.memberIdPadding,
               memberIdType: coop.memberIdType,
+              requireMemberGuarantors: !!coop.requireMemberGuarantors,
             })
           }
           disabled={busy}

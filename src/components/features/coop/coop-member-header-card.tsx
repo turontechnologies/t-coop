@@ -39,6 +39,9 @@ export function CoopMemberHeaderCard({ member }: CoopMemberHeaderCardProps) {
 
           <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Membership ID" value={member.id} />
+            {member.alternativeId ? (
+              <Field label="Alternative ID" value={member.alternativeId} />
+            ) : null}
             <Field label="Email" value={member.email} />
             <Field label="Guarantor" value={member.guarantor} />
             <Field label="Country" value={member.country} />
@@ -118,6 +121,9 @@ function FullProfileDialog({
         <div className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
           <ProfileSection title="Personal Information">
             <Field label="Membership ID" value={member.id} />
+            {member.alternativeId ? (
+              <Field label="Alternative ID" value={member.alternativeId} />
+            ) : null}
             <Field label="Status" value={member.status} />
             <Field label="First Name" value={member.firstName} />
             <Field label="Last Name" value={member.lastName} />

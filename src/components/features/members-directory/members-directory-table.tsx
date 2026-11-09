@@ -47,7 +47,8 @@ export function MembersDirectoryTable({
       (member) =>
         coopMemberFullName(member).toLowerCase().includes(query) ||
         member.email.toLowerCase().includes(query) ||
-        member.id.toLowerCase().includes(query),
+        member.id.toLowerCase().includes(query) ||
+        (member.alternativeId ?? "").toLowerCase().includes(query),
     );
   }, [members, search]);
 
