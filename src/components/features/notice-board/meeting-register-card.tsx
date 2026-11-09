@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,15 @@ function RegisterBody({
   register: MeetingRegister;
 }) {
   const mark = useMarkAttendance(noticeId);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 5_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const canMarkAttendance =
+    register.canMarkAttendance &&
+    !!register.attendanceEndsAt &&
+    Date.parse(register.attendanceEndsAt) > now;
   const [search, setSearch] = useState("");
   const [drafts, setDrafts] = useState<Record<string, Draft>>(() =>
     Object.fromEntries(
@@ -160,6 +169,12 @@ function RegisterBody({
         <Stat label="Absent" value={summary.absent} tone="destructive" />
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        {canMarkAttendance
+          ? `Attendance is open for this ${register.meetingDurationMinutes}-minute meeting.`
+          : `Attendance can only be marked during the meeting and closes after ${register.meetingDurationMinutes} minutes.`}
+      </p>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative w-full sm:max-w-xs">
           <Search
@@ -176,7 +191,9 @@ function RegisterBody({
         </div>
         <Button
           onClick={handleSave}
-          disabled={changed.length === 0 || mark.isPending}
+          disabled={
+            !canMarkAttendance || changed.length === 0 || mark.isPending
+          }
         >
           {mark.isPending ? (
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -233,7 +250,7 @@ function RegisterBody({
                         onChange={(attendance) =>
                           update(entry.memberId, { attendance })
                         }
-                        disabled={mark.isPending}
+                        disabled={!canMarkAttendance || mark.isPending}
                         label={`Attendance for ${entry.memberName}`}
                       />
                     </td>
@@ -242,7 +259,7 @@ function RegisterBody({
                         entry={entry}
                         draft={drafts[entry.memberId]}
                         onChange={(note) => update(entry.memberId, { note })}
-                        disabled={mark.isPending}
+                        disabled={!canMarkAttendance || mark.isPending}
                       />
                     </td>
                   </tr>
@@ -273,14 +290,14 @@ function RegisterBody({
                   onChange={(attendance) =>
                     update(entry.memberId, { attendance })
                   }
-                  disabled={mark.isPending}
+                  disabled={!canMarkAttendance || mark.isPending}
                   label={`Attendance for ${entry.memberName}`}
                 />
                 <NoteInput
                   entry={entry}
                   draft={drafts[entry.memberId]}
                   onChange={(note) => update(entry.memberId, { note })}
-                  disabled={mark.isPending}
+                  disabled={!canMarkAttendance || mark.isPending}
                 />
               </div>
             ))}

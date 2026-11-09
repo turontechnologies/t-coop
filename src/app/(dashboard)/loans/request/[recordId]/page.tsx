@@ -47,6 +47,7 @@ import {
 import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
 import { formatDateLong, formatMoney, getInitials } from "@/lib/format";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
+import { useTabAccess } from "@/hooks/use-permission";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import { useCooperative } from "@/hooks/use-cooperative";
 import {
@@ -69,6 +70,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   const { recordId } = use(params);
   const router = useRouter();
   const authMember = useAuthStore((state) => state.member);
+  const requestsAccess = useTabAccess("Loans", "Requests");
   const coopId =
     authMember?.role === "admin"
       ? authMember.id
@@ -187,8 +189,12 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   // Only a guarantor who hasn't answered yet can accept or decline — the backend enforces it too.
   const showGuarantorActions =
     record.status === "Awaiting Guarantor" && !!myPendingGuarantee;
-  const canApprove = !!approvals?.canApprove;
-  const canReject = !!approvals?.canReject;
+  const canApprove =
+    !!approvals?.canApprove &&
+    (authMember?.permissionModules == null || requestsAccess === "write");
+  const canReject =
+    !!approvals?.canReject &&
+    (authMember?.permissionModules == null || requestsAccess === "write");
 
   return (
     <div className="space-y-4 pt-6">

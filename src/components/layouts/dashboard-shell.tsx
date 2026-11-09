@@ -73,7 +73,7 @@ export function DashboardShell({
           onLogout={handleLogout}
         />
         <DashboardBreadcrumb
-          roleLabel={getRoleLabel(member.role)}
+          roleLabel={getRoleLabel(member.role, member.roleName)}
           page={page}
           cooperativeName={branding?.name}
         />

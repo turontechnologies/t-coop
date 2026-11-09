@@ -87,6 +87,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
   const typeId = useId();
   const meetingDateId = useId();
   const meetingTimeId = useId();
+  const meetingDurationId = useId();
   const scheduleDateId = useId();
   const scheduleTimeId = useId();
 
@@ -107,6 +108,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
       recipient: isSuperAdmin ? "All Admins" : "All Members",
       medium: "Email",
       schedule: "now",
+      meetingDurationMinutes: 120,
       // Admins only ever manage one co-op — their own — so it's picked implicitly and never
       // shown as a field; the backend enforces this server-side too (it ignores this value for
       // anyone but a super admin).
@@ -165,6 +167,10 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
           values.type === "Meeting Notice" ? values.meetingDate : undefined,
         meetingTime:
           values.type === "Meeting Notice" ? values.meetingTime : undefined,
+        meetingDurationMinutes:
+          values.type === "Meeting Notice"
+            ? values.meetingDurationMinutes
+            : undefined,
         attachment,
         sendAt,
         targetCoopIds: values.targetCoopIds,
@@ -253,7 +259,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
           </div>
 
           {type === "Meeting Notice" ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor={meetingDateId}>Meeting Date</Label>
                 <Controller
@@ -333,6 +339,27 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                   )}
                 />
                 <FieldError message={errors.meetingTime?.message} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={meetingDurationId}>Duration (minutes)</Label>
+                <Input
+                  id={meetingDurationId}
+                  type="number"
+                  min={1}
+                  max={1440}
+                  step={1}
+                  className="h-11"
+                  disabled={isSubmitting}
+                  aria-invalid={!!errors.meetingDurationMinutes}
+                  {...register("meetingDurationMinutes", {
+                    valueAsNumber: true,
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Attendance opens at the start and closes when this duration
+                  ends.
+                </p>
+                <FieldError message={errors.meetingDurationMinutes?.message} />
               </div>
             </div>
           ) : null}

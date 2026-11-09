@@ -100,8 +100,11 @@ export default function DashboardRouteLayout({
   // subscription banner to show.
   const memberId = member?.id;
   const memberRole = member?.role;
+  const memberIsRestricted =
+    member?.permissionModules != null &&
+    (member.role === "support" || member.role === "member");
   useEffect(() => {
-    if (memberRole !== "admin" || !memberId) return;
+    if ((memberRole !== "admin" && !memberIsRestricted) || !memberId) return;
     authService
       .me()
       .then((fresh) => {
@@ -111,7 +114,7 @@ export default function DashboardRouteLayout({
         // Best-effort refresh — a failed request here shouldn't block the
         // page; the enforcement filter is the real source of truth anyway.
       });
-  }, [memberId, memberRole, pathname]);
+  }, [memberId, memberRole, memberIsRestricted, pathname]);
 
   // A dormant admin (subscription expired/never paid) can only reach /support — that's the
   // one page that still works while everything else is locked (SubscriptionGateFilter blocks

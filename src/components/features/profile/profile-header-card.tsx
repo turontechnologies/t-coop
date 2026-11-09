@@ -117,7 +117,9 @@ export function ProfileHeaderCard({ member }: ProfileHeaderCardProps) {
             <h2 className="text-lg font-semibold text-foreground">
               {member.name}
             </h2>
-            <Badge variant="secondary">{getRoleLabel(member.role)}</Badge>
+            <Badge variant="secondary">
+              {getRoleLabel(member.role, member.roleName)}
+            </Badge>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:justify-start">
             <span className="flex items-center gap-1.5">

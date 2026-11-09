@@ -96,6 +96,7 @@ export function useMyMeetingResponse(
     queryFn: () => noticeService.getMyResponse(noticeId as string),
     enabled: Boolean(noticeId) && enabled,
     staleTime: 15_000,
+    refetchInterval: 15_000,
   });
 }
 
@@ -127,6 +128,7 @@ export function useMeetingRegister(
     queryFn: () => noticeService.getRegister(noticeId as string),
     enabled: Boolean(noticeId) && enabled,
     staleTime: 15_000,
+    refetchInterval: 15_000,
   });
 }
 

@@ -22,6 +22,9 @@ export interface Notice {
   meetingDate?: string;
   /** "HH:mm", the co-op's local time. */
   meetingTime?: string;
+  meetingDurationMinutes: number;
+  /** The meeting this minutes notice records, when created from a meeting page. */
+  meetingNoticeId?: string | null;
   attachment?: NoticeAttachment;
   sendAt: string;
   status: NoticeStatus;
@@ -82,6 +85,9 @@ export interface MeetingRegister {
   title: string;
   meetingDate: string | null;
   meetingTime: string | null;
+  meetingDurationMinutes: number;
+  attendanceEndsAt: string | null;
+  canMarkAttendance: boolean;
   summary: MeetingAttendanceSummary;
   entries: MeetingAttendanceEntry[];
 }

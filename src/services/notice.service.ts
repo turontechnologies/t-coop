@@ -20,6 +20,8 @@ export interface CreateNoticePayload {
   medium: CreateNoticeFormValues["medium"];
   meetingDate?: string;
   meetingTime?: string;
+  meetingDurationMinutes?: number;
+  meetingNoticeId?: string;
   attachment?: NoticeAttachment;
   sendAt: string;
   targetCoopIds: string[];

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { NotificationMenu } from "@/components/layouts/notification-menu";
 import { formatTodayLong, getInitials } from "@/lib/format";
+import { getRoleLabel } from "@/config/dashboard-nav";
 import type { AuthenticatedMember } from "@/types/auth";
 
 interface DashboardTopbarProps {
@@ -83,7 +84,7 @@ export function DashboardTopbar({
                 {member.name}
               </span>
               <span className="block text-xs text-muted-foreground">
-                {member.email}
+                {getRoleLabel(member.role, member.roleName)}
               </span>
             </span>
             <ChevronDown
@@ -97,6 +98,9 @@ export function DashboardTopbar({
                 {member.name}
               </p>
               <p className="text-xs text-muted-foreground">{member.email}</p>
+              <p className="text-xs text-muted-foreground">
+                {getRoleLabel(member.role, member.roleName)}
+              </p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem

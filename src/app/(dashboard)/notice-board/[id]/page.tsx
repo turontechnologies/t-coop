@@ -23,11 +23,13 @@ import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { ReplyThread } from "@/components/features/notice-board/reply-thread";
 import { MeetingRsvpCard } from "@/components/features/notice-board/meeting-rsvp-card";
 import { MeetingRegisterCard } from "@/components/features/notice-board/meeting-register-card";
+import { MeetingMinutesCard } from "@/components/features/notice-board/meeting-minutes-card";
 import { formatMeetingWhen } from "@/lib/meeting";
 import { formatDateLong } from "@/lib/format";
 import { useCooperatives } from "@/hooks/use-cooperatives";
 import { useNotice, useNoticeMutations } from "@/hooks/use-notices";
 import { useAuthStore } from "@/store/auth.store";
+import { useModuleAccess } from "@/hooks/use-permission";
 import { cn } from "@/lib/utils";
 
 interface NoticeDetailsPageProps {
@@ -38,6 +40,7 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
   const { id } = use(params);
   const router = useRouter();
   const member = useAuthStore((state) => state.member);
+  const noticeBoardAccess = useModuleAccess("Notice Board");
   const {
     data: notice,
     isLoading,
@@ -52,11 +55,15 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
 
   if (!member) return null;
 
-  const canManage = member.role !== "member";
+  const isRoleRestrictedStaff =
+    member.role === "member" && member.permissionModules != null;
+  const canManage =
+    (member.role !== "member" || isRoleRestrictedStaff) &&
+    noticeBoardAccess === "write";
   // Officers: the co-op admin, or a member holding a co-op role (permissionModules set).
   const isCoopOfficer =
     member.role === "admin" ||
-    (member.role === "member" && member.permissionModules != null);
+    (isRoleRestrictedStaff && noticeBoardAccess !== null);
 
   const handleResend = async () => {
     try {
@@ -251,6 +258,14 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
 
             {notice.type === "Meeting Notice" && isCoopOfficer ? (
               <MeetingRegisterCard noticeId={notice.id} />
+            ) : null}
+            {notice.type === "Meeting Notice" &&
+            isCoopOfficer &&
+            notice.status === "Sent" ? (
+              <MeetingMinutesCard
+                meeting={notice}
+                canWrite={noticeBoardAccess === "write"}
+              />
             ) : null}
 
             <Card>

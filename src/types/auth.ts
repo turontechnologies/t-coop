@@ -11,6 +11,8 @@ export interface AuthenticatedMember {
   name: string;
   email: string;
   role: UserRole;
+  /** The named co-op/platform role assigned to this account, e.g. "Vice President". */
+  roleName?: string | null;
   avatarUrl?: string;
   /** Null for super_admin/support. The co-op identifier can differ from an admin's login id;
    * regular members also use this to identify their co-operative. */

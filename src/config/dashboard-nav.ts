@@ -77,8 +77,8 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
 };
 
-export function getRoleLabel(role: UserRole): string {
-  return ROLE_LABEL[role];
+export function getRoleLabel(role: UserRole, roleName?: string | null): string {
+  return roleName?.trim() || ROLE_LABEL[role];
 }
 
 /** The nav-item list a permission-restricted role's `permissionModules` gets filtered against —
