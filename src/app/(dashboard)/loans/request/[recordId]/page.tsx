@@ -300,8 +300,12 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
               />
               <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
               <Field
-                label="Guarantor"
-                value={record.guarantorName ?? "None (Within loan)"}
+                label={guarantors.length > 1 ? "Guarantors" : "Guarantor"}
+                value={
+                  guarantors.length > 0
+                    ? guarantors.map((g) => g.name).join(", ")
+                    : "None (Within loan)"
+                }
               />
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Status</p>
@@ -434,7 +438,7 @@ function ApprovalTimeline({
         ) : null}
         {status === "Awaiting Guarantor" ? (
           <p className="mt-4 text-xs text-muted-foreground">
-            Approvals start once the guarantor accepts.
+            Approvals start once every guarantor accepts.
           </p>
         ) : null}
       </CardContent>
@@ -695,9 +699,9 @@ function RejectGuarantorDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Reject guarantor request</AlertDialogTitle>
           <AlertDialogDescription>
-            {record.guarantorName} will be recorded as declining to guarantee{" "}
-            {record.memberName}&apos;s {record.loanType}. The loan is marked
-            Rejected — no admin decision needed afterward.
+            You&apos;ll be recorded as declining to guarantee{" "}
+            {record.memberName}&apos;s {record.loanType}. A loan needs every
+            guarantor to accept, so it will be marked Rejected.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

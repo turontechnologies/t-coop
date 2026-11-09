@@ -20,7 +20,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoanRepaymentPanel } from "@/components/features/loans/loan-repayment-panel";
-import { PENDING_LOAN_STATUSES, type CoopLoanStatus } from "@/lib/coop-data";
+import {
+  loanGuarantorsOf,
+  PENDING_LOAN_STATUSES,
+  type CoopLoanStatus,
+} from "@/lib/coop-data";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
 import { useGuarantorResponse, useLoanApprovals } from "@/hooks/use-loans-self";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -70,7 +74,11 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
   }
 
   const isBorrower = record.memberId === member.id;
-  const isGuarantor = record.guarantorId === member.id;
+  const guarantors = loanGuarantorsOf(record);
+  // Only a guarantor who hasn't answered yet can accept or decline.
+  const isGuarantor = guarantors.some(
+    (g) => g.memberId === member.id && g.status === "Pending",
+  );
   const isAdmin = member.role === "admin";
   const showGuarantorActions =
     record.status === "Awaiting Guarantor" && isGuarantor;
@@ -238,8 +246,12 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
           />
           <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
           <Field
-            label="Guarantor"
-            value={record.guarantorName ?? "None (Within loan)"}
+            label={guarantors.length > 1 ? "Guarantors" : "Guarantor"}
+            value={
+              guarantors.length > 0
+                ? guarantors.map((g) => `${g.name} (${g.status})`).join(", ")
+                : "None (Within loan)"
+            }
           />
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">Status</p>
