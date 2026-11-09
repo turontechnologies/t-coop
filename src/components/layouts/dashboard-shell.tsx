@@ -6,7 +6,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { DashboardSidebar } from "@/components/layouts/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/layouts/dashboard-topbar";
-import { DashboardBreadcrumb } from "@/components/layouts/dashboard-breadcrumb";
 import { RouteTransition } from "@/components/brand/route-transition";
 import { getRoleLabel } from "@/config/dashboard-nav";
 import { useCooperativeBranding } from "@/hooks/use-cooperative";
@@ -61,6 +60,9 @@ export function DashboardShell({
         role={member.role}
         cooperativeId={member.cooperativeId}
         permissionModules={member.permissionModules}
+        memberName={member.name}
+        roleLabel={getRoleLabel(member.role, member.roleName)}
+        avatarUrl={member.avatarUrl}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
         onLogout={handleLogout}
@@ -69,16 +71,13 @@ export function DashboardShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <DashboardTopbar
           member={member}
+          title={page}
+          cooperativeName={branding?.name}
           onMenuClick={() => setMobileOpen(true)}
           onLogout={handleLogout}
         />
-        <DashboardBreadcrumb
-          roleLabel={getRoleLabel(member.role, member.roleName)}
-          page={page}
-          cooperativeName={branding?.name}
-        />
         {member.role === "admin" && member.subscriptionActive === false ? (
-          <div className="mx-4 mt-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:mx-6">
+          <div className="mx-4 mt-5 flex items-start gap-3 rounded-xl sm:mx-6 lg:mx-8 border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:px-5">
             <TriangleAlert
               className="mt-0.5 size-4 shrink-0"
               aria-hidden="true"
@@ -95,7 +94,9 @@ export function DashboardShell({
             </p>
           </div>
         ) : null}
-        <main className="flex-1 px-4 pb-8 sm:px-6">{children}</main>
+        <main className="w-full flex-1 animate-fade-in px-4 pb-12 sm:px-6 lg:px-8">
+          {children}
+        </main>
       </div>
     </div>
   );

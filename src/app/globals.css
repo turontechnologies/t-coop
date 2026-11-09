@@ -44,6 +44,8 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --shadow-card: var(--shadow-card);
+  --shadow-raised: var(--shadow-raised);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -55,35 +57,40 @@
 
 :root {
   /* T-Coop brand palette — light theme (Tailwind Slate neutrals + brand green) */
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f5f7f6;
+  --foreground: #0f1f1a;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #0f1f1a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --popover-foreground: #0f1f1a;
   --primary: #00543d;
   --primary-foreground: #ffffff;
   --brand: #00543d;
   --brand-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #ecfdf5;
+  --secondary: #eef2f0;
+  --secondary-foreground: #0f1f1a;
+  --muted: #eef2f0;
+  --muted-foreground: #5f6f69;
+  --accent: #e8f5ef;
   --accent-foreground: #00543d;
   --success: #059669;
   --success-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  --border: #e3e9e6;
+  --input: #d9e1dd;
   --ring: #00543d;
   --chart-1: #00543d;
   --chart-2: #10b981;
   --chart-3: #64748b;
   --chart-4: #94a3b8;
   --chart-5: #cbd5e1;
-  --radius: 0.75rem;
+  --radius: 0.875rem;
+  /* Soft, layered elevation — cards sit on the page instead of being outlined. */
+  --shadow-card:
+    0 1px 2px rgb(15 31 26 / 0.04), 0 2px 8px -2px rgb(15 31 26 / 0.06);
+  --shadow-raised:
+    0 2px 4px rgb(15 31 26 / 0.05), 0 12px 28px -8px rgb(15 31 26 / 0.14);
   --sidebar: #00543d;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffffff;
@@ -96,20 +103,20 @@
 
 .dark {
   /* T-Coop brand palette — dark theme */
-  --background: #020617;
-  --foreground: #f1f5f9;
-  --card: #111827;
-  --card-foreground: #f1f5f9;
-  --popover: #111827;
+  --background: #08110e;
+  --foreground: #eef3f1;
+  --card: #0f1a16;
+  --card-foreground: #eef3f1;
+  --popover: #0f1a16;
   --popover-foreground: #f1f5f9;
   --primary: #00543d;
   --primary-foreground: #ffffff;
   --brand: #10b981;
   --brand-foreground: #022c1b;
-  --secondary: #1e293b;
-  --secondary-foreground: #f1f5f9;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
+  --secondary: #17241f;
+  --secondary-foreground: #eef3f1;
+  --muted: #17241f;
+  --muted-foreground: #93a59e;
   --accent: #0f2e24;
   --accent-foreground: #34d399;
   --success: #34d399;
@@ -124,7 +131,10 @@
   --chart-3: #94a3b8;
   --chart-4: #64748b;
   --chart-5: #475569;
-  --sidebar: #04382a;
+  --sidebar: #05332a;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --shadow-raised:
+    0 12px 32px -8px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
   --sidebar-foreground: #f1f5f9;
   --sidebar-primary: #10b981;
   --sidebar-primary-foreground: #022c1b;
@@ -150,6 +160,13 @@
   table th,
   table td {
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
   }
 
   * {
@@ -249,4 +266,54 @@
 
 [data-sonner-toast] [data-icon] {
   align-items: center;
+}
+
+/* ── Motion system ───────────────────────────────────────────────────────────
+ * One timing language for everything that floats. Opens decelerate softly
+ * (expo-out) so they feel physical; closes are quicker and accelerate away so
+ * dismissing never makes anyone wait. Unlayered on purpose: it overrides the
+ * per-component duration utilities, keeping every surface consistent. */
+:root {
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-quick: cubic-bezier(0.4, 0, 1, 1);
+}
+
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"],
+[data-slot="sheet-content"] {
+  --tw-duration: 260ms;
+  --tw-ease: var(--ease-out-soft);
+}
+
+[data-slot="popover-content"],
+[data-slot="select-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="tooltip-content"] {
+  --tw-duration: 180ms;
+  --tw-ease: var(--ease-out-soft);
+}
+
+[data-slot="dialog-content"][data-closed],
+[data-slot="alert-dialog-content"][data-closed],
+[data-slot="sheet-content"][data-closed],
+[data-slot="popover-content"][data-closed],
+[data-slot="select-content"][data-closed],
+[data-slot="dropdown-menu-content"][data-closed],
+[data-slot="dropdown-menu-sub-content"][data-closed],
+[data-slot="tooltip-content"][data-closed] {
+  --tw-duration: 120ms;
+  --tw-ease: var(--ease-in-quick);
+}
+
+/* Respect people who've asked their OS for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

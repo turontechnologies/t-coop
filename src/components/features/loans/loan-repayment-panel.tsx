@@ -177,20 +177,20 @@ export function LoanRepaymentPanel({
             <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-accent/60">
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Amount
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Interest
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Total Amount
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Due Date
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Status
                     </th>
                   </tr>
@@ -275,20 +275,20 @@ export function LoanRepaymentPanel({
             <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border bg-accent/60">
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Transaction ID
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Amount
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Date
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Method
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-foreground">
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Status
                     </th>
                   </tr>

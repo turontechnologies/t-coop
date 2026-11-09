@@ -65,19 +65,23 @@ export function SubscriptionHistoryTable({
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[820px] text-left text-sm">
           <thead>
-            <tr className="border-b border-border bg-accent/60">
-              <th className="px-4 py-2.5 font-medium text-foreground">
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Payment Ref
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Amount Paid
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Payment Date
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">Type</th>
-              <th className="px-4 py-2.5 font-medium text-foreground">Cycle</th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Type
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Cycle
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Status
               </th>
             </tr>

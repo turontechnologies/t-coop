@@ -15,11 +15,11 @@ function Tabs({ className, ...props }: TabsPrimitive.Root.Props) {
 
 function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
   return (
-    <div className="relative -mx-px [mask-image:linear-gradient(to_right,transparent,black_12px,black_calc(100%-12px),transparent)] sm:mx-0 sm:[mask-image:none]">
+    <div className="relative max-w-full">
       <TabsPrimitive.List
         data-slot="tabs-list"
         className={cn(
-          "relative flex items-center gap-6 overflow-x-auto border-b border-border px-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "relative inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-muted p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           className,
         )}
         {...props}
@@ -33,7 +33,7 @@ function TabsTab({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-tab"
       className={cn(
-        "relative shrink-0 py-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors data-selected:text-foreground",
+        "relative z-10 shrink-0 rounded-lg px-3.5 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground data-selected:text-foreground",
         className,
       )}
       {...props}
@@ -46,7 +46,7 @@ function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
     <TabsPrimitive.Indicator
       data-slot="tabs-indicator"
       className={cn(
-        "absolute bottom-0 left-0 h-0.5 w-(--active-tab-width) translate-x-(--active-tab-left) rounded-full bg-primary transition-all duration-300 ease-out",
+        "absolute top-1 bottom-1 left-0 z-0 w-(--active-tab-width) translate-x-(--active-tab-left) rounded-lg bg-card shadow-card ring-1 ring-border/60 transition-all duration-300 ease-out",
         className,
       )}
       {...props}

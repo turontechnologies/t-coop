@@ -107,24 +107,26 @@ export function SavingsRequestsTable({
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead>
-            <tr className="border-b border-border bg-accent/60">
-              <th className="px-4 py-2.5 font-medium text-foreground">
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Member
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">Type</th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Type
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Savings Type
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Amount
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Requested
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Status
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Action
               </th>
             </tr>

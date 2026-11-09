@@ -155,23 +155,23 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
               <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
                 <table className="w-full min-w-[640px] text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-accent/60">
-                      <th className="px-4 py-2.5 font-medium text-foreground">
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         Member
                       </th>
-                      <th className="px-4 py-2.5 font-medium text-foreground">
+                      <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         Meetings
                       </th>
-                      <th className="px-4 py-2.5 font-medium text-foreground">
+                      <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         Present
                       </th>
-                      <th className="px-4 py-2.5 font-medium text-foreground">
+                      <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         Absent
                       </th>
-                      <th className="px-4 py-2.5 font-medium text-foreground">
+                      <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         Apologies
                       </th>
-                      <th className="px-4 py-2.5 font-medium text-foreground">
+                      <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         Attendance rate
                       </th>
                     </tr>
@@ -295,22 +295,22 @@ function HistoryTable({
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
-            <tr className="border-b border-border bg-accent/60">
-              <th className="px-4 py-2.5 font-medium text-foreground">
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Meeting
               </th>
               {showMember ? (
-                <th className="px-4 py-2.5 font-medium text-foreground">
+                <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Member
                 </th>
               ) : null}
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Response
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Attendance
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Note / reason
               </th>
             </tr>

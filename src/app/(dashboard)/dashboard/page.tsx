@@ -7,6 +7,34 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import { useAuthStore } from "@/store/auth.store";
 
+function greeting(date: Date = new Date()): string {
+  const hour = date.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+const SUBTITLE: Record<string, string> = {
+  super_admin: "Here's how every co-operative on the platform is doing.",
+  support: "Here's what's happening across the platform today.",
+  admin: "Here's how your co-operative is doing today.",
+  member: "Here's a quick look at your savings and loans.",
+};
+
+function WelcomeHeader({ name, role }: { name: string; role: string }) {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  return (
+    <div className="space-y-1">
+      <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+        {greeting()}, {firstName}
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        {SUBTITLE[role] ?? SUBTITLE.member}
+      </p>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const member = useAuthStore((state) => state.member);
   const currency = useCurrency();
@@ -16,25 +44,27 @@ export default function DashboardPage() {
 
   if (isLoading || !data) {
     return (
-      <div className="space-y-6 pt-6">
+      <div className="space-y-6 pt-8">
+        <WelcomeHeader name={member.name} role={member.role} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
-              className="h-28 animate-pulse rounded-xl bg-muted"
+              className="h-40 animate-pulse rounded-2xl bg-muted"
             />
           ))}
         </div>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="h-80 animate-pulse rounded-xl bg-muted lg:col-span-2" />
-          <div className="h-80 animate-pulse rounded-xl bg-muted" />
+          <div className="h-80 animate-pulse rounded-2xl bg-muted lg:col-span-2" />
+          <div className="h-80 animate-pulse rounded-2xl bg-muted" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 pt-6">
+    <div className="space-y-6 pt-8">
+      <WelcomeHeader name={member.name} role={member.role} />
       <QuickSummaryCards cards={data.cards} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

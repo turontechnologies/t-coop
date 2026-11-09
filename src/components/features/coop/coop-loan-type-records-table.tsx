@@ -189,18 +189,20 @@ export function CoopLoanTypeRecordsTable({
       <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
-            <tr className="border-b border-border bg-accent/60">
-              <th className="px-4 py-2.5 font-medium text-foreground">
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Members Id
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Full Name
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Loan Amount
               </th>
-              <th className="px-4 py-2.5 font-medium text-foreground">Date</th>
-              <th className="px-4 py-2.5 font-medium text-foreground">
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Date
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Status
               </th>
             </tr>

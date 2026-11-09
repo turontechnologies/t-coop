@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
@@ -37,10 +38,23 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
           ) ?? card.loanEligibilityByType?.[0];
 
         return (
-          <Card key={card.label}>
-            <CardContent className="flex items-start justify-between gap-3">
-              <div className="min-w-0 space-y-1.5">
-                <p className="truncate text-sm text-muted-foreground">
+          <Card
+            key={card.label}
+            className="transition-shadow duration-300 hover:shadow-raised"
+          >
+            <CardContent className="flex h-full flex-col gap-4">
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className={cn(
+                    "flex size-11 shrink-0 items-center justify-center rounded-xl",
+                    TONE_CLASSES[card.tone],
+                  )}
+                >
+                  <card.icon className="size-5" aria-hidden="true" />
+                </span>
+              </div>
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="truncate text-sm font-medium text-muted-foreground">
                   {card.label}
                 </p>
                 {card.loanEligibilityByType ? (
@@ -75,7 +89,7 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="grid grid-cols-2 gap-2 border-t pt-2 text-xs">
+                        <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/60 p-2.5 text-xs">
                           <p className="text-muted-foreground">
                             Times two
                             <span className="block font-semibold text-foreground">
@@ -97,30 +111,26 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                     )}
                   </div>
                 ) : (
-                  <p className="text-xl font-semibold text-foreground sm:text-2xl">
+                  <p className="truncate text-2xl font-semibold tracking-tight text-foreground tabular-nums sm:text-[1.7rem]">
                     {card.value}
                   </p>
                 )}
-                {card.action ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      card.actionHref ? router.push(card.actionHref) : undefined
-                    }
-                    className="mt-1 rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/70"
-                  >
-                    {card.action}
-                  </button>
-                ) : null}
               </div>
-              <span
-                className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-full",
-                  TONE_CLASSES[card.tone],
-                )}
-              >
-                <card.icon className="size-5" aria-hidden="true" />
-              </span>
+              {card.action ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    card.actionHref ? router.push(card.actionHref) : undefined
+                  }
+                  className="group/action inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80 dark:text-emerald-400"
+                >
+                  {card.action}
+                  <ArrowRight
+                    className="size-4 transition-transform group-hover/action:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : null}
             </CardContent>
           </Card>
         );

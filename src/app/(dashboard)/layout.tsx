@@ -82,7 +82,9 @@ export default function DashboardRouteLayout({
   const [needsFullIntro] = useState(() => !hasAppIntroShown());
   const showDashboard = useMinimumDuration(
     hasHydrated && !!member,
-    needsFullIntro ? 5000 : 300,
+    // A short branded intro on a fresh load — long enough to feel deliberate, short enough
+    // that nobody waits on it.
+    needsFullIntro ? 1200 : 300,
   );
 
   useEffect(() => {

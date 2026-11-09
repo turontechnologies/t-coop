@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { CalendarDays, ChevronDown, LogOut, Menu, User } from "lucide-react";
+import { ChevronDown, LogOut, Menu, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,22 +19,28 @@ import type { AuthenticatedMember } from "@/types/auth";
 
 interface DashboardTopbarProps {
   member: AuthenticatedMember;
+  /** The current page's name — the big title on the left. */
+  title: string;
+  /** The signed-in member's co-op, shown under the title. */
+  cooperativeName?: string | null;
   onMenuClick: () => void;
   onLogout: () => void;
 }
 
 export function DashboardTopbar({
   member,
+  title,
+  cooperativeName,
   onMenuClick,
   onLogout,
 }: DashboardTopbarProps) {
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-18 items-center justify-between gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+      <div className="flex min-w-0 items-center gap-3">
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
           className="lg:hidden"
           onClick={onMenuClick}
@@ -42,14 +48,14 @@ export function DashboardTopbar({
         >
           <Menu className="size-4.5" />
         </Button>
-        <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
-          <CalendarDays className="size-4" aria-hidden="true" />
-          <span>
-            Today&apos;s Date:{" "}
-            <span className="font-medium text-foreground">
-              {formatTodayLong()}
-            </span>
-          </span>
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold text-foreground sm:text-xl">
+            {title}
+          </h1>
+          <p className="hidden truncate text-xs text-muted-foreground sm:block">
+            {cooperativeName ? `${cooperativeName} · ` : ""}
+            {formatTodayLong()}
+          </p>
         </div>
       </div>
 
