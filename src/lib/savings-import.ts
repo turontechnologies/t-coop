@@ -3,33 +3,39 @@ import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
 import { triggerDownload } from "@/lib/table-export";
 import type { ImportRowError, ParsedImportResult } from "@/lib/table-import";
 
-const HEADERS = ["Savings Type", "Amount"];
+/**
+ * Admin import of members' savings (Savings → Members Savings → a savings type → Import). Each row
+ * is recorded for the member it names through the admin manual-deposit endpoint.
+ */
+const HEADERS = ["Membership ID", "Amount"];
 
 export interface ImportedSavingsRow {
   rowNumber: number;
+  memberId: string;
   savingsTypeId: string;
   amount: number;
 }
 
 export function downloadSavingsImportTemplate(
-  savingsTypes: CoopSavingsTypeSummary[],
+  savingsType: CoopSavingsTypeSummary,
 ) {
-  const templateSheet = XLSX.utils.aoa_to_sheet([HEADERS]);
-  templateSheet["!cols"] = [{ wch: 28 }, { wch: 16 }];
+  const templateSheet = XLSX.utils.aoa_to_sheet([HEADERS, ["MB-0001", 5000]]);
+  templateSheet["!cols"] = [{ wch: 18 }, { wch: 16 }];
 
   const referenceSheet = XLSX.utils.aoa_to_sheet([
     ["Field", "Notes"],
+    ["Savings Type", `Every row is saved into "${savingsType.name}".`],
     [
-      "Savings Type",
-      `Required — use an active type name exactly as configured: ${savingsTypes.map((type) => type.name).join(", ") || "no active types available"}`,
+      "Membership ID",
+      "Required — the member's membership ID in this co-operative.",
     ],
-    ["Amount", "Required — positive amount in the cooperative currency."],
+    ["Amount", "Required — a positive amount in the co-operative's currency."],
     [
       "Processing",
-      "Imported amounts are recorded using the admin manual-deposit flow; configured savings charges may be deducted. Each upload creates new records, so do not import the same file twice.",
+      "Each row is recorded as a manual deposit for that member; configured savings charges are deducted as for any teller upload. Delete the example row before uploading, and don't upload the same file twice.",
     ],
   ]);
-  referenceSheet["!cols"] = [{ wch: 20 }, { wch: 90 }];
+  referenceSheet["!cols"] = [{ wch: 20 }, { wch: 100 }];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, templateSheet, "Template");
@@ -38,13 +44,13 @@ export function downloadSavingsImportTemplate(
   const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
   triggerDownload(
     new Blob([buffer], { type: "application/octet-stream" }),
-    "my-savings-import-template.xlsx",
+    `${savingsType.name.replace(/[^\w-]+/g, "-").toLowerCase()}-savings-import-template.xlsx`,
   );
 }
 
 export async function parseSavingsImportFile(
   file: File,
-  savingsTypes: CoopSavingsTypeSummary[],
+  savingsType: CoopSavingsTypeSummary,
 ): Promise<ParsedImportResult<ImportedSavingsRow>> {
   const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
   const sheetName =
@@ -62,39 +68,17 @@ export async function parseSavingsImportFile(
   });
   const rows: ImportedSavingsRow[] = [];
   const errors: ImportRowError[] = [];
-  const typesByName = new Map<string, CoopSavingsTypeSummary[]>();
-
-  for (const type of savingsTypes.filter((item) => item.status === "Active")) {
-    const key = type.name.trim().toLowerCase();
-    typesByName.set(key, [...(typesByName.get(key) ?? []), type]);
-  }
 
   rawRows.forEach((raw, index) => {
     const rowNumber = index + 2;
-    const typeName = String(raw["Savings Type"] ?? "").trim();
+    const memberId = String(raw["Membership ID"] ?? "").trim();
     const amountRaw = raw["Amount"];
-    if (!typeName && (amountRaw === "" || amountRaw == null)) return;
+    if (!memberId && (amountRaw === "" || amountRaw == null)) return;
 
-    if (!typeName) {
-      errors.push({ row: rowNumber, message: "Savings Type is required" });
+    if (!memberId) {
+      errors.push({ row: rowNumber, message: "Membership ID is required" });
       return;
     }
-    const matchedTypes = typesByName.get(typeName.toLowerCase()) ?? [];
-    if (matchedTypes.length === 0) {
-      errors.push({
-        row: rowNumber,
-        message: `"${typeName}" is not an active savings type`,
-      });
-      return;
-    }
-    if (matchedTypes.length > 1) {
-      errors.push({
-        row: rowNumber,
-        message: `"${typeName}" matches more than one active savings type`,
-      });
-      return;
-    }
-
     const amount = Number(amountRaw);
     if (!Number.isFinite(amount) || amount <= 0) {
       errors.push({
@@ -104,16 +88,7 @@ export async function parseSavingsImportFile(
       return;
     }
 
-    const savingsType = matchedTypes[0];
-    if (amount < savingsType.min || amount > savingsType.max) {
-      errors.push({
-        row: rowNumber,
-        message: `Amount must be between ${savingsType.min} and ${savingsType.max} for "${savingsType.name}"`,
-      });
-      return;
-    }
-
-    rows.push({ rowNumber, savingsTypeId: savingsType.id, amount });
+    rows.push({ rowNumber, memberId, savingsTypeId: savingsType.id, amount });
   });
 
   return { rows, errors };
