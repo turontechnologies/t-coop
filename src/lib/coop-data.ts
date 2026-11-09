@@ -135,6 +135,38 @@ export interface CoopLoanRecord {
   disbursedAmount?: number | null;
   disbursementReference?: string | null;
   disbursedAt?: string | null;
+  /** Every guarantor and where each stands — a Times two loan has two or more. */
+  guarantors?: LoanGuarantorInfo[];
+}
+
+export type LoanGuarantorStatus = "Pending" | "Accepted" | "Declined";
+
+export interface LoanGuarantorInfo {
+  memberId: string;
+  name: string;
+  status: LoanGuarantorStatus;
+  documentUrl: string | null;
+  respondedAt: string | null;
+}
+
+/** A loan's guarantors — falling back to the single summary fields for an older record. */
+export function loanGuarantorsOf(record: CoopLoanRecord): LoanGuarantorInfo[] {
+  if (record.guarantors && record.guarantors.length > 0)
+    return record.guarantors;
+  if (!record.guarantorId || !record.guarantorName) return [];
+  return [
+    {
+      memberId: record.guarantorId,
+      name: record.guarantorName,
+      status: record.guarantorAcceptedAt
+        ? "Accepted"
+        : record.status === "Awaiting Guarantor"
+          ? "Pending"
+          : "Accepted",
+      documentUrl: record.guarantorDocumentUrl ?? null,
+      respondedAt: record.guarantorAcceptedAt ?? null,
+    },
+  ];
 }
 
 export function coopMemberFullName(member: CoopMember): string {

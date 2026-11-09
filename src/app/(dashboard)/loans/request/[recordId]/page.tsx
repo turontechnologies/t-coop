@@ -39,9 +39,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   coopLoanStatusBadgeVariant,
-  coopMemberFullName,
+  loanGuarantorsOf,
   type CoopLoanRecord,
   type CoopMember,
+  type LoanGuarantorInfo,
 } from "@/lib/coop-data";
 import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
 import { formatDateLong, formatMoney, getInitials } from "@/lib/format";
@@ -98,8 +99,9 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     );
   }
 
-  const guarantorMember = members.find(
-    (m) => coopMemberFullName(m) === record.guarantorName,
+  const guarantors = loanGuarantorsOf(record);
+  const myPendingGuarantee = guarantors.find(
+    (g) => g.memberId === authMember?.id && g.status === "Pending",
   );
 
   const handleGuarantorAccept = async (documentUrl?: string) => {
@@ -109,8 +111,9 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
         decision: "Accepted",
         documentUrl,
       });
-      toast.success("Guarantor accepted", {
-        description: `${record.guarantorName} has agreed to guarantee this loan — now awaiting the admin's decision.`,
+      toast.success("You've accepted", {
+        description:
+          "The loan goes to the officers for approval once every guarantor has accepted.",
       });
     } catch (error) {
       toast.error("Couldn't accept", {
@@ -180,10 +183,10 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     }
   };
 
-  const showGuarantorCard = record.status === "Awaiting Guarantor";
-  // Only the named guarantor can accept or decline — the backend enforces it too.
+  const showGuarantorCard = guarantors.length > 0;
+  // Only a guarantor who hasn't answered yet can accept or decline — the backend enforces it too.
   const showGuarantorActions =
-    showGuarantorCard && authMember?.id === record.guarantorId;
+    record.status === "Awaiting Guarantor" && !!myPendingGuarantee;
   const canApprove = !!approvals?.canApprove;
   const canReject = !!approvals?.canReject;
 
@@ -207,10 +210,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
       >
         {showGuarantorCard ? (
           <div className="lg:col-span-1">
-            <GuarantorProfileCard
-              name={record.guarantorName ?? ""}
-              member={guarantorMember}
-            />
+            <GuarantorsCard guarantors={guarantors} members={members} />
           </div>
         ) : null}
 
@@ -459,53 +459,80 @@ function Field({
   );
 }
 
-function GuarantorProfileCard({
-  name,
-  member,
+/** Every guarantor on the loan and where each stands. The loan reaches the officers only once
+ * all of them have accepted; one decline rejects it. */
+function GuarantorsCard({
+  guarantors,
+  members,
 }: {
-  name: string;
-  member?: CoopMember;
+  guarantors: LoanGuarantorInfo[];
+  members: CoopMember[];
 }) {
+  const accepted = guarantors.filter((g) => g.status === "Accepted").length;
   return (
     <Card className="h-fit">
-      <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
-        <span className="flex size-20 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
-          {getInitials(name)}
-        </span>
-        <div className="w-full space-y-3 text-left">
-          <ProfileField label="Full Name" value={name} />
-          {member ? (
-            <>
-              <ProfileField label="Membership ID" value={member.id} />
-              <ProfileField label="Email" value={member.email} />
-              <ProfileField label="Country" value={member.country} />
-              <ProfileField label="State" value={member.state} />
-              <ProfileField label="Access" value={member.role} />
-              <Link
-                href={`/members/${member.id}`}
-                className="block pt-1 text-sm font-semibold text-primary underline-offset-4 hover:underline"
-              >
-                View Full Profile
-              </Link>
-            </>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              No member record on file for this guarantor — showing the name
-              provided at application time.
-            </p>
-          )}
-        </div>
+      <CardHeader>
+        <CardTitle>Guarantors</CardTitle>
+        <p className="text-xs text-muted-foreground">
+          {accepted} of {guarantors.length} accepted
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {guarantors.map((guarantor) => {
+          const member = members.find((m) => m.id === guarantor.memberId);
+          return (
+            <div
+              key={guarantor.memberId}
+              className="flex items-start gap-3 rounded-xl border border-border p-3"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                {getInitials(guarantor.name)}
+              </span>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {guarantor.name}
+                  </p>
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      guarantor.status === "Accepted" &&
+                        "bg-success/15 text-success",
+                      guarantor.status === "Declined" &&
+                        "bg-destructive/15 text-destructive",
+                    )}
+                  >
+                    {guarantor.status}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {guarantor.memberId}
+                  {member?.role === "Admin" ? " · Admin" : ""}
+                </p>
+                {guarantor.documentUrl ? (
+                  <a
+                    href={guarantor.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                  >
+                    Proof of income
+                  </a>
+                ) : null}
+                {member ? (
+                  <Link
+                    href={`/members/${member.id}`}
+                    className="block text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    View profile
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
-  );
-}
-
-function ProfileField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="space-y-0.5">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium text-foreground">{value}</p>
-    </div>
   );
 }
 
