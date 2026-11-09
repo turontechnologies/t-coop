@@ -21,6 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { ReplyThread } from "@/components/features/notice-board/reply-thread";
+import { MeetingRsvpCard } from "@/components/features/notice-board/meeting-rsvp-card";
+import { MeetingRegisterCard } from "@/components/features/notice-board/meeting-register-card";
+import { formatMeetingWhen } from "@/lib/meeting";
 import { formatDateLong } from "@/lib/format";
 import { useCooperatives } from "@/hooks/use-cooperatives";
 import { useNotice, useNoticeMutations } from "@/hooks/use-notices";
@@ -50,6 +53,10 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
   if (!member) return null;
 
   const canManage = member.role !== "member";
+  // Officers: the co-op admin, or a member holding a co-op role (permissionModules set).
+  const isCoopOfficer =
+    member.role === "admin" ||
+    (member.role === "member" && member.permissionModules != null);
 
   const handleResend = async () => {
     try {
@@ -105,9 +112,12 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                       <CardTitle>{notice.title}</CardTitle>
                       <Badge variant="outline">{notice.type}</Badge>
                       <Badge
-                        variant={notice.status === "Sent" ? "secondary" : "outline"}
+                        variant={
+                          notice.status === "Sent" ? "secondary" : "outline"
+                        }
                         className={cn(
-                          notice.status === "Sent" && "bg-success/15 text-success",
+                          notice.status === "Sent" &&
+                            "bg-success/15 text-success",
                         )}
                       >
                         {notice.status}
@@ -137,7 +147,10 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                         )}
                         Resend
                       </Button>
-                      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                      <AlertDialog
+                        open={deleteOpen}
+                        onOpenChange={setDeleteOpen}
+                      >
                         <AlertDialogTrigger
                           render={
                             <Button
@@ -154,7 +167,8 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete Notice</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to delete &quot;{notice.title}
+                              Are you sure you want to delete &quot;
+                              {notice.title}
                               &quot;? This can&apos;t be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
@@ -194,13 +208,20 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                   <Field
                     label="Co-operative"
                     value={notice.targetCoopIds
-                      .map((cid) => cooperatives.find((coop) => coop.id === cid)?.name ?? cid)
+                      .map(
+                        (cid) =>
+                          cooperatives.find((coop) => coop.id === cid)?.name ??
+                          cid,
+                      )
                       .join(", ")}
                   />
                   {notice.meetingDate ? (
                     <Field
-                      label="Meeting Date"
-                      value={formatDateLong(new Date(notice.meetingDate))}
+                      label="Meeting"
+                      value={formatMeetingWhen(
+                        notice.meetingDate,
+                        notice.meetingTime,
+                      )}
                     />
                   ) : null}
                 </div>
@@ -221,6 +242,16 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                 ) : null}
               </CardContent>
             </Card>
+
+            {notice.type === "Meeting Notice" &&
+            notice.status === "Sent" &&
+            member.role !== "super_admin" ? (
+              <MeetingRsvpCard noticeId={notice.id} />
+            ) : null}
+
+            {notice.type === "Meeting Notice" && isCoopOfficer ? (
+              <MeetingRegisterCard noticeId={notice.id} />
+            ) : null}
 
             <Card>
               <CardContent>

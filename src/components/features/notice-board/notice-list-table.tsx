@@ -159,12 +159,15 @@ export function NoticeListTable({
     try {
       await Promise.all([...selected].map((id) => resend.mutateAsync(id)));
       toast.success(
-        selected.size === 1 ? "Notice resent" : `${selected.size} notices resent`,
+        selected.size === 1
+          ? "Notice resent"
+          : `${selected.size} notices resent`,
       );
       setSelected(new Set());
     } catch (error) {
       toast.error("Couldn't resend", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     } finally {
       setBusy(false);
@@ -177,7 +180,8 @@ export function NoticeListTable({
       await Promise.all([...selected].map((id) => remove.mutateAsync(id)));
     } catch (error) {
       toast.error("Couldn't delete", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     }
     setBusy(false);

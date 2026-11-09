@@ -74,7 +74,8 @@ export function ReplyThread({ noticeId, member }: ReplyThreadProps) {
       toast.success("Reply sent");
     } catch (error) {
       toast.error("Couldn't send that reply", {
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
       });
     }
   };
