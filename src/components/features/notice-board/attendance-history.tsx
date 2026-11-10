@@ -266,7 +266,10 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
             transition={{ duration: 0.3, ease: EASE }}
             className="space-y-6"
           >
-            <StatTiles totals={totalsOf(data)} />
+            <StatTiles
+              totals={totalsOf(data)}
+              meetingCount={new Set(data.map((item) => item.noticeId)).size}
+            />
 
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex rounded-xl bg-muted p-1" role="tablist">
@@ -364,11 +367,19 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
 
 /* ──────────────────────────────── Building blocks ─────────────────────────────── */
 
-function StatTiles({ totals }: { totals: Totals }) {
+/** `meetingCount` overrides the meetings tile when the rows span several members (the
+ * officers' overview, where one meeting has a row per member). */
+function StatTiles({
+  totals,
+  meetingCount,
+}: {
+  totals: Totals;
+  meetingCount?: number;
+}) {
   const tiles = [
     {
       label: "Meetings",
-      value: String(totals.meetings),
+      value: String(meetingCount ?? totals.meetings),
       icon: CalendarDays,
       tone: "bg-primary/10 text-primary dark:text-emerald-300",
     },

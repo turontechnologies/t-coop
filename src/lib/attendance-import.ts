@@ -136,15 +136,7 @@ export async function parseAttendanceFile(
       });
       return;
     }
-    if (seen.has(memberId.toLowerCase())) {
-      errors.push({
-        row: rowNumber,
-        message: `${memberId} appears more than once`,
-      });
-      return;
-    }
-    seen.add(memberId.toLowerCase());
-
+    // Check the value first, so a bad entry is reported as such, not as a duplicate.
     const attendance = toMark(attendanceRaw);
     if (attendance === undefined) {
       errors.push({
@@ -154,6 +146,16 @@ export async function parseAttendanceFile(
       return;
     }
     if (attendance === null) return; // blank: leave as is
+
+    // Only rows that actually set attendance count towards duplicates.
+    if (seen.has(memberId.toLowerCase())) {
+      errors.push({
+        row: rowNumber,
+        message: `${memberId} appears more than once`,
+      });
+      return;
+    }
+    seen.add(memberId.toLowerCase());
 
     const canonical =
       register.entries.find(

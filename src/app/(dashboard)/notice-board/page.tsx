@@ -73,9 +73,8 @@ export default function NoticeBoardPage() {
 
   return (
     <div className="space-y-6 pt-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-foreground">Notice Board</h2>
-        {canCreateNotice && tab === "notices" ? (
+      {canCreateNotice && tab === "notices" ? (
+        <div className="flex justify-end">
           <Button
             nativeButton={false}
             render={<Link href="/notice-board/new" />}
@@ -83,8 +82,8 @@ export default function NoticeBoardPage() {
             <Plus className="size-4" aria-hidden="true" />
             Create Notice
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {isSuperAdmin ? (
         noticeList
