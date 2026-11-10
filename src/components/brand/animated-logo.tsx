@@ -9,11 +9,8 @@ interface AnimatedLogoProps {
   messages?: string[];
 }
 
-const PATHS = [
-  "M21.0465 42.0457L0.495117 21.0676L21.0595 0.496094L41.9122 21.2513L21.0465 42.0457Z",
-  "M21.0989 44.6016L0.495117 24.0039L21.0465 3.07812L41.7026 23.794L21.0989 44.6016Z",
-  "M21.152 47.082L0.600586 26.3925L21.152 5.4668L41.4981 26.5007L21.152 47.082Z",
-];
+const MARK =
+  "M21.0465 42.0457L0.495117 21.0676L21.0595 0.496094L41.9122 21.2513L21.0465 42.0457Z";
 
 const DEFAULT_MESSAGES = [
   "Preparing your workspace",
@@ -21,6 +18,10 @@ const DEFAULT_MESSAGES = [
   "Securing your session",
 ];
 
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+/** The branded loading moment: the logo mark in a glass tile, a progress ring sweeping around
+ * it, and short status lines that cross-fade. Used by the launch intro and route transitions. */
 export function AnimatedLogo({
   className,
   messages = DEFAULT_MESSAGES,
@@ -31,83 +32,98 @@ export function AnimatedLogo({
     if (messages.length <= 1) return;
     const interval = setInterval(() => {
       setMessageIndex((index) => (index + 1) % messages.length);
-    }, 1900);
+    }, 1400);
     return () => clearInterval(interval);
   }, [messages.length]);
 
   return (
-    <div
+    <motion.div
       role="status"
       aria-label={messages[messageIndex]}
-      className={cn("flex flex-col items-center gap-5", className)}
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: EASE }}
+      className={cn("flex flex-col items-center gap-7", className)}
     >
-      <div className="relative flex size-24 items-center justify-center">
+      <div className="relative flex size-28 items-center justify-center">
+        {/* soft breathing glow */}
         <motion.span
-          className="absolute size-24 rounded-full bg-primary/20 blur-2xl"
-          animate={{ opacity: [0.35, 0.8, 0.35], scale: [0.85, 1.05, 0.85] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute inset-0 rounded-full bg-primary/25 blur-3xl"
+          animate={{ opacity: [0.45, 0.9, 0.45], scale: [0.9, 1.08, 0.9] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
           aria-hidden="true"
         />
 
+        {/* progress ring */}
         <svg
-          viewBox="0 0 42 48"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="relative size-14 text-primary"
+          viewBox="0 0 112 112"
+          className="absolute inset-0 size-full -rotate-90"
           aria-hidden="true"
         >
-          {PATHS.map((d, index) => (
-            <motion.path
-              key={d}
-              d={d}
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: [0, 1, 1, 0], opacity: [0, 1, 1, 0] }}
-              transition={{
-                duration: 2.4,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: index * 0.22,
-                times: [0, 0.45, 0.75, 1],
-              }}
-            />
-          ))}
+          <circle
+            cx="56"
+            cy="56"
+            r="52"
+            fill="none"
+            strokeWidth="2.5"
+            className="stroke-primary/10"
+          />
+          <motion.circle
+            cx="56"
+            cy="56"
+            r="52"
+            fill="none"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            className="stroke-primary dark:stroke-emerald-400"
+            initial={{ pathLength: 0.05 }}
+            animate={{ pathLength: [0.05, 0.75, 0.05], rotate: [0, 360] }}
+            style={{ transformOrigin: "56px 56px" }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          />
         </svg>
 
-        <motion.span
-          className="absolute inset-x-3 h-8 rounded-full bg-gradient-to-b from-transparent via-primary/40 to-transparent"
-          initial={{ y: -28, opacity: 0 }}
-          animate={{ y: [-28, 28], opacity: [0, 1, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-          aria-hidden="true"
-        />
+        {/* glass tile with the mark */}
+        <div className="relative flex size-18 items-center justify-center rounded-3xl bg-card/80 shadow-raised ring-1 ring-border/70 backdrop-blur">
+          <svg
+            viewBox="0 0 42 43"
+            fill="none"
+            className="size-9 text-primary dark:text-emerald-400"
+            aria-hidden="true"
+          >
+            <motion.path
+              d={MARK}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: [0, 1, 1], fillOpacity: [0, 0, 0.15] }}
+              fill="currentColor"
+              transition={{
+                duration: 1.6,
+                repeat: Infinity,
+                repeatType: "reverse",
+                ease: "easeInOut",
+              }}
+            />
+          </svg>
+        </div>
       </div>
 
-      <div className="relative h-5 w-56 text-center">
+      <div className="relative h-5 w-64 text-center">
         <AnimatePresence mode="wait">
           <motion.p
             key={messages[messageIndex]}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className="absolute inset-x-0 text-sm font-medium tracking-wide text-muted-foreground"
+            initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
+            transition={{ duration: 0.4, ease: EASE }}
+            className="absolute inset-x-0 text-sm font-medium text-muted-foreground"
           >
             {messages[messageIndex]}
           </motion.p>
         </AnimatePresence>
       </div>
-
-      <span className="h-0.5 w-24 overflow-hidden rounded-full bg-muted">
-        <motion.span
-          className="block h-full w-1/3 rounded-full bg-primary"
-          animate={{ x: ["-100%", "220%"] }}
-          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-        />
-      </span>
-    </div>
+    </motion.div>
   );
 }

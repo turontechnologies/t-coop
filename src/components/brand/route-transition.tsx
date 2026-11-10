@@ -11,7 +11,7 @@ interface RouteTransitionProps {
 
 export function RouteTransition({
   messages,
-  duration = 2200,
+  duration = 1300,
   onComplete,
 }: RouteTransitionProps) {
   const onCompleteRef = useRef(onComplete);
@@ -23,7 +23,7 @@ export function RouteTransition({
   }, [duration]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background bg-[radial-gradient(60%_50%_at_50%_45%,color-mix(in_oklch,var(--primary)_10%,transparent),transparent)]">
       <AnimatedLogo messages={messages} />
     </div>
   );

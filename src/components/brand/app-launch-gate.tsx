@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AnimatedLogo } from "@/components/brand/animated-logo";
 import { hasAppIntroShown, markAppIntroShown } from "@/lib/app-intro";
 
-const INTRO_DURATION = 2600;
+const INTRO_DURATION = 1500;
 
 export function AppLaunchGate({ children }: { children: ReactNode }) {
   const [showIntro, setShowIntro] = useState(() => !hasAppIntroShown());
@@ -20,7 +20,7 @@ export function AppLaunchGate({ children }: { children: ReactNode }) {
 
   if (showIntro) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
+      <div className="flex min-h-dvh items-center justify-center bg-background bg-[radial-gradient(60%_50%_at_50%_45%,color-mix(in_oklch,var(--primary)_10%,transparent),transparent)]">
         <AnimatedLogo
           messages={["Welcome to T-Cooperative", "Preparing your experience"]}
         />
