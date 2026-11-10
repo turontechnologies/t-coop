@@ -632,7 +632,10 @@ function MemberRow({
             <span>{totals.online} online</span>
             <span>{totals.absent} absent</span>
             {totals.apologies > 0 ? (
-              <span>{totals.apologies} apologies</span>
+              <span>
+                {totals.apologies}{" "}
+                {totals.apologies === 1 ? "apology" : "apologies"}
+              </span>
             ) : null}
           </div>
         </div>

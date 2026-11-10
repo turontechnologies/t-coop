@@ -99,6 +99,18 @@ sent, the backend creates its **attendance register** — one line per active me
 - **History:** Notice Board → **My Attendance** (everyone; mobile: Notice Board → Attendance →
   Mine) and **Members Attendance** (officers): a per-member summary — meetings, present, absent,
   apologies, attendance rate — with each member's full history one click away.
+- **In person vs online:** officers mark each member _In person_ (`Present`), _Online_
+  (`PresentOnline`, V45/V46) or _Absent_ with a three-way switch; "Mark as they said" fills the
+  sheet from members' answers. Counts, the progress bar and history keep the two apart.
+- **Excel:** the sheet's Export / Import menu exports it (CSV/Excel/PDF), downloads a template
+  pre-filled with everyone invited and their current marks, and uploads a filled-in one
+  (`src/lib/attendance-import.ts`). Attendance accepts "In person", "Online" or "Absent"; blank
+  leaves a member unchanged; unknown or duplicate members and invalid values are reported by row.
+  Uploading follows the same rule as marking — only while the meeting's attendance is open.
+- **History views:** Members Attendance shows totals with an attendance-rate gauge, then either
+  _By meeting_ (a card per meeting: date, rate, in-person/online/absent bar) or _By member_ (a row
+  per member with their bar and rate; open one for their timeline). My Attendance is the member's
+  own timeline. Both export to CSV/Excel/PDF.
 - Meeting notices sent before this existed get their register the first time it's opened.
 
 Backend: `MeetingAttendanceController` — `GET/PUT /notices/{id}/my-response`,
