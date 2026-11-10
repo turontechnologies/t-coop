@@ -47,7 +47,14 @@ export interface NoticeReply {
 
 /** A member's answer to a meeting notice. */
 export type MeetingResponse = "Physical" | "Online" | "NotAttending";
-export type MeetingAttendanceMark = "Present" | "Absent";
+/** "Present" = in person; "PresentOnline" = joined online. */
+export type MeetingAttendanceMark = "Present" | "PresentOnline" | "Absent";
+
+export const ATTENDANCE_LABELS: Record<MeetingAttendanceMark, string> = {
+  Present: "In person",
+  PresentOnline: "Online",
+  Absent: "Absent",
+};
 
 export const MEETING_RESPONSE_LABELS: Record<MeetingResponse, string> = {
   Physical: "Attending in person",
@@ -76,6 +83,8 @@ export interface MeetingAttendanceSummary {
   notAttending: number;
   noResponse: number;
   present: number;
+  presentInPerson: number;
+  presentOnline: number;
   absent: number;
   unmarked: number;
 }

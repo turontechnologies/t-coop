@@ -46,6 +46,8 @@ export function attendanceBadgeClass(
   switch (attendance) {
     case "Present":
       return "bg-success/15 text-success";
+    case "PresentOnline":
+      return "bg-sky-500/15 text-sky-700 dark:text-sky-300";
     case "Absent":
       return "bg-destructive/15 text-destructive";
     default:

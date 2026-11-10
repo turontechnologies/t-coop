@@ -18,7 +18,10 @@ import {
   responseBadgeClass,
   responseLabel,
 } from "@/lib/meeting";
-import type { MeetingAttendanceHistoryItem } from "@/types/notice";
+import {
+  ATTENDANCE_LABELS,
+  type MeetingAttendanceHistoryItem,
+} from "@/types/notice";
 
 /** The signed-in member's own attendance across every meeting they were invited to. */
 export function MyAttendanceHistory() {
@@ -243,7 +246,9 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
 }
 
 function totalsOf(items: MeetingAttendanceHistoryItem[]) {
-  const present = items.filter((i) => i.attendance === "Present").length;
+  const present = items.filter(
+    (i) => i.attendance === "Present" || i.attendance === "PresentOnline",
+  ).length;
   const absent = items.filter((i) => i.attendance === "Absent").length;
   const apologies = items.filter((i) => i.response === "NotAttending").length;
   const marked = present + absent;
@@ -350,7 +355,9 @@ function HistoryTable({
                     variant="secondary"
                     className={attendanceBadgeClass(item.attendance)}
                   >
-                    {item.attendance ?? "Not marked"}
+                    {item.attendance
+                      ? ATTENDANCE_LABELS[item.attendance]
+                      : "Not marked"}
                   </Badge>
                 </td>
                 <td className="max-w-xs px-4 py-3 text-muted-foreground">
@@ -371,7 +378,9 @@ function HistoryTable({
                 variant="secondary"
                 className={attendanceBadgeClass(item.attendance)}
               >
-                {item.attendance ?? "Not marked"}
+                {item.attendance
+                  ? ATTENDANCE_LABELS[item.attendance]
+                  : "Not marked"}
               </Badge>
             }
             fields={[
