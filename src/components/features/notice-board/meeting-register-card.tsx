@@ -17,15 +17,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import {
+  ExportImportMenu,
+  type ImportConfig,
+  type ImportResult,
+} from "@/components/features/shared/export-import-menu";
+import {
+  downloadAttendanceTemplate,
+  parseAttendanceFile,
+  type ImportedAttendanceRow,
+} from "@/lib/attendance-import";
+import type { ExportColumn } from "@/lib/table-export";
 import { useMarkAttendance, useMeetingRegister } from "@/hooks/use-notices";
 import { formatTimeLabel } from "@/components/ui/time-picker";
 import { responseBadgeClass, responseLabel } from "@/lib/meeting";
 import { getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type {
-  MeetingAttendanceEntry,
-  MeetingAttendanceMark,
-  MeetingRegister,
+import {
+  ATTENDANCE_LABELS,
+  type MeetingAttendanceEntry,
+  type MeetingAttendanceMark,
+  type MeetingRegister,
 } from "@/types/notice";
 
 interface Draft {
@@ -223,6 +235,58 @@ function RegisterBody({
     }
   };
 
+  // Excel: export the sheet as it stands; upload a filled-in template while marking is open.
+  const exportColumns: ExportColumn<MeetingAttendanceEntry>[] = [
+    { header: "Membership ID", accessor: (row) => row.memberId },
+    { header: "Member", accessor: (row) => row.memberName },
+    {
+      header: "Said beforehand",
+      accessor: (row) => responseLabel(row.response),
+    },
+    {
+      header: "Attendance",
+      accessor: (row) =>
+        row.attendance ? ATTENDANCE_LABELS[row.attendance] : "Not marked",
+    },
+    {
+      header: "Note / reason",
+      accessor: (row) => row.attendanceNote ?? row.responseReason ?? "",
+    },
+  ];
+  const importConfig: ImportConfig<ImportedAttendanceRow> | undefined = canMark
+    ? {
+        templateStorageKey: `attendance-template-${noticeId}`,
+        downloadTemplate: () => downloadAttendanceTemplate(register),
+        parseFile: (file) => parseAttendanceFile(file, register),
+        onImport: async (rows): Promise<ImportResult> => {
+          if (rows.length === 0) return { imported: 0, errors: [] };
+          try {
+            await mark.mutateAsync(
+              rows.map((row) => ({
+                memberId: row.memberId,
+                attendance: row.attendance,
+                note: row.note,
+              })),
+            );
+            return { imported: rows.length, errors: [] };
+          } catch (error) {
+            return {
+              imported: 0,
+              errors: [
+                {
+                  row: rows[0].rowNumber,
+                  message:
+                    error instanceof Error
+                      ? error.message
+                      : "Couldn't save the uploaded attendance",
+                },
+              ],
+            };
+          }
+        },
+      }
+    : undefined;
+
   const { summary } = register;
   const closesAt = register.attendanceEndsAt
     ? new Date(register.attendanceEndsAt)
@@ -362,6 +426,16 @@ function RegisterBody({
             Mark as they said
             {fromResponses.length > 0 ? ` (${fromResponses.length})` : ""}
           </Button>
+          <div className="ml-auto">
+            <ExportImportMenu
+              rows={register.entries}
+              columns={exportColumns}
+              filenamePrefix={`attendance-${register.meetingDate ?? noticeId}`}
+              exportTitle={`Attendance — ${register.title}`}
+              entityLabel="attendance record"
+              importConfig={importConfig}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap gap-1.5" role="tablist">
           {filters.map((option) => (
