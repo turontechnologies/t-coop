@@ -20,7 +20,8 @@ import {
 import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import { useCoopSavingsRecords } from "@/hooks/use-coop-savings";
-import { useApplyForLoan } from "@/hooks/use-loans-self";
+import { useApplyForLoan, useLoansAwaitingMe } from "@/hooks/use-loans-self";
+import { LoansAwaitingMeCard } from "@/components/features/loans/loans-awaiting-me-card";
 import type { LoanApplicationPayload } from "@/services/loan-self.service";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
@@ -126,8 +127,13 @@ export function MemberLoansView({
     }
   };
 
+  const { data: awaitingMe = [] } = useLoansAwaitingMe(coopId);
+
   return (
     <div className="space-y-6">
+      {awaitingMe.length > 0 ? (
+        <LoansAwaitingMeCard loans={awaitingMe} currency={currency} />
+      ) : null}
       {showSummary ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">

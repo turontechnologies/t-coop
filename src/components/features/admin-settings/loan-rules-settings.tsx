@@ -142,7 +142,6 @@ function RulesForm({
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
-  const num = (value: string) => Number(value.replace(/[^\d.]/g, "")) || 0;
 
   const nameOf = (memberId: string) => {
     const member = members.find((m) => m.id === memberId);

@@ -60,6 +60,16 @@ const STATUS_OPTIONS = [
 ] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
+/** Loans still in progress (or turned down) open on their request page, where the committee's
+ * progress and the borrower's offer live; running and finished loans open their details. */
+function loanHref(record: CoopLoanRecord) {
+  const onRequestPage =
+    PENDING_LOAN_STATUSES.includes(record.status) ||
+    record.status === "Rejected" ||
+    record.status === "Declined";
+  return onRequestPage ? `/loans/request/${record.id}` : `/loans/${record.id}`;
+}
+
 function statusBadgeVariant(status: CoopLoanStatus) {
   if (status === "Active" || status === "Completed") return "secondary";
   if (PENDING_LOAN_STATUSES.includes(status)) return "outline";
@@ -282,7 +292,7 @@ export function LoanRecordsTable({ records, viewerId }: LoanRecordsTableProps) {
               pageRecords.map((record) => (
                 <tr
                   key={record.id}
-                  onClick={() => router.push(`/loans/${record.id}`)}
+                  onClick={() => router.push(loanHref(record))}
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
@@ -334,7 +344,7 @@ export function LoanRecordsTable({ records, viewerId }: LoanRecordsTableProps) {
         {pageRecords.map((record) => (
           <MobileRecordCard
             key={record.id}
-            onClick={() => router.push(`/loans/${record.id}`)}
+            onClick={() => router.push(loanHref(record))}
             title={record.loanType}
             badge={
               <Badge

@@ -24,6 +24,7 @@ import {
   loanGuarantorsOf,
   PENDING_LOAN_STATUSES,
   type CoopLoanStatus,
+  loanStatusLabel,
 } from "@/lib/coop-data";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
 import { useGuarantorResponse, useLoanApprovals } from "@/hooks/use-loans-self";
@@ -262,7 +263,7 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
                 record.status === "Completed" && "bg-primary/10 text-primary",
               )}
             >
-              {record.status}
+              {loanStatusLabel(record)}
             </Badge>
           </div>
           {record.rejectionReason ? (
