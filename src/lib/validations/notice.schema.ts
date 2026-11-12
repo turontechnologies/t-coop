@@ -13,6 +13,10 @@ export const createNoticeSchema = z
     meetingDate: z.string().optional(),
     meetingTime: z.string().optional(),
     meetingDurationMinutes: z.number().int().min(1).max(1440),
+    meetingVenue: z
+      .string()
+      .max(200, "Keep the venue under 200 characters")
+      .optional(),
     schedule: z.enum(["now", "later"]),
     scheduleDate: z.string().optional(),
     scheduleTime: z.string().optional(),

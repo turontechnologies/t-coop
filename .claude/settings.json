@@ -76,7 +76,11 @@
       "Bash(grep -n \"secureTextEntry\\\\|Input$\\\\|Input \" \"c:/Users/HomePC/Documents/work/t-coop-mobile/src/app/login.tsx\")",
       "Bash(echo \"exit-code-$?\")",
       "Bash(npx expo *)",
-      "Bash(python - \"src/app/\\(dashboard\\)/notice-board/[id]/page.tsx\")"
+      "Bash(python - \"src/app/\\(dashboard\\)/notice-board/[id]/page.tsx\")",
+      "Bash(python - src/components/features/notice-board/create-notice-form.tsx src/lib/validations/notice.schema.ts)",
+      "Bash(HEIGHT=1500 WAIT=9000 node shot.mjs COOP-0001 admin123 shots-att 1440 /notice-board/56a31abe-55b9-4cde-877a-f5a5382f842f)",
+      "Bash(HEIGHT=1100 node shot.mjs MB-0004 admin123 shots-att-m 1440 /notice-board/56a31abe-55b9-4cde-877a-f5a5382f842f)",
+      "Bash(tasklist //FI \"IMAGENAME eq chrome.exe\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"

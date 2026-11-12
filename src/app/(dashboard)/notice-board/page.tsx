@@ -116,11 +116,7 @@ export default function NoticeBoardPage() {
           ) : null}
 
           <TabsPanel value="my-attendance" className="pt-4">
-            <Card>
-              <CardContent>
-                <MyAttendanceHistory />
-              </CardContent>
-            </Card>
+            <MyAttendanceHistory />
           </TabsPanel>
         </Tabs>
       )}

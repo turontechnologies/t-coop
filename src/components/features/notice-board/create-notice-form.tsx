@@ -71,6 +71,15 @@ interface CreateNoticeFormProps {
   member: AuthenticatedMember;
 }
 
+const DURATIONS = [
+  { value: "30", label: "30 minutes" },
+  { value: "60", label: "1 hour" },
+  { value: "90", label: "1½ hours" },
+  { value: "120", label: "2 hours" },
+  { value: "180", label: "3 hours" },
+  { value: "240", label: "4 hours" },
+];
+
 export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
   const router = useRouter();
   const { data: cooperatives = [] } = useCooperatives();
@@ -88,6 +97,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
   const meetingDateId = useId();
   const meetingTimeId = useId();
   const meetingDurationId = useId();
+  const meetingVenueId = useId();
   const scheduleDateId = useId();
   const scheduleTimeId = useId();
 
@@ -170,6 +180,10 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
         meetingDurationMinutes:
           values.type === "Meeting Notice"
             ? values.meetingDurationMinutes
+            : undefined,
+        meetingVenue:
+          values.type === "Meeting Notice"
+            ? values.meetingVenue?.trim() || undefined
             : undefined,
         attachment,
         sendAt,
@@ -259,9 +273,9 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
           </div>
 
           {type === "Meeting Notice" ? (
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor={meetingDateId}>Meeting Date</Label>
+                <Label htmlFor={meetingDateId}>Meeting date</Label>
                 <Controller
                   control={control}
                   name="meetingDate"
@@ -305,7 +319,7 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                 <FieldError message={errors.meetingDate?.message} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={meetingTimeId}>Meeting Time</Label>
+                <Label htmlFor={meetingTimeId}>Start time</Label>
                 <Controller
                   control={control}
                   name="meetingTime"
@@ -341,26 +355,53 @@ export function CreateNoticeForm({ member }: CreateNoticeFormProps) {
                 <FieldError message={errors.meetingTime?.message} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor={meetingDurationId}>Duration (minutes)</Label>
-                <Input
-                  id={meetingDurationId}
-                  type="number"
-                  min={1}
-                  max={1440}
-                  step={1}
-                  className="h-11"
-                  disabled={isSubmitting}
-                  aria-invalid={!!errors.meetingDurationMinutes}
-                  {...register("meetingDurationMinutes", {
-                    valueAsNumber: true,
-                  })}
+                <Label htmlFor={meetingDurationId}>Duration</Label>
+                <Controller
+                  control={control}
+                  name="meetingDurationMinutes"
+                  render={({ field }) => (
+                    <Select
+                      items={DURATIONS}
+                      value={String(field.value)}
+                      onValueChange={(value) =>
+                        field.onChange(Number(value ?? 120))
+                      }
+                      disabled={isSubmitting}
+                    >
+                      <SelectTrigger
+                        id={meetingDurationId}
+                        className="h-11 w-full"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Attendance opens at the start and closes when this duration
-                  ends.
-                </p>
                 <FieldError message={errors.meetingDurationMinutes?.message} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor={meetingVenueId}>Venue or link</Label>
+                <Input
+                  id={meetingVenueId}
+                  placeholder="e.g. Community hall"
+                  maxLength={200}
+                  className="h-11"
+                  disabled={isSubmitting}
+                  {...register("meetingVenue")}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Members check themselves in from the start until 30 minutes
+                before the end; officers approve attendance until the meeting
+                ends.
+              </p>
             </div>
           ) : null}
 
