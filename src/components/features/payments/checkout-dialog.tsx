@@ -157,7 +157,7 @@ export function CheckoutDialog({
     >
       <DialogContent
         showClose={false}
-        className="gap-0 overflow-hidden p-0 sm:max-w-[720px]"
+        className="gap-0 overflow-hidden p-0 sm:max-w-[720px] sm:p-0"
       >
         <DialogTitle className="sr-only">{label}</DialogTitle>
         <div className="grid max-h-[92dvh] grid-cols-1 sm:min-h-[460px] sm:grid-cols-[200px_minmax(0,1fr)]">
@@ -201,13 +201,13 @@ export function CheckoutDialog({
           <section className="flex min-w-0 flex-col overflow-y-auto">
             <header className="flex items-start gap-3 border-b border-border px-6 pt-5 pb-4">
               <div className="grid min-w-0 flex-1">
-                <span className="truncate font-bold text-foreground">
-                  {merchant}
-                </span>
+                <span className="font-bold text-foreground">{merchant}</span>
                 <span className="text-sm text-muted-foreground">{label}</span>
               </div>
-              <div className="grid text-right text-sm text-muted-foreground">
-                <span className="hidden truncate sm:block">{email}</span>
+              <div className="grid max-w-[45%] text-right text-sm text-muted-foreground">
+                <span className="hidden truncate sm:block" title={email}>
+                  {email}
+                </span>
                 <span>
                   Pay{" "}
                   <b className="text-base text-emerald-600 dark:text-emerald-400">
