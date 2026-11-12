@@ -22,65 +22,55 @@ there is no mock mode.
 ## The loan lifecycle
 
 ```
-Awaiting Guarantor → Awaiting Vice President → Awaiting Treasurer
-  → Awaiting Secretary → Active (paid out) → Completed
-          any open stage → Rejected
+(pay application fee) → Awaiting Guarantor → Awaiting Approval (committee, in order)
+  → Awaiting Acceptance (borrower) → Pending Disbursement → Active → Completed
+        any open stage → Rejected          borrower says no → Declined
 ```
 
-1. **Apply.** A member picks a **mode**, a loan type and an amount:
-   - **Times two** — up to half their savings (their savings must be at
-     least twice the loan). Needs a **guarantor**: an _active member of the
-     same co-op_, not the applicant — the picker only lists those, and the
-     backend rejects anything else.
-   - **Within** — borrowed from their own savings, up to what they've
-     saved. No guarantor: it goes straight to the Vice President. The
-     payout is deducted from their savings and the principal part of each
-     repayment goes back into them.
+0. **Application fee.** If the admin set one (Settings → Loan Settings), "+ New Loan" opens a
+   checkout first (`checkout-dialog.tsx`, the preview's design: Card / Bank / Transfer / USSD).
+   The card or bank details are entered in Paystack's (or Flutterwave's) own secure window,
+   never in T-Coop; the server verifies the payment (`LoanApplicationFeeController`). A paid fee
+   stays on file until an application uses it, so closing the form doesn't mean paying again.
+1. **Apply.** Mode, loan type, amount and **how many months to repay over** (up to the loan
+   type's maximum period). The co-op's rules apply: minimum amount, Times two up to N× savings,
+   Within up to N% of savings, minimum membership months, minimum savings, and whether a member
+   may have more than one loan. Times two needs the co-op's number of guarantors.
+2. **Guarantors** (Times two only) each accept or decline; one decline rejects the loan.
+3. **Loan committee.** The admin chooses who approves and in what order (any number of people,
+   each with a title). Each one, in turn, **suggests an amount and repayment period** (never
+   more than was asked for, never longer than the type allows) with an optional note. The last
+   approver's figures are the approved terms. Any approver at their step, or the admin at any
+   stage, can reject with a reason. With no committee set, the admin approves alone.
+4. **Borrower accepts.** The borrower sees the approved amount and period (and what they asked
+   for) and accepts or declines. Accepting asks where to pay: **their registered account**, or
+   **another account**, which must be in their registered name: the bank is asked for the
+   account's real name (Paystack resolve) and it must contain their first and last names.
+5. **Disbursement.** An admin (or a role with Loans → Requests write) checks the summary and pays
+   out **online** (Paystack transfer to the chosen account) or by **cheque** (upload a photo or
+   scan, optional cheque number). The loan becomes **Active**.
+6. **Repayment** as before (see [payments-and-payouts.md](./payments-and-payouts.md)).
 
-   Both are capped by the loan type's maximum, and **every loan charges the
-   loan type's interest** — a percentage, a fixed amount, or none for a
-   "No Interest" type. Every co-op has a **Household Loan** type by default.
-   This is the only place a guarantor is named; joining the co-op needs
-   none (see [members-directory-page.md](./members-directory-page.md)).
+### Committee rules
 
-2. **Guarantor** (Times two only). Only the named guarantor can accept
-   (optionally attaching proof of income) or decline. Declining rejects the
-   loan.
-3. **Officer approvals.** The loan then goes to the co-op's **Vice
-   President**, then **Treasurer**, then **Secretary** — one approval each,
-   in that order. Each officer is notified when it's their turn.
-4. **Payout.** The Secretary's approval immediately sends the loan to the
-   borrower's saved bank account — principal minus the combined co-op +
-   platform loan charge — as a server-side Paystack transfer. Only when
-   Paystack accepts it does the loan become **Active**. If the payout fails
-   (no bank account, no Paystack set up, Paystack refuses), nothing changes
-   and the Secretary sees the reason and can try again.
-5. **Repayment.** The borrower pays each fixed installment online, or an
-   admin/officer records one paid offline; the final installment completes
-   the loan (see [payments-and-payouts.md](./payments-and-payouts.md)).
+- Nobody approves a loan they borrow or guarantee: the admin covers that step.
+- Committee members don't need a Loans permission to act; their seat is the authority. Loans
+  waiting on them show at the top of their Loans page ("waiting for your approval").
+- Every decision, with the suggested terms and what changed, is in the loan's trail
+  (`loan_approvals`).
 
-### Officer rules
+### Dividends
 
-- Every co-op has four fixed officer roles — **President, Vice President,
-  Treasurer, Secretary** — managed in Settings → User Management like any
-  co-op role, but they can't be renamed, deactivated, or deleted, and each
-  is held by one member at a time.
-- At each step only that office's holder can approve or reject.
-- **A vacant office is covered by the co-op admin.** The same applies when
-  the office holder is the loan's own borrower or guarantor — nobody acts on
-  a loan they're party to.
-- **The President can reject at any open stage** (including while it awaits
-  the guarantor) but doesn't approve.
-- Every decision is recorded in the loan's approval trail
-  (`loan_approvals`), including whether the admin acted as cover.
+Settings → Loan Settings → Dividends: **a share of savings** (rate% of each member's savings),
+**a share of loan interest** (rate% of the interest actually earned on loans, shared in
+proportion to savings), or **none**, plus how often it's paid. The dashboard uses this
+(`DividendCalculator`).
 
 ### Where payouts come from
 
-The co-op's own Paystack account if it has connected one (co-op admin's
-Settings → Integrations), otherwise the platform's. The transfer reference
-is fixed per loan (`loan-<loanId>`), so retrying an approval can never pay
-the same loan twice. The paying account must allow API transfers without an
-OTP (Paystack Settings → Preferences).
+The co-op's own Paystack account if it has connected one (Settings → Integrations), otherwise
+the platform's. The online transfer reference is fixed per loan (`loan-<loanId>`), so retrying
+can never pay the same loan twice.
 
 ## Borrower history
 
