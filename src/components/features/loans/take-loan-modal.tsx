@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -22,20 +21,18 @@ import {
 } from "@/components/ui/select";
 import {
   computeEligibleAmount,
-  computeLoanTerms,
   describeInterest,
-  LOAN_MODES,
   type LoanMode,
 } from "@/lib/loans-data";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { useCoopLoanTypes } from "@/hooks/use-coop-loans";
+import { useLoanSettings } from "@/hooks/use-loans-self";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { GuarantorMultiSelect } from "@/components/features/loans/guarantor-multi-select";
-
-/** A Times two loan needs at least this many guarantors (the backend enforces it too). */
-const MIN_GUARANTORS = 2;
+import { TermsPreview } from "@/components/features/loans/loan-request-panels";
+import type { LoanFeeCredit } from "@/services/loan-fee.service";
 
 interface TakeLoanModalProps {
   open: boolean;
@@ -45,13 +42,19 @@ interface TakeLoanModalProps {
   memberId: string;
   members: CoopMember[];
   totalSavings: number;
+  /** The application fee paid for this application, when the co-op charges one. */
+  feeCredit?: LoanFeeCredit | null;
   onProceed: (application: {
     loanTypeId: string;
     amount: number;
     loanMode: LoanMode;
+    durationMonths: number;
     guarantorMemberIds?: string[];
   }) => void;
 }
+
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
+const digits = (value: string) => Number(value.replace(/[^\d.]/g, "")) || 0;
 
 export function TakeLoanModal({
   open,
@@ -61,16 +64,27 @@ export function TakeLoanModal({
   memberId,
   members,
   totalSavings,
+  feeCredit,
   onProceed,
 }: TakeLoanModalProps) {
   const typeId = useId();
   const amountId = useId();
+  const monthsId = useId();
   const guarantorId = useId();
   const currency = useCurrency();
   const [loanMode, setLoanMode] = useState<LoanMode>("TimesTwo");
   const [loanTypeId, setLoanTypeId] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amountText, setAmountText] = useState("");
+  const [monthsText, setMonthsText] = useState("");
   const [guarantorMemberIds, setGuarantorMemberIds] = useState<string[]>([]);
+
+  const { data: settings } = useLoanSettings(open ? coopId : undefined);
+  const rules = {
+    savingsMultiplier: settings?.savingsMultiplier ?? 2,
+    withinPercent: settings?.withinPercent ?? 100,
+  };
+  const minAmount = settings?.minAmount ?? 0;
+  const minGuarantors = settings?.minGuarantors ?? 2;
 
   const {
     data: types,
@@ -85,20 +99,15 @@ export function TakeLoanModal({
     [types],
   );
   const selectedType = loanTypes.find((type) => type.id === loanTypeId);
+  const maxMonths = selectedType?.durationMonths ?? 0;
   const eligibleAmount = selectedType
-    ? computeEligibleAmount(totalSavings, selectedType, loanMode)
+    ? computeEligibleAmount(totalSavings, selectedType, loanMode, rules)
     : 0;
-  const amountNumber = Number(amount);
-  const terms = useMemo(
-    () =>
-      selectedType && amountNumber > 0
-        ? computeLoanTerms(selectedType, amountNumber)
-        : null,
-    [selectedType, amountNumber],
-  );
+  const amount = digits(amountText);
+  const months = Number(monthsText) || 0;
 
-  const needsGuarantor = loanMode === "TimesTwo";
-  // Anyone active in this co-op — a member or the admin — can stand as guarantor, except the
+  const needsGuarantor = loanMode === "TimesTwo" && minGuarantors > 0;
+  // Anyone active in this co-op, a member or the admin, can stand as guarantor, except the
   // borrower themselves (the backend enforces it too).
   const guarantorOptions = members
     .filter((member) => member.id !== memberId && member.status === "Active")
@@ -108,65 +117,117 @@ export function TakeLoanModal({
       tag: member.role === "Admin" ? "Admin" : undefined,
     }));
 
+  const amountError =
+    !selectedType || !amountText
+      ? null
+      : amount > eligibleAmount
+        ? `That's more than you can borrow. The most is ${formatMoney(eligibleAmount, currency)}.`
+        : minAmount > 0 && amount < minAmount
+          ? `The smallest loan is ${formatMoney(minAmount, currency)}.`
+          : null;
+  const monthsError =
+    !selectedType || !monthsText
+      ? null
+      : months < 1 || !Number.isInteger(months)
+        ? "Enter a whole number of months."
+        : months > maxMonths
+          ? `The longest period for ${selectedType.name} is ${plural(maxMonths, "month")}.`
+          : null;
+
   const isValid =
     !!selectedType &&
-    (!needsGuarantor || guarantorMemberIds.length >= MIN_GUARANTORS) &&
-    amountNumber > 0 &&
-    amountNumber <= eligibleAmount;
+    amount > 0 &&
+    !amountError &&
+    months > 0 &&
+    !monthsError &&
+    (!needsGuarantor || guarantorMemberIds.length >= minGuarantors);
+
+  const reset = () => {
+    setLoanMode("TimesTwo");
+    setLoanTypeId("");
+    setAmountText("");
+    setMonthsText("");
+    setGuarantorMemberIds([]);
+  };
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) {
-      setLoanMode("TimesTwo");
-      setLoanTypeId("");
-      setAmount("");
-      setGuarantorMemberIds([]);
-    }
+    if (!next) reset();
     onOpenChange(next);
   };
 
+  const modes: { value: LoanMode; title: string; body: string }[] = [
+    {
+      value: "TimesTwo",
+      title: "Times two",
+      body: `Borrow up to ${rules.savingsMultiplier}× your savings (${formatMoney(totalSavings, currency)} saved → up to ${formatMoney(totalSavings * rules.savingsMultiplier, currency)}).${minGuarantors > 0 ? ` Needs at least ${plural(minGuarantors, "guarantor")}.` : ""}`,
+    },
+    {
+      value: "Within",
+      title: "Within",
+      body: `Borrow from your own savings, up to ${rules.withinPercent === 100 ? "what you've saved" : `${rules.withinPercent}% of it`}. No guarantor. It comes out of your savings, and your repayments go back into them.`,
+    },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Take a Loan</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {feeCredit ? (
+            <p className="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <CheckCircle2 className="size-4" aria-hidden="true" />
+              Application fee paid
+              <span className="font-medium text-muted-foreground">
+                · {formatMoney(feeCredit.amount, currency)} · Ref{" "}
+                {feeCredit.reference}
+              </span>
+            </p>
+          ) : null}
+
           <div className="space-y-2">
-            <Label>How are you borrowing?</Label>
-            <RadioGroup
-              value={loanMode}
-              onValueChange={(value) => setLoanMode(value as LoanMode)}
-              disabled={busy}
+            <Label className="text-[0.95rem] text-foreground">
+              How are you borrowing?
+            </Label>
+            <div
+              className="grid gap-2.5"
+              role="radiogroup"
+              aria-label="How are you borrowing?"
             >
-              {LOAN_MODES.map((mode) => {
-                const optionId = `${typeId}-${mode.value}`;
+              {modes.map((mode) => {
+                const checked = loanMode === mode.value;
                 return (
                   <label
                     key={mode.value}
-                    htmlFor={optionId}
                     className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3",
-                      loanMode === mode.value && "border-primary bg-accent/40",
+                      "flex cursor-pointer items-start gap-3.5 rounded-2xl border px-4 py-3.5 transition-colors",
+                      checked
+                        ? "border-primary/60 bg-primary/5"
+                        : "border-border hover:border-foreground/20",
                     )}
                   >
-                    <RadioGroupItem
-                      id={optionId}
-                      value={mode.value}
-                      className="mt-0.5"
+                    <input
+                      type="radio"
+                      name="loan-mode"
+                      className="mt-1 size-4 accent-[var(--primary)]"
+                      checked={checked}
+                      disabled={busy}
+                      onChange={() => setLoanMode(mode.value)}
                     />
-                    <span className="space-y-0.5">
-                      <span className="block text-sm font-medium text-foreground">
-                        {mode.label}
+                    <span>
+                      <span className="block font-bold text-foreground">
+                        {mode.title}
                       </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {mode.description}
+                      <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                        {mode.body}
                       </span>
                     </span>
                   </label>
                 );
               })}
-            </RadioGroup>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -177,29 +238,28 @@ export function TakeLoanModal({
                 value: type.id,
                 label: type.name,
               }))}
-              onValueChange={(value) => setLoanTypeId(value ?? "")}
+              onValueChange={(value) => {
+                setLoanTypeId(value ?? "");
+                const type = loanTypes.find((t) => t.id === value);
+                if (type && !monthsText)
+                  setMonthsText(String(type.durationMonths));
+              }}
               disabled={busy}
             >
-              <SelectTrigger id={typeId} className="h-11 w-full">
+              <SelectTrigger id={typeId} className="w-full">
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
                 {loanTypes.map((type) => (
                   <SelectItem key={type.id} value={type.id}>
-                    {type.name}
+                    {type.name} · up to {type.durationMonths} months ·{" "}
+                    {describeInterest(type, (value) =>
+                      formatMoney(value, currency),
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedType ? (
-              <p className="text-xs text-muted-foreground">
-                You can borrow up to {formatMoney(eligibleAmount, currency)} ·{" "}
-                {describeInterest(selectedType, (value) =>
-                  formatMoney(value, currency),
-                )}{" "}
-                over {selectedType.durationMonths} months
-              </p>
-            ) : null}
             {isLoadingTypes || isFetchingTypes ? (
               <p className="text-xs text-muted-foreground" aria-live="polite">
                 Loading loan types…
@@ -228,28 +288,88 @@ export function TakeLoanModal({
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor={amountId}>Loan Amount</Label>
-            <Input
-              id={amountId}
-              type="number"
-              inputMode="numeric"
-              placeholder="Enter amount"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              disabled={busy || !selectedType}
-              className="h-11"
-            />
-            {selectedType && amountNumber > eligibleAmount ? (
-              <p className="text-xs text-destructive">
-                {loanMode === "Within"
-                  ? "A Within loan can't be more than your savings"
-                  : "A Times two loan can't be more than twice your savings"}{" "}
-                (or this loan type&apos;s maximum) —{" "}
-                {formatMoney(eligibleAmount, currency)} here.
-              </p>
-            ) : null}
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <div className="space-y-2">
+              <Label htmlFor={amountId}>Loan Amount</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 font-semibold text-muted-foreground">
+                  ₦
+                </span>
+                <Input
+                  id={amountId}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="Enter amount"
+                  value={amountText}
+                  aria-invalid={!!amountError}
+                  onChange={(event) => setAmountText(event.target.value)}
+                  onBlur={() =>
+                    amount && setAmountText(amount.toLocaleString("en-NG"))
+                  }
+                  disabled={busy || !selectedType}
+                  className="pl-8"
+                />
+              </div>
+              {amountError ? (
+                <p className="text-sm font-medium text-destructive">
+                  {amountError}
+                </p>
+              ) : selectedType ? (
+                <p className="text-xs text-muted-foreground">
+                  You can borrow up to {formatMoney(eligibleAmount, currency)}
+                  {minAmount > 0
+                    ? ` · at least ${formatMoney(minAmount, currency)}`
+                    : ""}
+                  .
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={monthsId}>Repay over</Label>
+              <div className="relative">
+                <Input
+                  id={monthsId}
+                  type="number"
+                  min={1}
+                  max={maxMonths || undefined}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder="Months"
+                  value={monthsText}
+                  aria-invalid={!!monthsError}
+                  onChange={(event) => setMonthsText(event.target.value)}
+                  disabled={busy || !selectedType}
+                  className="pr-20"
+                />
+                <span className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-sm text-muted-foreground">
+                  months
+                </span>
+              </div>
+              {monthsError ? (
+                <p className="text-sm font-medium text-destructive">
+                  {monthsError}
+                </p>
+              ) : selectedType ? (
+                <p className="text-xs text-muted-foreground">
+                  Up to {plural(maxMonths, "month")}.
+                </p>
+              ) : null}
+            </div>
           </div>
+
+          {isValid ||
+          (selectedType &&
+            amount > 0 &&
+            !amountError &&
+            months > 0 &&
+            !monthsError) ? (
+            <TermsPreview
+              amount={amount}
+              months={months}
+              loanType={selectedType}
+              currency={currency}
+            />
+          ) : null}
 
           {needsGuarantor ? (
             <div className="space-y-2">
@@ -259,51 +379,23 @@ export function TakeLoanModal({
                 options={guarantorOptions}
                 value={guarantorMemberIds}
                 onChange={setGuarantorMemberIds}
-                min={MIN_GUARANTORS}
+                min={minGuarantors}
                 disabled={busy}
               />
+              <p className="text-xs text-muted-foreground">
+                {guarantorMemberIds.length < minGuarantors
+                  ? `Pick ${minGuarantors - guarantorMemberIds.length} more. Each guarantor is asked to accept.`
+                  : "Each guarantor is asked to accept before the loan goes to the loan committee."}
+              </p>
             </div>
           ) : null}
 
-          {terms ? (
-            <div className="space-y-2 rounded-xl bg-accent/60 p-4">
-              <p className="text-sm font-semibold text-foreground">
-                Loan Details
-              </p>
-              <dl className="grid grid-cols-2 gap-y-2 text-sm">
-                <dt className="text-muted-foreground">Loan Type</dt>
-                <dd className="text-right font-medium text-foreground">
-                  {selectedType?.name}
-                </dd>
-                <dt className="text-muted-foreground">Duration</dt>
-                <dd className="text-right font-medium text-foreground">
-                  {terms.durationMonths} months
-                </dd>
-                <dt className="text-muted-foreground">Loan Amount</dt>
-                <dd className="text-right font-medium text-foreground">
-                  {formatMoney(amountNumber, currency)}
-                </dd>
-                <dt className="text-muted-foreground">Interest</dt>
-                <dd className="text-right font-medium text-foreground">
-                  {formatMoney(terms.totalInterest, currency)}
-                </dd>
-                <dt className="text-muted-foreground">Total Repayment</dt>
-                <dd className="text-right font-medium text-foreground">
-                  {formatMoney(terms.totalRepayment, currency)}
-                </dd>
-                <dt className="text-muted-foreground">Monthly Repayment</dt>
-                <dd className="text-right font-medium text-foreground">
-                  {formatMoney(terms.monthlyRepayment, currency)}
-                </dd>
-              </dl>
-              {loanMode === "Within" ? (
-                <p className="text-xs text-muted-foreground">
-                  {formatMoney(amountNumber, currency)} comes out of your
-                  savings when the loan is paid out, and the principal part of
-                  each repayment goes back into them.
-                </p>
-              ) : null}
-            </div>
+          {loanMode === "Within" && amount > 0 && !amountError ? (
+            <p className="text-xs text-muted-foreground">
+              {formatMoney(amount, currency)} comes out of your savings when the
+              loan is paid out, and the principal part of each repayment goes
+              back into them.
+            </p>
           ) : null}
         </div>
 
@@ -311,31 +403,25 @@ export function TakeLoanModal({
           <Button
             type="button"
             variant="ghost"
-            aria-disabled={busy}
-            className={cn(busy && "pointer-events-none opacity-50")}
-            onClick={() => {
-              if (busy) return;
-              handleOpenChange(false);
-            }}
+            disabled={busy}
+            onClick={() => handleOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
             type="button"
-            disabled={!isValid}
-            aria-disabled={busy}
-            className={cn(busy && "pointer-events-none opacity-50")}
-            onClick={() => {
-              if (busy) return;
+            disabled={!isValid || busy}
+            onClick={() =>
               onProceed({
                 loanTypeId,
-                amount: amountNumber,
+                amount,
                 loanMode,
+                durationMonths: months,
                 guarantorMemberIds: needsGuarantor
                   ? guarantorMemberIds
                   : undefined,
-              });
-            }}
+              })
+            }
           >
             {busy ? (
               <>

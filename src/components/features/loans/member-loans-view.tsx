@@ -8,6 +8,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoanRecordsTable } from "@/components/features/loans/loan-records-table";
 import { LoanSuccessModal } from "@/components/features/loans/loan-success-modal";
 import { TakeLoanModal } from "@/components/features/loans/take-loan-modal";
+import { CheckoutDialog } from "@/components/features/payments/checkout-dialog";
+import { useLoanFeePayment, useLoanFeeStatus } from "@/hooks/use-loan-fee";
+import { useAuthStore } from "@/store/auth.store";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import {
   PENDING_LOAN_STATUSES,
@@ -66,6 +69,7 @@ export function MemberLoansView({
   const { data: members = [] } = useCoopMembers(coopId);
   const applyForLoan = useApplyForLoan(coopId);
   const currency = useCurrency();
+  const email = useAuthStore((state) => state.member?.email) ?? "";
 
   const totalSavings = useMemo(
     () => savingsRecords.reduce((sum, record) => sum + record.amount, 0),
@@ -92,6 +96,15 @@ export function MemberLoansView({
   const setTakeOpen = onTakeOpenChange ?? setInternalTakeOpen;
   const [busy, setBusy] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
+
+  // The application fee (set by the admin) is paid before the form opens. A paid fee waits on
+  // file until it's used, so closing the form doesn't mean paying again.
+  const { data: feeStatus, refetch: refetchFee } = useLoanFeeStatus(
+    coopId,
+    takeOpen,
+  );
+  const payFee = useLoanFeePayment(coopId, email);
+  const feeDue = !!feeStatus && feeStatus.fee > 0 && !feeStatus.credit;
   const [lastAmount, setLastAmount] = useState(0);
 
   const handleProceed = async (application: LoanApplicationPayload) => {
@@ -99,6 +112,7 @@ export function MemberLoansView({
     setBusy(true);
     try {
       await applyForLoan.mutateAsync(application);
+      void refetchFee();
       setTakeOpen(false);
       setLastAmount(amount);
       setSuccessOpen(true);
@@ -154,8 +168,22 @@ export function MemberLoansView({
         </CardContent>
       </Card>
 
+      <CheckoutDialog
+        open={takeOpen && feeDue}
+        onOpenChange={(next) => {
+          if (!next) setTakeOpen(false);
+        }}
+        merchant={feeStatus?.merchantName ?? "Your co-operative"}
+        label="Loan application fee"
+        email={email}
+        amount={feeStatus?.fee ?? 0}
+        currency={currency}
+        onPay={payFee}
+        onDone={() => void refetchFee()}
+      />
       <TakeLoanModal
-        open={takeOpen}
+        open={takeOpen && !!feeStatus && !feeDue}
+        feeCredit={feeStatus?.credit ?? null}
         onOpenChange={setTakeOpen}
         coopId={coopId}
         busy={busy}
