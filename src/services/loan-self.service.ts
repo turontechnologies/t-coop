@@ -147,6 +147,8 @@ export interface DisbursePayload {
 /** Settings -> Loans: the committee, loan rules and dividend rules. */
 export interface LoanSettings {
   minAmount: number;
+  /** Paid online before the loan form opens; 0 for no fee. */
+  applicationFee: number;
   savingsMultiplier: number;
   withinPercent: number;
   minMembershipMonths: number;

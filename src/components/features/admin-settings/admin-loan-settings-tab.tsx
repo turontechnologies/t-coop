@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { LoanTypeSettingsTable } from "@/components/features/admin-settings/loan-type-settings-table";
+import { LoanRulesSettings } from "@/components/features/admin-settings/loan-rules-settings";
 import {
   useCoopLoanTypeMutations,
   useCoopLoanTypes,
@@ -51,37 +52,41 @@ export function AdminLoanSettingsTab() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full max-w-xs">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search"
-            className="h-9 pl-8"
-          />
+    <div className="space-y-8">
+      {coopId ? <LoanRulesSettings coopId={coopId} /> : null}
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-foreground">Loan types</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative w-full max-w-xs">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search"
+              className="h-9 pl-8"
+            />
+          </div>
+          <Button onClick={() => router.push("/settings/loans/new")}>
+            New Loan Type
+          </Button>
         </div>
-        <Button onClick={() => router.push("/settings/loans/new")}>
-          New Loan Type
-        </Button>
-      </div>
 
-      <QueryBoundary
-        isLoading={typesQuery.isLoading}
-        isError={typesQuery.isError}
-        error={typesQuery.error}
-        onRetry={() => typesQuery.refetch()}
-        isRetrying={typesQuery.isFetching}
-      >
-        <LoanTypeSettingsTable
-          settings={filtered}
-          onToggleStatus={handleToggleStatus}
-        />
-      </QueryBoundary>
+        <QueryBoundary
+          isLoading={typesQuery.isLoading}
+          isError={typesQuery.isError}
+          error={typesQuery.error}
+          onRetry={() => typesQuery.refetch()}
+          isRetrying={typesQuery.isFetching}
+        >
+          <LoanTypeSettingsTable
+            settings={filtered}
+            onToggleStatus={handleToggleStatus}
+          />
+        </QueryBoundary>
+      </div>
     </div>
   );
 }
