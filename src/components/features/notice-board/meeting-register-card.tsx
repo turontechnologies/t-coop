@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Check,
   ClipboardList,
+  FileText,
   Loader2,
   MonitorSmartphone,
   Search,
-  StickyNote,
   UserCheck,
   UserX,
   Wand2,
@@ -15,7 +16,17 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import {
   ExportImportMenu,
@@ -28,79 +39,85 @@ import {
   type ImportedAttendanceRow,
 } from "@/lib/attendance-import";
 import type { ExportColumn } from "@/lib/table-export";
-import { useMarkAttendance, useMeetingRegister } from "@/hooks/use-notices";
-import { formatTimeLabel } from "@/components/ui/time-picker";
-import { responseBadgeClass, responseLabel } from "@/lib/meeting";
+import {
+  useApproveCheckIns,
+  useMarkAttendance,
+  useMeetingRegister,
+} from "@/hooks/use-notices";
+import {
+  formatClock,
+  meetingPhase,
+  responseLabel,
+  useNow,
+  type MeetingPhase,
+} from "@/lib/meeting";
 import { getInitials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   ATTENDANCE_LABELS,
+  CHECK_IN_LABELS,
   type MeetingAttendanceEntry,
   type MeetingAttendanceMark,
   type MeetingRegister,
 } from "@/types/notice";
 
-interface Draft {
-  attendance: MeetingAttendanceMark | null;
-  note: string;
-}
+const EASE = [0.16, 1, 0.3, 1] as const;
 
-type Filter = "all" | "unmarked" | MeetingAttendanceMark;
+type Bucket = "inPerson" | "online" | "absent" | "unmarked";
+type Filter = "all" | "awaiting" | Bucket;
+
+const bucketOf = (entry: MeetingAttendanceEntry): Bucket =>
+  entry.attendance === "Present"
+    ? "inPerson"
+    : entry.attendance === "PresentOnline"
+      ? "online"
+      : entry.attendance === "Absent"
+        ? "absent"
+        : "unmarked";
+
+const matches = (entry: MeetingAttendanceEntry, filter: Filter) =>
+  filter === "all" ||
+  (filter === "awaiting" ? entry.awaitingApproval : bucketOf(entry) === filter);
 
 const MARKS: {
   value: MeetingAttendanceMark;
   label: string;
   icon: typeof UserCheck;
-  active: string;
+  pressed: string;
 }[] = [
   {
     value: "Present",
     label: "In person",
     icon: UserCheck,
-    active: "text-emerald-700 dark:text-emerald-300",
+    pressed:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
   },
   {
     value: "PresentOnline",
     label: "Online",
     icon: MonitorSmartphone,
-    active: "text-sky-700 dark:text-sky-300",
+    pressed: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
   },
   {
     value: "Absent",
     label: "Absent",
     icon: UserX,
-    active: "text-rose-700 dark:text-rose-300",
+    pressed: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
   },
 ];
 
-const PILL_BG: Record<MeetingAttendanceMark, string> = {
-  Present: "bg-emerald-100 dark:bg-emerald-500/20",
-  PresentOnline: "bg-sky-100 dark:bg-sky-500/20",
-  Absent: "bg-rose-100 dark:bg-rose-500/20",
-};
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
 /**
- * The meeting's attendance sheet, for officers. Everyone the notice reached is listed with what
- * they said beforehand; the officer marks each one present in person, present online, or absent.
- * A "not attending" answer arrives already marked absent with the member's reason. Marking is
- * open from the meeting's start until its scheduled duration ends.
+ * A meeting's attendance, for officers. Members check themselves in during the meeting (until 30
+ * minutes before it ends); officers approve or reject those check-ins, or mark anyone directly,
+ * from the start until the end. Every change saves straight away.
  */
 export function MeetingRegisterCard({ noticeId }: { noticeId: string }) {
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isRefetching,
-    dataUpdatedAt,
-  } = useMeetingRegister(noticeId);
+  const { data, isLoading, isError, error, refetch, isRefetching } =
+    useMeetingRegister(noticeId);
 
   return (
     <Card>
-      <CardContent className="space-y-5">
+      <CardContent>
         <QueryBoundary
           isLoading={isLoading}
           isError={isError}
@@ -109,13 +126,7 @@ export function MeetingRegisterCard({ noticeId }: { noticeId: string }) {
           isRetrying={isRefetching}
           errorTitle="Couldn't load the attendance"
         >
-          {data ? (
-            <RegisterBody
-              key={dataUpdatedAt}
-              noticeId={noticeId}
-              register={data}
-            />
-          ) : null}
+          {data ? <RegisterBody noticeId={noticeId} register={data} /> : null}
         </QueryBoundary>
       </CardContent>
     </Card>
@@ -130,112 +141,176 @@ function RegisterBody({
   register: MeetingRegister;
 }) {
   const mark = useMarkAttendance(noticeId);
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 5_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  const canMark =
-    register.canMarkAttendance &&
-    !!register.attendanceEndsAt &&
-    Date.parse(register.attendanceEndsAt) > now;
+  const approve = useApproveCheckIns(noticeId);
+  const now = useNow(5_000);
+  const phase = meetingPhase(register.window, now);
+  const canMark = phase === "checkin" || phase === "approvals";
+  const busy = mark.isPending || approve.isPending;
 
-  const initialDrafts = () =>
-    Object.fromEntries(
-      register.entries.map((entry) => [
-        entry.memberId,
-        { attendance: entry.attendance, note: entry.attendanceNote ?? "" },
-      ]),
-    ) as Record<string, Draft>;
-  const [drafts, setDrafts] = useState<Record<string, Draft>>(initialDrafts);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [openNotes, setOpenNotes] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [noteFor, setNoteFor] = useState<MeetingAttendanceEntry | null>(null);
+  const [noteText, setNoteText] = useState("");
 
-  const changed = register.entries.filter((entry) => {
-    const draft = drafts[entry.memberId];
-    return (
-      draft.attendance !== entry.attendance ||
-      draft.note.trim() !== (entry.attendanceNote ?? "")
-    );
-  });
-
-  // Live counts from the sheet as it's being filled in, not just what's saved.
-  const counts = useMemo(() => {
-    const result = { Present: 0, PresentOnline: 0, Absent: 0, unmarked: 0 };
-    for (const entry of register.entries) {
-      const value = drafts[entry.memberId]?.attendance;
-      if (value) result[value] += 1;
-      else result.unmarked += 1;
-    }
-    return result;
-  }, [drafts, register.entries]);
-  const total = register.entries.length;
-  const markedCount = total - counts.unmarked;
+  const entries = register.entries;
+  const total = entries.length;
+  const count = (f: Filter) => entries.filter((e) => matches(e, f)).length;
+  const marked = total - count("unmarked");
+  const awaiting = count("awaiting");
+  const said = {
+    physical: register.summary.physical,
+    online: register.summary.online,
+    apologies: register.summary.notAttending,
+    none: register.summary.noResponse,
+  };
 
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return register.entries.filter((entry) => {
-      const value = drafts[entry.memberId]?.attendance ?? null;
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "unmarked" ? value === null : value === filter);
-      const matchesSearch =
-        !query ||
-        entry.memberName.toLowerCase().includes(query) ||
-        entry.memberId.toLowerCase().includes(query);
-      return matchesFilter && matchesSearch;
-    });
-  }, [register.entries, drafts, filter, search]);
-
-  const update = (memberId: string, patch: Partial<Draft>) =>
-    setDrafts((current) => ({
-      ...current,
-      [memberId]: { ...current[memberId], ...patch },
-    }));
-
-  // "Mark as they said": in person → In person, online → Online, apology → Absent.
-  const fromResponses = register.entries.filter(
-    (entry) => entry.response && drafts[entry.memberId]?.attendance === null,
-  );
-  const applyResponses = () => {
-    setDrafts((current) => {
-      const next = { ...current };
-      for (const entry of fromResponses) {
-        const value: MeetingAttendanceMark =
-          entry.response === "Physical"
-            ? "Present"
-            : entry.response === "Online"
-              ? "PresentOnline"
-              : "Absent";
-        next[entry.memberId] = { ...next[entry.memberId], attendance: value };
-      }
-      return next;
-    });
-    toast.success(
-      `Marked ${fromResponses.length} ${fromResponses.length === 1 ? "member" : "members"} as they said`,
+    return entries.filter(
+      (e) =>
+        matches(e, filter) &&
+        (!query ||
+          e.memberName.toLowerCase().includes(query) ||
+          e.memberId.toLowerCase().includes(query)),
     );
-  };
+  }, [entries, filter, search]);
 
-  const handleSave = async () => {
+  const failed = (title: string) => (error: unknown) =>
+    toast.error(title, {
+      description: error instanceof Error ? error.message : "Please try again.",
+    });
+
+  const saveMarks = async (
+    changes: {
+      entry: MeetingAttendanceEntry;
+      attendance: MeetingAttendanceMark | null;
+      note?: string | null;
+    }[],
+    success?: string,
+  ) => {
+    if (changes.length === 0) return;
     try {
       await mark.mutateAsync(
-        changed.map((entry) => ({
+        changes.map(({ entry, attendance, note }) => ({
           memberId: entry.memberId,
-          attendance: drafts[entry.memberId].attendance,
-          note: drafts[entry.memberId].note.trim() || null,
+          attendance,
+          note: note === undefined ? entry.attendanceNote : note,
         })),
       );
-      toast.success("Attendance saved");
+      if (success) toast.success(success);
     } catch (error) {
-      toast.error("Couldn't save the attendance", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
+      failed("Couldn't save the attendance")(error);
     }
   };
 
-  // Excel: export the sheet as it stands; upload a filled-in template while marking is open.
+  const approveIds = async (memberIds: string[], success: string) => {
+    if (memberIds.length === 0) return;
+    try {
+      await approve.mutateAsync(memberIds);
+      toast.success(success);
+    } catch (error) {
+      failed("Couldn't approve the check-in")(error);
+    }
+  };
+
+  /** Clicking the active option again clears that member's attendance. */
+  const toggleMark = (
+    entry: MeetingAttendanceEntry,
+    value: MeetingAttendanceMark,
+  ) =>
+    saveMarks([
+      {
+        entry,
+        attendance:
+          entry.attendance === value && !entry.attendanceAuto ? null : value,
+      },
+    ]);
+
+  const reject = (entry: MeetingAttendanceEntry) =>
+    saveMarks(
+      [{ entry, attendance: "Absent" }],
+      `${entry.memberName}'s check-in wasn't approved`,
+    );
+
+  // "Mark as they said": a check-in is approved; otherwise their earlier answer is used.
+  const asTheySaid = entries.filter(
+    (e) =>
+      e.attendance === null &&
+      (e.checkInMode !== null ||
+        e.response === "Physical" ||
+        e.response === "Online"),
+  );
+  const markAsTheySaid = async () => {
+    const checkedIn = asTheySaid.filter((e) => e.checkInMode !== null);
+    const fromAnswers = asTheySaid.filter((e) => e.checkInMode === null);
+    try {
+      if (checkedIn.length)
+        await approve.mutateAsync(checkedIn.map((e) => e.memberId));
+      if (fromAnswers.length)
+        await mark.mutateAsync(
+          fromAnswers.map((e) => ({
+            memberId: e.memberId,
+            attendance: e.response === "Online" ? "PresentOnline" : "Present",
+            note: e.attendanceNote,
+          })),
+        );
+      toast.success(
+        `Marked ${asTheySaid.length} ${asTheySaid.length === 1 ? "person" : "people"} as they said. Change anyone who didn't come.`,
+      );
+    } catch (error) {
+      failed("Couldn't mark everyone")(error);
+    }
+  };
+
+  const selectedEntries = entries.filter((e) => selected.has(e.memberId));
+  const selectedAwaiting = selectedEntries.filter((e) => e.awaitingApproval);
+  const clearSelection = () => setSelected(new Set());
+  const bulkMark = async (value: MeetingAttendanceMark) => {
+    await saveMarks(
+      selectedEntries.map((entry) => ({ entry, attendance: value })),
+      `${selectedEntries.length} ${selectedEntries.length === 1 ? "attendee" : "attendees"} updated`,
+    );
+    clearSelection();
+  };
+  const bulkApprove = async () => {
+    await approveIds(
+      selectedAwaiting.map((e) => e.memberId),
+      `${selectedAwaiting.length} check-in${selectedAwaiting.length === 1 ? "" : "s"} approved`,
+    );
+    clearSelection();
+  };
+
+  const allVisibleSelected =
+    visible.length > 0 && visible.every((e) => selected.has(e.memberId));
+  const someVisibleSelected = visible.some((e) => selected.has(e.memberId));
+  const toggleAll = () =>
+    setSelected((current) => {
+      const next = new Set(current);
+      for (const e of visible) {
+        if (allVisibleSelected) next.delete(e.memberId);
+        else next.add(e.memberId);
+      }
+      return next;
+    });
+
+  const openNote = (entry: MeetingAttendanceEntry) => {
+    setNoteFor(entry);
+    setNoteText(entry.attendanceNote ?? "");
+  };
+  const saveNote = async (text: string) => {
+    if (!noteFor) return;
+    await saveMarks([
+      {
+        entry: noteFor,
+        attendance: noteFor.attendance,
+        note: text.trim() || null,
+      },
+    ]);
+    setNoteFor(null);
+  };
+
+  // Excel round-trip, while attendance is open.
   const exportColumns: ExportColumn<MeetingAttendanceEntry>[] = [
     { header: "Membership ID", accessor: (row) => row.memberId },
     { header: "Member", accessor: (row) => row.memberName },
@@ -244,12 +319,23 @@ function RegisterBody({
       accessor: (row) => responseLabel(row.response),
     },
     {
-      header: "Attendance",
+      header: "Checked in",
       accessor: (row) =>
-        row.attendance ? ATTENDANCE_LABELS[row.attendance] : "Not marked",
+        row.checkInMode
+          ? `${CHECK_IN_LABELS[row.checkInMode]} at ${formatClock(row.checkedInAt)}`
+          : "",
     },
     {
-      header: "Note / reason",
+      header: "Attendance",
+      accessor: (row) =>
+        row.attendance
+          ? ATTENDANCE_LABELS[row.attendance]
+          : row.awaitingApproval
+            ? "Awaiting approval"
+            : "Not marked",
+    },
+    {
+      header: "Note",
       accessor: (row) => row.attendanceNote ?? row.responseReason ?? "",
     },
   ];
@@ -287,148 +373,123 @@ function RegisterBody({
       }
     : undefined;
 
-  const { summary } = register;
-  const closesAt = register.attendanceEndsAt
-    ? new Date(register.attendanceEndsAt)
-    : null;
-  const closesLabel = closesAt
-    ? formatTimeLabel(
-        `${String(closesAt.getHours()).padStart(2, "0")}:${String(closesAt.getMinutes()).padStart(2, "0")}`,
-      )
-    : null;
-
-  const filters: { value: Filter; label: string; count: number }[] = [
-    { value: "all", label: "Everyone", count: total },
-    { value: "unmarked", label: "Not marked", count: counts.unmarked },
-    { value: "Present", label: "In person", count: counts.Present },
-    { value: "PresentOnline", label: "Online", count: counts.PresentOnline },
-    { value: "Absent", label: "Absent", count: counts.Absent },
+  const filters: { value: Filter; label: string }[] = [
+    { value: "all", label: "Everyone" },
+    { value: "unmarked", label: "Not marked" },
+    ...(awaiting > 0
+      ? [{ value: "awaiting" as Filter, label: "Awaiting approval" }]
+      : []),
+    { value: "inPerson", label: "In person" },
+    { value: "online", label: "Online" },
+    { value: "absent", label: "Absent" },
   ];
+  const pct = (n: number) => (total ? (n / total) * 100 : 0);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary dark:text-emerald-300">
-            <ClipboardList className="size-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h3 className="text-base font-semibold tracking-tight text-foreground">
-              Attendance
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {register.meetingDurationMinutes}-minute meeting · {total} invited
-            </p>
-          </div>
-        </div>
-        <span
-          className={cn(
-            "inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold",
-            canMark
-              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300"
-              : "bg-muted text-muted-foreground",
-          )}
-        >
-          <span className="relative flex size-2">
-            {canMark ? (
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-            ) : null}
-            <span
-              className={cn(
-                "relative inline-flex size-2 rounded-full",
-                canMark ? "bg-emerald-500" : "bg-muted-foreground/50",
-              )}
-            />
-          </span>
-          {canMark
-            ? `Open${closesLabel ? ` — closes ${closesLabel}` : ""}`
-            : "Closed — opens when the meeting starts, for its duration"}
+      <div className="flex flex-wrap items-center gap-4">
+        <span className="flex size-13 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+          <ClipboardList className="size-5" aria-hidden="true" />
         </span>
+        <div className="min-w-48 flex-1">
+          <h3 className="text-lg font-semibold tracking-tight text-foreground">
+            Attendance
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {register.meetingDurationMinutes}-minute meeting · {total} invited
+          </p>
+        </div>
+        <StatusPill phase={phase} register={register} />
       </div>
 
       {/* Totals */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <TotalTile
-          icon={UserCheck}
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+        <Tile
           label="Present in person"
-          value={counts.Present}
-          tone="bg-emerald-50 text-emerald-700 ring-emerald-200/70 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20"
+          value={count("inPerson")}
+          icon={UserCheck}
+          tone="border-emerald-200/80 bg-emerald-50/80 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
         />
-        <TotalTile
-          icon={MonitorSmartphone}
+        <Tile
           label="Present online"
-          value={counts.PresentOnline}
-          tone="bg-sky-50 text-sky-700 ring-sky-200/70 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/20"
+          value={count("online")}
+          icon={MonitorSmartphone}
+          tone="border-sky-200/80 bg-sky-50/80 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300"
         />
-        <TotalTile
-          icon={UserX}
+        <Tile
           label="Absent"
-          value={counts.Absent}
-          tone="bg-rose-50 text-rose-700 ring-rose-200/70 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20"
+          value={count("absent")}
+          icon={UserX}
+          tone="border-rose-200/80 bg-rose-50/80 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300"
         />
       </div>
 
       {/* Progress */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-foreground">
-            {markedCount} of {total} marked
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <span className="text-sm font-semibold text-foreground">
+            {marked} of {total} marked
           </span>
-          <span className="text-muted-foreground">
-            Said beforehand: {summary.physical} in person · {summary.online}{" "}
-            online · {summary.notAttending} apologies · {summary.noResponse} no
-            reply
+          {awaiting > 0 ? (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+              {awaiting} awaiting approval
+            </span>
+          ) : null}
+          <span className="ml-auto text-sm text-muted-foreground">
+            Said beforehand: {said.physical} in person · {said.online} online ·{" "}
+            {said.apologies} {said.apologies === 1 ? "apology" : "apologies"} ·{" "}
+            {said.none} no reply
           </span>
         </div>
         <div className="flex h-2 overflow-hidden rounded-full bg-muted">
-          {(["Present", "PresentOnline", "Absent"] as const).map((value) => (
+          {(
+            [
+              ["inPerson", "bg-emerald-500"],
+              ["online", "bg-sky-500"],
+              ["absent", "bg-rose-500"],
+            ] as const
+          ).map(([key, color]) => (
             <motion.div
-              key={value}
-              className={cn(
-                value === "Present" && "bg-emerald-500",
-                value === "PresentOnline" && "bg-sky-500",
-                value === "Absent" && "bg-rose-500",
-              )}
+              key={key}
+              className={color}
               initial={false}
-              animate={{
-                width: total ? `${(counts[value] / total) * 100}%` : "0%",
-              }}
-              transition={{ duration: 0.6, ease: EASE }}
+              animate={{ width: `${pct(count(key))}%` }}
+              transition={{ duration: 0.5, ease: EASE }}
             />
           ))}
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-0 flex-1 sm:max-w-xs">
+      <div className="space-y-3.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative min-w-52 flex-1 sm:max-w-80">
             <Search
-              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
             />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search members"
-              className="pl-9"
+              className="pl-10"
               aria-label="Search members"
             />
           </div>
           <Button
             variant="outline"
-            onClick={applyResponses}
-            disabled={!canMark || fromResponses.length === 0}
-            title="Mark everyone who answered: in person → In person, online → Online, apology → Absent"
+            className="h-10"
+            onClick={markAsTheySaid}
+            disabled={!canMark || busy || asTheySaid.length === 0}
+            title="Marks everyone not yet marked: by their check-in if they checked in, otherwise by what they said beforehand"
           >
             <Wand2 className="size-4" aria-hidden="true" />
             Mark as they said
-            {fromResponses.length > 0 ? ` (${fromResponses.length})` : ""}
           </Button>
           <div className="ml-auto">
             <ExportImportMenu
-              rows={register.entries}
+              rows={entries}
               columns={exportColumns}
               filenamePrefix={`attendance-${register.meetingDate ?? noticeId}`}
               exportTitle={`Attendance — ${register.title}`}
@@ -437,292 +498,497 @@ function RegisterBody({
             />
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5" role="tablist">
-          {filters.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="tab"
-              aria-selected={filter === option.value}
-              onClick={() => setFilter(option.value)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                filter === option.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground",
-              )}
-            >
-              {option.label}
-              <span
+
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Filter attendees"
+        >
+          {filters.map((option) => {
+            const active = filter === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setFilter(option.value)}
                 className={cn(
-                  "rounded-full px-1.5 tabular-nums",
-                  filter === option.value ? "bg-white/20" : "bg-muted",
+                  "inline-flex h-9 items-center gap-2 rounded-full border pr-1.5 pl-3.5 text-sm font-semibold transition-colors",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground",
                 )}
               >
-                {option.count}
-              </span>
-            </button>
-          ))}
+                {option.label}
+                <span
+                  className={cn(
+                    "grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-xs tabular-nums",
+                    active ? "bg-white/20" : "bg-muted",
+                  )}
+                >
+                  {count(option.value)}
+                </span>
+              </button>
+            );
+          })}
         </div>
+
+        <AnimatePresence initial={false}>
+          {selected.size > 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2, ease: EASE }}
+              className="flex flex-wrap items-center gap-1.5 rounded-xl bg-primary/10 py-2 pr-2 pl-4 text-primary dark:text-emerald-300"
+            >
+              <span className="mr-auto text-sm font-semibold">
+                {selected.size} selected
+              </span>
+              {MARKS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant="ghost"
+                  size="sm"
+                  disabled={!canMark || busy}
+                  onClick={() => bulkMark(option.value)}
+                >
+                  <option.icon className="size-4" aria-hidden="true" />
+                  {option.label}
+                </Button>
+              ))}
+              {selectedAwaiting.length > 0 ? (
+                <Button
+                  size="sm"
+                  disabled={!canMark || busy}
+                  onClick={bulkApprove}
+                >
+                  <Check className="size-4" aria-hidden="true" />
+                  Approve check-ins
+                </Button>
+              ) : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
-      {/* Members */}
+      {/* Attendees */}
       {total === 0 ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-          Nobody is on this meeting&apos;s list — it wasn&apos;t addressed to
-          any active members.
+        <p className="rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+          Nobody is on this meeting&apos;s list. It wasn&apos;t addressed to any
+          active members.
         </p>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-          <AnimatePresence initial={false}>
-            {visible.map((entry) => (
-              <motion.li
-                key={entry.memberId}
-                layout
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: EASE }}
-                className="bg-card"
-              >
-                <MemberRow
-                  entry={entry}
-                  draft={drafts[entry.memberId]}
-                  disabled={!canMark || mark.isPending}
-                  noteOpen={
-                    openNotes.has(entry.memberId) ||
-                    !!drafts[entry.memberId].note
-                  }
-                  onOpenNote={() =>
-                    setOpenNotes((current) =>
-                      new Set(current).add(entry.memberId),
-                    )
-                  }
-                  onChange={(patch) => update(entry.memberId, patch)}
-                />
-              </motion.li>
-            ))}
-          </AnimatePresence>
-          {visible.length === 0 ? (
-            <li className="px-4 py-10 text-center text-sm text-muted-foreground">
-              No one matches this filter.
-            </li>
-          ) : null}
-        </ul>
+        <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-card">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
+            <thead>
+              <tr className="bg-muted/50 text-left">
+                {canMark ? (
+                  <th className="h-12 w-12 border-b border-border pl-5">
+                    <Checkbox
+                      checked={allVisibleSelected}
+                      indeterminate={!allVisibleSelected && someVisibleSelected}
+                      onCheckedChange={toggleAll}
+                      aria-label="Select everyone shown"
+                    />
+                  </th>
+                ) : null}
+                {["Member", "Member check-in", "Attendance"].map(
+                  (label, index) => (
+                    <th
+                      key={label}
+                      className={cn(
+                        "h-12 border-b border-border px-4 text-xs font-bold tracking-wider whitespace-nowrap text-muted-foreground uppercase",
+                        !canMark && index === 0 && "pl-5",
+                        index === 2 && "pr-5 text-right",
+                      )}
+                    >
+                      {label}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={canMark ? 4 : 3}
+                    className="px-6 py-14 text-center text-muted-foreground"
+                  >
+                    <span className="block font-semibold text-foreground">
+                      No one matches
+                    </span>
+                    Try another filter or search.
+                  </td>
+                </tr>
+              ) : (
+                visible.map((entry) => (
+                  <AttendeeRow
+                    key={entry.memberId}
+                    entry={entry}
+                    canMark={canMark}
+                    busy={busy}
+                    selected={selected.has(entry.memberId)}
+                    onSelect={(on) =>
+                      setSelected((current) => {
+                        const next = new Set(current);
+                        if (on) next.add(entry.memberId);
+                        else next.delete(entry.memberId);
+                        return next;
+                      })
+                    }
+                    onMark={(value) => toggleMark(entry, value)}
+                    onApprove={() =>
+                      approveIds(
+                        [entry.memberId],
+                        `${entry.memberName}'s attendance confirmed`,
+                      )
+                    }
+                    onReject={() => reject(entry)}
+                    onNote={() => openNote(entry)}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {/* Save bar: slides up once there's something to save. */}
-      <AnimatePresence>
-        {changed.length > 0 ? (
-          <motion.div
-            initial={{ y: 24, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 24, opacity: 0 }}
-            transition={{ duration: 0.3, ease: EASE }}
-            className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-raised backdrop-blur"
-          >
-            <p className="text-sm text-foreground">
-              <span className="font-semibold">{changed.length}</span> unsaved{" "}
-              {changed.length === 1 ? "change" : "changes"}
-            </p>
-            <div className="flex gap-2">
+      <Dialog
+        open={noteFor !== null}
+        onOpenChange={(open) => (!open ? setNoteFor(null) : null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Note for {noteFor?.memberName}</DialogTitle>
+            <DialogDescription>
+              Only officers see attendance notes.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={noteText}
+            onChange={(event) => setNoteText(event.target.value)}
+            maxLength={500}
+            rows={4}
+            placeholder="e.g. Left early at 3pm"
+            aria-label="Note"
+            disabled={!canMark}
+          />
+          <DialogFooter>
+            {noteFor?.attendanceNote ? (
               <Button
                 variant="ghost"
-                onClick={() => setDrafts(initialDrafts())}
-                disabled={mark.isPending}
+                className="mr-auto text-destructive hover:text-destructive"
+                disabled={!canMark || busy}
+                onClick={() => saveNote("")}
               >
-                Discard
+                Remove note
               </Button>
-              <Button
-                onClick={handleSave}
-                disabled={!canMark || mark.isPending}
-              >
-                {mark.isPending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                ) : null}
-                Save attendance
-              </Button>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function MemberRow({
-  entry,
-  draft,
-  disabled,
-  noteOpen,
-  onOpenNote,
-  onChange,
-}: {
-  entry: MeetingAttendanceEntry;
-  draft: Draft;
-  disabled: boolean;
-  noteOpen: boolean;
-  onOpenNote: () => void;
-  onChange: (patch: Partial<Draft>) => void;
-}) {
-  return (
-    <div className="space-y-3 px-4 py-3.5 transition-colors hover:bg-muted/30">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary dark:text-emerald-300">
-          {getInitials(entry.memberName)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">
-            {entry.memberName}
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span className="text-xs text-muted-foreground">
-              {entry.memberId}
-            </span>
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-[0.7rem] font-medium",
-                responseBadgeClass(entry.response),
-              )}
-            >
-              Said: {responseLabel(entry.response)}
-            </span>
-          </div>
-        </div>
-
-        <AttendanceSwitch
-          value={draft.attendance}
-          disabled={disabled}
-          id={entry.memberId}
-          label={entry.memberName}
-          onChange={(attendance) => onChange({ attendance })}
-        />
-      </div>
-
-      {entry.responseReason ? (
-        <p className="ml-13 rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-          Reason: {entry.responseReason}
-        </p>
-      ) : null}
-
-      {noteOpen ? (
-        <div className="ml-13 space-y-1">
-          <Input
-            value={draft.note}
-            onChange={(event) => onChange({ note: event.target.value })}
-            maxLength={500}
-            placeholder="Note (optional)"
-            disabled={disabled}
-            aria-label={`Note for ${entry.memberName}`}
-          />
-          {entry.attendanceAuto ? (
-            <p className="text-xs text-muted-foreground">From their apology</p>
-          ) : null}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={onOpenNote}
-          disabled={disabled}
-          className="ml-13 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-        >
-          <StickyNote className="size-3.5" aria-hidden="true" />
-          Add a note
-        </button>
-      )}
-    </div>
-  );
-}
-
-/** In person / Online / Absent — a segmented switch with a sliding highlight. Tapping the
- * selected option again clears it. */
-function AttendanceSwitch({
-  value,
-  disabled,
-  id,
-  label,
-  onChange,
-}: {
-  value: MeetingAttendanceMark | null;
-  disabled: boolean;
-  id: string;
-  label: string;
-  onChange: (value: MeetingAttendanceMark | null) => void;
-}) {
-  return (
-    <div
-      role="radiogroup"
-      aria-label={`Attendance for ${label}`}
-      className="flex w-full rounded-xl bg-muted p-1 sm:w-auto"
-    >
-      {MARKS.map((option) => {
-        const active = value === option.value;
-        const Icon = option.icon;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            disabled={disabled}
-            onClick={() => onChange(active ? null : option.value)}
-            className={cn(
-              "relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none",
-              active
-                ? option.active
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {active ? (
-              <motion.span
-                layoutId={`attendance-pill-${id}`}
-                className={cn(
-                  "absolute inset-0 rounded-lg shadow-card",
-                  PILL_BG[option.value],
-                )}
-                transition={{ duration: 0.3, ease: EASE }}
-              />
             ) : null}
-            <Icon className="relative size-3.5" aria-hidden="true" />
-            <span className="relative">{option.label}</span>
-          </button>
-        );
-      })}
+            <Button variant="outline" onClick={() => setNoteFor(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!canMark || busy}
+              onClick={() => saveNote(noteText)}
+            >
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              Save note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function TotalTile({
-  icon: Icon,
+function StatusPill({
+  phase,
+  register,
+}: {
+  phase: MeetingPhase;
+  register: MeetingRegister;
+}) {
+  const { checkInClosesAt, endsAt } = register.window;
+  const config = {
+    before: {
+      text: "Closed — opens when the meeting starts",
+      tone: "bg-muted text-muted-foreground",
+      dot: "bg-muted-foreground/60",
+      live: false,
+    },
+    checkin: {
+      text: `Open — check-in closes ${formatClock(checkInClosesAt)} · approvals until ${formatClock(endsAt)}`,
+      tone: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
+      dot: "bg-emerald-500",
+      live: true,
+    },
+    approvals: {
+      text: `Check-in closed — approvals until ${formatClock(endsAt)}`,
+      tone: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+      dot: "bg-amber-500",
+      live: true,
+    },
+    after: {
+      text: "Closed — the meeting has ended",
+      tone: "bg-muted text-muted-foreground",
+      dot: "bg-muted-foreground/60",
+      live: false,
+    },
+  }[phase];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-semibold",
+        config.tone,
+      )}
+    >
+      <span className="relative flex size-2">
+        {config.live ? (
+          <span
+            className={cn(
+              "absolute inline-flex size-full animate-ping rounded-full opacity-60",
+              config.dot,
+            )}
+          />
+        ) : null}
+        <span
+          className={cn("relative inline-flex size-2 rounded-full", config.dot)}
+        />
+      </span>
+      {config.text}
+    </span>
+  );
+}
+
+function Tile({
   label,
   value,
+  icon: Icon,
   tone,
 }: {
-  icon: typeof UserCheck;
   label: string;
   value: number;
+  icon: typeof UserCheck;
   tone: string;
 }) {
   return (
     <div
       className={cn(
-        "flex items-center justify-between rounded-2xl px-4 py-3.5 ring-1",
+        "flex items-center justify-between gap-3 rounded-2xl border px-5 py-4",
         tone,
       )}
     >
       <div>
-        <p className="text-xs font-medium opacity-80">{label}</p>
+        <p className="text-sm font-semibold">{label}</p>
         <motion.p
           key={value}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: EASE }}
-          className="text-2xl font-semibold tracking-tight tabular-nums"
+          className="text-3xl leading-tight font-bold tracking-tight tabular-nums"
         >
           {value}
         </motion.p>
       </div>
-      <Icon className="size-6 opacity-70" aria-hidden="true" />
+      <Icon className="size-6 opacity-80" aria-hidden="true" />
     </div>
+  );
+}
+
+function SaidChip({ entry }: { entry: MeetingAttendanceEntry }) {
+  const text =
+    entry.response === "Physical"
+      ? "Attending in person"
+      : entry.response === "Online"
+        ? "Attending online"
+        : entry.response === "NotAttending"
+          ? "Apologies"
+          : "No response";
+  return (
+    <span
+      title={entry.responseReason ?? undefined}
+      className={cn(
+        "rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap",
+        entry.response === "NotAttending"
+          ? "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+          : entry.response
+            ? "bg-primary/10 text-primary dark:text-emerald-300"
+            : "bg-muted text-muted-foreground",
+      )}
+    >
+      Said: {text}
+    </span>
+  );
+}
+
+function AttendeeRow({
+  entry,
+  canMark,
+  busy,
+  selected,
+  onSelect,
+  onMark,
+  onApprove,
+  onReject,
+  onNote,
+}: {
+  entry: MeetingAttendanceEntry;
+  canMark: boolean;
+  busy: boolean;
+  selected: boolean;
+  onSelect: (on: boolean) => void;
+  onMark: (value: MeetingAttendanceMark) => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onNote: () => void;
+}) {
+  const expected = entry.checkInMode === "Online" ? "PresentOnline" : "Present";
+  return (
+    <tr
+      className={cn(
+        "border-b border-border transition-colors last:border-b-0 hover:bg-muted/40",
+        selected && "bg-primary/5",
+      )}
+    >
+      {canMark ? (
+        <td className="w-12 py-3 pl-5 align-middle">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(on) => onSelect(on === true)}
+            aria-label={`Select ${entry.memberName}`}
+          />
+        </td>
+      ) : null}
+
+      <td className={cn("px-4 py-3 align-middle", !canMark && "pl-5")}>
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary dark:text-emerald-300">
+            {getInitials(entry.memberName)}
+          </span>
+          <div className="grid min-w-0 gap-1">
+            <span className="text-[0.95rem] font-semibold text-foreground">
+              {entry.memberName}
+            </span>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {entry.memberId}
+              <SaidChip entry={entry} />
+            </div>
+            <button
+              type="button"
+              onClick={onNote}
+              className={cn(
+                "inline-flex max-w-72 items-center gap-1.5 justify-self-start text-sm transition-colors hover:text-primary",
+                entry.attendanceNote
+                  ? "text-muted-foreground italic"
+                  : "text-muted-foreground/70",
+              )}
+            >
+              <FileText className="size-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">
+                {entry.attendanceNote ?? (canMark ? "Add a note" : "No note")}
+              </span>
+            </button>
+          </div>
+        </div>
+      </td>
+
+      <td className="px-4 py-3 align-middle whitespace-nowrap">
+        {entry.checkInMode ? (
+          <div className="grid gap-0.5">
+            <span className="inline-flex items-center gap-1.5 text-foreground">
+              {entry.checkInMode === "Online" ? (
+                <MonitorSmartphone className="size-4" aria-hidden="true" />
+              ) : (
+                <UserCheck className="size-4" aria-hidden="true" />
+              )}
+              {CHECK_IN_LABELS[entry.checkInMode]}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              at {formatClock(entry.checkedInAt)}
+            </span>
+            {entry.awaitingApproval ? (
+              canMark ? (
+                <div className="mt-1.5 flex gap-1.5">
+                  <Button size="sm" disabled={busy} onClick={onApprove}>
+                    <Check className="size-3.5" aria-hidden="true" />
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={onReject}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                  Not reviewed
+                </span>
+              )
+            ) : (
+              <span
+                className={cn(
+                  "text-xs font-semibold",
+                  entry.attendance === expected
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : "text-rose-700 dark:text-rose-300",
+                )}
+              >
+                {entry.attendance === expected
+                  ? "Approved"
+                  : entry.attendance === "Absent"
+                    ? "Not approved"
+                    : "Changed by an officer"}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground/60">—</span>
+        )}
+      </td>
+
+      <td className="py-3 pr-5 pl-4 text-right align-middle whitespace-nowrap">
+        <div
+          role="group"
+          aria-label={`Attendance for ${entry.memberName}`}
+          className="inline-flex gap-0.5 rounded-full bg-muted p-[3px]"
+        >
+          {MARKS.map((option) => {
+            const pressed = entry.attendance === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={pressed}
+                title={option.label}
+                disabled={!canMark || busy}
+                onClick={() => onMark(option.value)}
+                className={cn(
+                  "inline-flex h-[34px] items-center gap-1.5 rounded-full px-2.5 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed xl:px-3",
+                  pressed
+                    ? option.pressed
+                    : "text-muted-foreground/80 enabled:hover:text-foreground",
+                  !canMark && !pressed && "opacity-60",
+                )}
+              >
+                <option.icon className="size-4" aria-hidden="true" />
+                <span className="sr-only xl:not-sr-only">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {entry.response === "NotAttending" && entry.attendance === "Absent" ? (
+          <div className="mt-1 text-xs text-muted-foreground">
+            With apologies
+          </div>
+        ) : null}
+      </td>
+    </tr>
   );
 }

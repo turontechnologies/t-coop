@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/axios";
 import { uploadService } from "@/services/upload.service";
 import type {
+  CheckInMode,
   MeetingAttendanceHistoryItem,
   MeetingAttendanceMark,
   MeetingRegister,
@@ -21,6 +22,7 @@ export interface CreateNoticePayload {
   meetingDate?: string;
   meetingTime?: string;
   meetingDurationMinutes?: number;
+  meetingVenue?: string;
   meetingNoticeId?: string;
   attachment?: NoticeAttachment;
   sendAt: string;
@@ -109,6 +111,30 @@ export const noticeService = {
     const { data } = await apiClient.put<MeetingRegister>(
       `/notices/${noticeId}/attendance`,
       { entries },
+    );
+    return data;
+  },
+
+  /** The member checks themselves in during the meeting. */
+  async checkIn(
+    noticeId: string,
+    mode: CheckInMode,
+  ): Promise<MyMeetingResponse> {
+    const { data } = await apiClient.put<MyMeetingResponse>(
+      `/notices/${noticeId}/my-checkin`,
+      { mode },
+    );
+    return data;
+  },
+
+  /** Officers approve members' check-ins. */
+  async approveCheckIns(
+    noticeId: string,
+    memberIds: string[],
+  ): Promise<MeetingRegister> {
+    const { data } = await apiClient.post<MeetingRegister>(
+      `/notices/${noticeId}/attendance/approve`,
+      { memberIds },
     );
     return data;
   },

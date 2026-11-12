@@ -23,6 +23,8 @@ export interface Notice {
   /** "HH:mm", the co-op's local time. */
   meetingTime?: string;
   meetingDurationMinutes: number;
+  /** Where the meeting happens — a place, a link, or both. */
+  meetingVenue?: string | null;
   /** The meeting this minutes notice records, when created from a meeting page. */
   meetingNoticeId?: string | null;
   attachment?: NoticeAttachment;
@@ -74,6 +76,26 @@ export interface MeetingAttendanceEntry {
   /** Filled in automatically from a "not attending" answer, not by an officer. */
   attendanceAuto: boolean;
   markedAt: string | null;
+  /** The member's own check-in during the meeting; it counts once an officer approves it. */
+  checkInMode: CheckInMode | null;
+  checkedInAt: string | null;
+  /** Checked in, and no officer has approved or rejected it yet. */
+  awaitingApproval: boolean;
+}
+
+export type CheckInMode = "InPerson" | "Online";
+
+export const CHECK_IN_LABELS: Record<CheckInMode, string> = {
+  InPerson: "In person",
+  Online: "Online",
+};
+
+/** When a meeting's attendance windows open and close (ISO instants). Officers mark and approve
+ * from `startsAt` to `endsAt`; members check in from `startsAt` to `checkInClosesAt`. */
+export interface MeetingWindow {
+  startsAt: string | null;
+  checkInClosesAt: string | null;
+  endsAt: string | null;
 }
 
 export interface MeetingAttendanceSummary {
@@ -87,6 +109,8 @@ export interface MeetingAttendanceSummary {
   presentOnline: number;
   absent: number;
   unmarked: number;
+  checkedIn: number;
+  awaitingApproval: number;
 }
 
 export interface MeetingRegister {
@@ -95,8 +119,10 @@ export interface MeetingRegister {
   meetingDate: string | null;
   meetingTime: string | null;
   meetingDurationMinutes: number;
+  meetingVenue: string | null;
   attendanceEndsAt: string | null;
   canMarkAttendance: boolean;
+  window: MeetingWindow;
   summary: MeetingAttendanceSummary;
   entries: MeetingAttendanceEntry[];
 }
@@ -104,6 +130,8 @@ export interface MeetingRegister {
 export interface MyMeetingResponse {
   entry: MeetingAttendanceEntry | null;
   canRespond: boolean;
+  canCheckIn: boolean;
+  window: MeetingWindow;
 }
 
 /** One line of attendance history. */
@@ -112,12 +140,18 @@ export interface MeetingAttendanceHistoryItem {
   title: string;
   meetingDate: string | null;
   meetingTime: string | null;
+  meetingDurationMinutes: number;
+  meetingVenue: string | null;
+  /** The meeting has started; upcoming meetings don't count towards rates. */
+  held: boolean;
   memberId: string;
   memberName: string;
   response: MeetingResponse | null;
   responseReason: string | null;
   attendance: MeetingAttendanceMark | null;
   attendanceNote: string | null;
+  checkInMode: CheckInMode | null;
+  awaitingApproval: boolean;
 }
 
 export function noticeExcerpt(message: string, maxLength = 90): string {

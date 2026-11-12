@@ -205,11 +205,11 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="whitespace-pre-line text-sm text-foreground">
+                <p className="max-w-[75ch] text-[0.95rem] leading-relaxed whitespace-pre-line text-foreground">
                   {notice.message}
                 </p>
 
-                <div className="grid grid-cols-1 gap-x-8 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-5 border-t border-border pt-5 text-sm sm:grid-cols-2 md:grid-cols-3">
                   <Field label="Sent To" value={notice.recipient} />
                   <Field label="Medium" value={notice.medium} />
                   <Field
@@ -235,6 +235,9 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                         label="Duration"
                         value={`${notice.meetingDurationMinutes} minutes`}
                       />
+                      {notice.meetingVenue ? (
+                        <Field label="Venue" value={notice.meetingVenue} />
+                      ) : null}
                     </>
                   ) : null}
                 </div>
@@ -259,7 +262,11 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
             {notice.type === "Meeting Notice" &&
             notice.status === "Sent" &&
             member.role !== "super_admin" ? (
-              <MeetingRsvpCard noticeId={notice.id} />
+              <MeetingRsvpCard
+                noticeId={notice.id}
+                meetingDate={notice.meetingDate}
+                meetingTime={notice.meetingTime}
+              />
             ) : null}
 
             {notice.type === "Meeting Notice" && isCoopOfficer ? (
@@ -289,8 +296,8 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-0.5">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium text-foreground">{value}</p>
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="text-[0.95rem] font-semibold text-foreground">{value}</p>
     </div>
   );
 }

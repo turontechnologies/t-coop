@@ -3,7 +3,11 @@ import {
   noticeService,
   type CreateNoticePayload,
 } from "@/services/notice.service";
-import type { MeetingAttendanceMark, MeetingResponse } from "@/types/notice";
+import type {
+  CheckInMode,
+  MeetingAttendanceMark,
+  MeetingResponse,
+} from "@/types/notice";
 
 const NOTICES_KEY = ["notices"];
 const noticeKey = (id: string) => ["notices", id];
@@ -144,6 +148,33 @@ export function useMarkAttendance(noticeId: string) {
     ) => noticeService.markAttendance(noticeId, entries),
     onSuccess: (register) => {
       queryClient.setQueryData(registerKey(noticeId), register);
+      queryClient.invalidateQueries({ queryKey: ATTENDANCE_KEY });
+    },
+  });
+}
+
+/** The member checks themselves in (in person or online). */
+export function useCheckIn(noticeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mode: CheckInMode) => noticeService.checkIn(noticeId, mode),
+    onSuccess: (data) => {
+      queryClient.setQueryData(myResponseKey(noticeId), data);
+      queryClient.invalidateQueries({ queryKey: registerKey(noticeId) });
+      queryClient.invalidateQueries({ queryKey: ATTENDANCE_KEY });
+    },
+  });
+}
+
+/** Officers approve members' check-ins. */
+export function useApproveCheckIns(noticeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberIds: string[]) =>
+      noticeService.approveCheckIns(noticeId, memberIds),
+    onSuccess: (register) => {
+      queryClient.setQueryData(registerKey(noticeId), register);
+      queryClient.invalidateQueries({ queryKey: myResponseKey(noticeId) });
       queryClient.invalidateQueries({ queryKey: ATTENDANCE_KEY });
     },
   });

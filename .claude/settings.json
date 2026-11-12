@@ -75,7 +75,8 @@
       "Bash(MSYS_NO_PATHCONV=1 docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"Local-Dev-Passw0rd!\" -C -d tcoopdb -Q \"SELECT id, role, cooperative_id, email FROM members WHERE role='member' AND cooperative_id IN \\('COOP-0001','coop-0002','COOP-005'\\);\")",
       "Bash(grep -n \"secureTextEntry\\\\|Input$\\\\|Input \" \"c:/Users/HomePC/Documents/work/t-coop-mobile/src/app/login.tsx\")",
       "Bash(echo \"exit-code-$?\")",
-      "Bash(npx expo *)"
+      "Bash(npx expo *)",
+      "Bash(python - \"src/app/\\(dashboard\\)/notice-board/[id]/page.tsx\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"
