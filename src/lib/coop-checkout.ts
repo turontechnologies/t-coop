@@ -1,5 +1,5 @@
 import { openFlutterwaveCheckout } from "@/lib/flutterwave";
-import { openPaystackCheckout } from "@/lib/paystack";
+import { openPaystackCheckout, type PaystackChannel } from "@/lib/paystack";
 
 /** Which widget a co-op payment's public key belongs to — decided server-side at initialize
  * (the co-op's own gateway from Settings -> Integrations, else the platform's Paystack). */
@@ -16,6 +16,8 @@ export interface CoopCheckoutOptions {
   description: string;
   onSuccess: (reference: string) => void;
   onClose: () => void;
+  /** Paystack only: which payment methods its window offers. */
+  channels?: PaystackChannel[];
 }
 
 /** Opens the checkout for a member's savings deposit or loan repayment, on whichever gateway the
@@ -24,10 +26,12 @@ export function openCoopCheckout({
   gateway,
   title,
   description,
+  channels,
   ...options
 }: CoopCheckoutOptions): Promise<void> {
   if (gateway === "Flutterwave") {
     return openFlutterwaveCheckout({ ...options, title, description });
   }
+  if (channels) return openPaystackCheckout({ ...options, channels });
   return openPaystackCheckout(options);
 }

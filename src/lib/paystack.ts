@@ -8,6 +8,8 @@ interface PaystackSetupOptions {
   amount: number;
   currency: string;
   ref: string;
+  /** Limits Paystack's window to these payment methods, e.g. ["card"]. */
+  channels?: PaystackChannel[];
   callback: (response: { reference: string }) => void;
   onClose: () => void;
 }
@@ -19,6 +21,8 @@ declare global {
     };
   }
 }
+
+export type PaystackChannel = "card" | "bank" | "bank_transfer" | "ussd";
 
 const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
 
@@ -48,6 +52,7 @@ export interface PaystackCheckoutOptions {
   /** Always from the backend's initialize response — the platform's key (Settings ->
    * Integrations) or the co-op's own (co-op admin's Settings -> Integrations). */
   publicKey: string;
+  channels?: PaystackChannel[];
 }
 
 export async function openPaystackCheckout({
@@ -57,6 +62,7 @@ export async function openPaystackCheckout({
   onSuccess,
   onClose,
   publicKey: key,
+  channels,
 }: PaystackCheckoutOptions): Promise<void> {
   if (!key) {
     throw new Error("Paystack isn't set up yet. Please contact your admin.");
@@ -75,6 +81,7 @@ export async function openPaystackCheckout({
     amount: Math.round(amountNaira * 100),
     currency: "NGN",
     ref: reference,
+    ...(channels ? { channels } : {}),
     callback: (response) => onSuccess(response.reference),
     onClose,
   });
