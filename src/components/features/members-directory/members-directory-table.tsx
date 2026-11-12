@@ -20,6 +20,7 @@ import {
 } from "@/hooks/use-coop-members";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { cn } from "@/lib/utils";
+import { formatMemberId } from "@/components/features/shared/member-id";
 
 interface MembersDirectoryTableProps {
   coopId: string;
@@ -152,7 +153,7 @@ export function MembersDirectoryTable({
                       />
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {member.id}
+                      {formatMemberId(member.id, member.alternativeId)}
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       {member.firstName}

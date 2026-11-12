@@ -29,6 +29,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MemberIdText } from "@/components/features/shared/member-id";
 
 function toIsoDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -218,7 +219,7 @@ export function CoopSavingsTypeRecordsTable({
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
-                    {record.memberId}
+                    <MemberIdText id={record.memberId} coopId={coopId} />
                   </td>
                   <td className="px-4 py-3 text-foreground">
                     {record.memberName}

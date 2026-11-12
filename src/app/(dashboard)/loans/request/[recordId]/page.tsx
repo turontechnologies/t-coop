@@ -60,6 +60,7 @@ import {
   DisburseLoanDialog,
   LoanOfferCard,
 } from "@/components/features/loans/loan-request-panels";
+import { MemberIdText } from "@/components/features/shared/member-id";
 
 interface LoanRequestPageProps {
   params: Promise<{ recordId: string }>;
@@ -550,7 +551,7 @@ function GuarantorsCard({
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {guarantor.memberId}
+                  <MemberIdText id={guarantor.memberId} />
                   {member?.role === "Admin" ? " · Admin" : ""}
                 </p>
                 {guarantor.documentUrl ? (

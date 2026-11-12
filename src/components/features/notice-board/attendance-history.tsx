@@ -38,6 +38,7 @@ import {
   ATTENDANCE_LABELS,
   type MeetingAttendanceHistoryItem,
 } from "@/types/notice";
+import { MemberIdText } from "@/components/features/shared/member-id";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const PAGE_SIZES = [10, 25, 50];
@@ -532,7 +533,7 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
                           {m.memberName}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {m.memberId} ·{" "}
+                          <MemberIdText id={m.memberId} /> ·{" "}
                           {plural(m.totals.total, "meeting", "meetings")}
                         </p>
                       </div>
@@ -580,7 +581,7 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
                   <div>
                     <DialogTitle>{openMember.memberName}</DialogTitle>
                     <DialogDescription>
-                      {openMember.memberId} ·{" "}
+                      <MemberIdText id={openMember.memberId} /> ·{" "}
                       {plural(openMember.totals.total, "meeting", "meetings")} ·{" "}
                       {rateLabel(openMember.totals.rate)} attendance
                     </DialogDescription>

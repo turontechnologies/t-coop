@@ -21,6 +21,7 @@ import {
 } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
+import { MemberIdText } from "@/components/features/shared/member-id";
 
 interface LoanRequestsTableProps {
   requests: CoopLoanRecord[];
@@ -120,7 +121,7 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
-                    {record.memberId}
+                    <MemberIdText id={record.memberId} />
                   </td>
                   <td className="px-4 py-3 text-foreground">
                     {record.memberName}

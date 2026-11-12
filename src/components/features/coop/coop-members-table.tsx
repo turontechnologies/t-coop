@@ -19,6 +19,7 @@ import {
   useUpdateCoopMemberStatus,
 } from "@/hooks/use-coop-members";
 import { cn } from "@/lib/utils";
+import { formatMemberId } from "@/components/features/shared/member-id";
 
 interface CoopMembersTableProps {
   coopId: string;
@@ -139,7 +140,7 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
                       />
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {member.id}
+                      {formatMemberId(member.id, member.alternativeId)}
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       {member.firstName}

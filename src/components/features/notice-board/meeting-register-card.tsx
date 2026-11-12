@@ -53,6 +53,7 @@ import {
   type MeetingAttendanceMark,
   type MeetingRegister,
 } from "@/types/notice";
+import { MemberIdText } from "@/components/features/shared/member-id";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -849,7 +850,7 @@ function AttendeeRow({
               {entry.memberName}
             </span>
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              {entry.memberId}
+              <MemberIdText id={entry.memberId} />
               <SaidChip entry={entry} />
             </div>
             <button

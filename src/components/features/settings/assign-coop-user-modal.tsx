@@ -27,6 +27,7 @@ import {
   type AssignCoopRoleFormValues,
 } from "@/lib/validations/admin-settings.schema";
 import type { CoopRole, CoopUser } from "@/services/coop-staff.service";
+import { formatMemberId } from "@/components/features/shared/member-id";
 
 interface AssignCoopUserModalProps {
   open: boolean;
@@ -97,7 +98,7 @@ export function AssignCoopUserModal({
                   onValueChange={field.onChange}
                   options={assignableMembers.map((member) => ({
                     value: member.id,
-                    label: `${member.firstName} ${member.lastName} (${member.id})`,
+                    label: `${member.firstName} ${member.lastName} (${formatMemberId(member.id, member.alternativeId)})`,
                   }))}
                   placeholder={
                     assignableMembers.length === 0

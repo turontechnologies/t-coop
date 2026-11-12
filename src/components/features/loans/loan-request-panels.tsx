@@ -45,6 +45,7 @@ import { computeLoanTerms, type LoanTypeDef } from "@/lib/loans-data";
 import type { LoanApprovalStatus } from "@/services/loan-self.service";
 import { uploadService } from "@/services/upload.service";
 import { cn } from "@/lib/utils";
+import { useFormatMemberId } from "@/components/features/shared/member-id";
 
 const digits = (value: string) => Number(value.replace(/[^\d]/g, "")) || 0;
 const plural = (n: number, one: string, many = `${one}s`) =>
@@ -931,6 +932,7 @@ export function DisburseLoanDialog({
   coopId: string;
 }) {
   const disburse = useDisburseLoan(coopId);
+  const formatId = useFormatMemberId(coopId);
   const [method, setMethod] = useState<"" | "Online" | "Cheque">("");
   const [cheque, setCheque] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -1009,7 +1011,7 @@ export function DisburseLoanDialog({
   };
 
   const summary = [
-    ["Member", `${record.memberName} · ${record.memberId}`],
+    ["Member", `${record.memberName} · ${formatId(record.memberId)}`],
     ["Loan type", record.loanType],
     ["Amount to pay out", formatMoney(net, currency)],
     ["Repayment period", plural(record.durationMonths, "month")],

@@ -17,6 +17,7 @@ import { getInitials } from "@/lib/format";
 import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
 import type { AuthenticatedMember } from "@/types/auth";
+import { MemberIdText } from "@/components/features/shared/member-id";
 
 interface ProfileHeaderCardProps {
   member: AuthenticatedMember;
@@ -128,7 +129,7 @@ export function ProfileHeaderCard({ member }: ProfileHeaderCardProps) {
             </span>
             <span className="flex items-center gap-1.5">
               <IdCard className="size-3.5" aria-hidden="true" />
-              {member.id}
+              <MemberIdText id={member.id} />
             </span>
           </div>
         </div>

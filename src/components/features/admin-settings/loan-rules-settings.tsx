@@ -32,6 +32,10 @@ import { coopMemberFullName } from "@/lib/coop-data";
 import { formatMoney, getInitials } from "@/lib/format";
 import type { LoanSettings } from "@/services/loan-self.service";
 import { cn } from "@/lib/utils";
+import {
+  MemberIdText,
+  formatMemberId,
+} from "@/components/features/shared/member-id";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -255,7 +259,7 @@ function RulesForm({
                         {nameOf(seat.memberId)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {seat.memberId}
+                        <MemberIdText id={seat.memberId} coopId={coopId} />
                         {index === seats.length - 1 ? " · Final approval" : ""}
                       </p>
                     </div>
@@ -325,7 +329,7 @@ function RulesForm({
                   onValueChange={setPicked}
                   options={available.map((m) => ({
                     value: m.id,
-                    label: `${coopMemberFullName(m)} · ${m.id}`,
+                    label: `${coopMemberFullName(m)} · ${formatMemberId(m.id, m.alternativeId)}`,
                   }))}
                   placeholder="Choose a member"
                   searchPlaceholder="Search members…"
