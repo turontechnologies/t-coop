@@ -104,7 +104,8 @@
       "Bash(sed -i 's/const borrower = \"MB-0009\";/const borrower = \"MB-0001\";/; s/call\\(\"MB-0001\", \"POST\", `\\\\/cooperatives\\\\/${coop}\\\\/loans\\\\/${L}\\\\/offer-response`/call\\(\"MB-0003\", \"POST\", `\\\\/cooperatives\\\\/${coop}\\\\/loans\\\\/${L}\\\\/offer-response`/' loan-flow-test.mjs)",
       "Bash(grep -v \"^\\\\s*$\")",
       "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_web_service.py\")",
-      "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_loans_data.py\")"
+      "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_loans_data.py\")",
+      "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_request_page.py\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"

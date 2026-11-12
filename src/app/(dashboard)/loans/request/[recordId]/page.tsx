@@ -3,15 +3,7 @@
 import { use, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Circle,
-  CircleDot,
-  Loader2,
-  Paperclip,
-  XCircle,
-} from "lucide-react";
+import { ArrowLeft, Banknote, Loader2, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -40,13 +32,15 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   coopLoanStatusBadgeVariant,
   loanGuarantorsOf,
+  loanStatusLabel,
+  loanStatusLabelForStaff,
   type CoopLoanRecord,
   type CoopMember,
   type LoanGuarantorInfo,
 } from "@/lib/coop-data";
 import { MAX_ATTACHMENT_BYTES } from "@/lib/file-to-data-url";
 import { formatDateLong, formatMoney, getInitials } from "@/lib/format";
-import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
+import { useCoopLoanRecord, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { useTabAccess } from "@/hooks/use-permission";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import { useCooperative } from "@/hooks/use-cooperative";
@@ -55,16 +49,23 @@ import {
   useLoanApprovals,
   useLoanDecision,
 } from "@/hooks/use-loans-self";
-import type { LoanApprovalStatus } from "@/services/loan-self.service";
 import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 import { loanModeLabel } from "@/lib/loans-data";
 import { BorrowerHistoryCard } from "@/components/features/loans/borrower-history-card";
+import {
+  ApprovalSteps,
+  ApproveLoanDialog,
+  DisburseLoanDialog,
+  LoanOfferCard,
+} from "@/components/features/loans/loan-request-panels";
 
 interface LoanRequestPageProps {
   params: Promise<{ recordId: string }>;
 }
+
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
 
 export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   const { recordId } = use(params);
@@ -78,9 +79,12 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   const { data: record, isLoading } = useCoopLoanRecord(recordId);
   const { data: coop } = useCooperative(coopId);
   const { data: members = [] } = useCoopMembers(coopId);
+  const { data: loanTypes = [] } = useCoopLoanTypes(coopId);
   const guarantorResponse = useGuarantorResponse(coopId ?? "");
   const loanDecision = useLoanDecision(coopId ?? "");
   const { data: approvals } = useLoanApprovals(coopId, recordId);
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [disburseOpen, setDisburseOpen] = useState(false);
 
   if (isLoading) {
     return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
@@ -100,6 +104,9 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     );
   }
 
+  const currency = coop.currency;
+  const isBorrower = record.memberId === authMember?.id;
+  const loanType = loanTypes.find((type) => type.name === record.loanType);
   const guarantors = loanGuarantorsOf(record);
   const myPendingGuarantee = guarantors.find(
     (g) => g.memberId === authMember?.id && g.status === "Pending",
@@ -114,7 +121,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
       });
       toast.success("You've accepted", {
         description:
-          "The loan goes to the officers for approval once every guarantor has accepted.",
+          "The loan goes to the loan committee once every guarantor has accepted.",
       });
     } catch (error) {
       toast.error("Couldn't accept", {
@@ -141,25 +148,35 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     }
   };
 
-  const finalStep = approvals?.currentStep === "SECRETARY";
-
-  const handleApprove = async () => {
+  const handleApprove = async (
+    amount: number,
+    months: number,
+    note: string,
+  ) => {
     try {
       const updated = await loanDecision.mutateAsync({
         loanId: record.id,
         decision: "Approved",
+        suggestedAmount: amount,
+        suggestedMonths: months,
+        note: note || undefined,
       });
-      if (updated.status === "Active") {
-        toast.success("Loan approved and paid out", {
-          description: `${formatMoney(updated.disbursedAmount ?? record.amount, coop.currency)} sent to ${record.memberName}'s bank account.`,
-        });
-      } else {
-        toast.success("Loan approved", {
-          description: `Now ${updated.status.toLowerCase()}.`,
-        });
-      }
+      setApproveOpen(false);
+      toast.success(
+        updated.status === "Awaiting Acceptance"
+          ? "Approved. The offer has gone to the borrower"
+          : `Approved at ${formatMoney(amount, currency)} over ${plural(months, "month")}`,
+        {
+          description:
+            updated.status === "Awaiting Acceptance"
+              ? `${record.memberName} is asked to accept ${formatMoney(amount, currency)} over ${plural(months, "month")}.`
+              : updated.approvalStepTitle
+                ? `Next: ${updated.approvalStepTitle}.`
+                : undefined,
+        },
+      );
     } catch (error) {
-      toast.error(finalStep ? "Payout failed" : "Couldn't approve", {
+      toast.error("Couldn't approve", {
         description:
           error instanceof Error ? error.message : "Please try again.",
       });
@@ -188,12 +205,19 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   // Only a guarantor who hasn't answered yet can accept or decline — the backend enforces it too.
   const showGuarantorActions =
     record.status === "Awaiting Guarantor" && !!myPendingGuarantee;
-  const canApprove =
-    !!approvals?.canApprove &&
-    (authMember?.permissionModules == null || requestsAccess === "write");
+  // A committee seat is the authority to approve, whatever the person's role.
+  const canApprove = !!approvals?.canApprove;
   const canReject =
     !!approvals?.canReject &&
-    (authMember?.permissionModules == null || requestsAccess === "write");
+    (approvals.canApprove ||
+      authMember?.permissionModules == null ||
+      requestsAccess === "write");
+  const canDisburse = !!approvals?.canDisburse;
+  const requested = record.requestedAmount ?? record.amount;
+  const requestedMonths = record.requestedMonths ?? record.durationMonths;
+  const statusText = isBorrower
+    ? loanStatusLabel(record)
+    : loanStatusLabelForStaff(record);
 
   return (
     <div className="space-y-4 pt-6">
@@ -225,6 +249,15 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
             showGuarantorCard ? "lg:col-span-2" : undefined,
           )}
         >
+          {approvals?.canRespondToOffer && coopId ? (
+            <LoanOfferCard
+              coopId={coopId}
+              record={record}
+              approvals={approvals}
+              currency={currency}
+            />
+          ) : null}
+
           <Card>
             <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0">
               <CardTitle>Loan Details</CardTitle>
@@ -236,15 +269,21 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                   />
                   <AcceptGuarantorDialog
                     record={record}
-                    currency={coop.currency}
+                    currency={currency}
                     onConfirm={handleGuarantorAccept}
                   />
                 </div>
-              ) : canApprove || canReject ? (
+              ) : canApprove || canReject || canDisburse ? (
                 <div className="flex flex-wrap items-center gap-2">
-                  {approvals?.actingAs ? (
-                    <span className="text-xs text-muted-foreground">
-                      Acting as {approvals.actingAs}
+                  {canDisburse ? (
+                    <span className="text-sm text-muted-foreground">
+                      Accepted by {record.memberName} · ready to pay out
+                    </span>
+                  ) : approvals?.actingAs ? (
+                    <span className="text-sm text-muted-foreground">
+                      {approvals.canApprove
+                        ? `You're the ${approvals.actingAs}`
+                        : `Acting as ${approvals.actingAs}`}
                     </span>
                   ) : null}
                   {canReject ? (
@@ -254,14 +293,15 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                     />
                   ) : null}
                   {canApprove ? (
-                    <ApproveLoanDialog
-                      record={record}
-                      currency={coop.currency}
-                      finalStep={finalStep}
-                      netAmount={approvals?.netDisbursement ?? null}
-                      nextStepLabel={nextStepLabel(approvals)}
-                      onConfirm={handleApprove}
-                    />
+                    <Button onClick={() => setApproveOpen(true)}>
+                      Approve Request
+                    </Button>
+                  ) : null}
+                  {canDisburse ? (
+                    <Button onClick={() => setDisburseOpen(true)}>
+                      <Banknote className="size-4" aria-hidden="true" />
+                      Disburse
+                    </Button>
                   ) : null}
                 </div>
               ) : null}
@@ -270,23 +310,41 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
               <Field label="Loan Type" value={record.loanType} />
               <Field
                 label="Loan Amount"
-                value={formatMoney(record.amount, coop.currency)}
+                value={
+                  <>
+                    {formatMoney(record.amount, currency)}
+                    {requested !== record.amount ? (
+                      <span className="block text-xs font-medium text-muted-foreground">
+                        Requested {formatMoney(requested, currency)}
+                      </span>
+                    ) : null}
+                  </>
+                }
               />
               <Field
                 label="Interest Rate"
                 value={`${record.interestRate}% flat`}
               />
               <Field
-                label="Duration"
-                value={`${record.durationMonths} months`}
+                label="Repayment Period"
+                value={
+                  <>
+                    {plural(record.durationMonths, "month")}
+                    {requestedMonths !== record.durationMonths ? (
+                      <span className="block text-xs font-medium text-muted-foreground">
+                        Requested {plural(requestedMonths, "month")}
+                      </span>
+                    ) : null}
+                  </>
+                }
               />
               <Field
                 label="Monthly Repayment"
-                value={formatMoney(record.monthlyRepayment, coop.currency)}
+                value={formatMoney(record.monthlyRepayment, currency)}
               />
               <Field
                 label="Total Repayment"
-                value={formatMoney(record.totalRepayment, coop.currency)}
+                value={formatMoney(record.totalRepayment, currency)}
               />
               <Field
                 label="Date Applied"
@@ -315,22 +373,67 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Status</p>
                 <Badge variant={coopLoanStatusBadgeVariant(record.status)}>
-                  {record.status}
+                  {statusText}
                 </Badge>
               </div>
+              {record.payoutAccountName ? (
+                <Field
+                  label="Pays into"
+                  value={
+                    <>
+                      {record.payoutAccountName}
+                      <span className="block text-xs font-medium text-muted-foreground">
+                        {[
+                          record.payoutBankName,
+                          record.payoutAccountNumber
+                            ? `••••${record.payoutAccountNumber.slice(-4)}`
+                            : null,
+                          record.payoutAccountType === "Other"
+                            ? "Another account"
+                            : "Registered account",
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </>
+                  }
+                />
+              ) : null}
               {record.disbursedAmount != null ? (
                 <Field
                   label="Paid Out"
-                  value={`${formatMoney(record.disbursedAmount, coop.currency)}${
-                    record.disbursedAt
-                      ? ` on ${formatDateLong(new Date(record.disbursedAt))}`
-                      : ""
-                  }`}
+                  value={
+                    <>
+                      {formatMoney(record.disbursedAmount, currency)}
+                      <span className="block text-xs font-medium text-muted-foreground">
+                        {record.disbursementMethod === "Cheque"
+                          ? `Cheque${record.chequeNumber ? ` No. ${record.chequeNumber}` : ""}`
+                          : "Online transfer"}
+                        {record.disbursedAt
+                          ? ` · ${formatDateLong(new Date(record.disbursedAt))}`
+                          : ""}
+                      </span>
+                      {record.chequeUrl ? (
+                        <a
+                          href={record.chequeUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                        >
+                          View cheque
+                        </a>
+                      ) : null}
+                    </>
+                  }
                 />
               ) : null}
               {record.rejectionReason ? (
                 <Field
-                  label="Rejection Reason"
+                  label={
+                    record.status === "Declined"
+                      ? "Declined"
+                      : "Rejection Reason"
+                  }
                   value={record.rejectionReason}
                   className="sm:col-span-2 lg:col-span-4"
                 />
@@ -339,115 +442,47 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
           </Card>
 
           {approvals ? (
-            <ApprovalTimeline approvals={approvals} status={record.status} />
+            <ApprovalSteps
+              approvals={approvals}
+              record={record}
+              currency={currency}
+            />
           ) : null}
 
-          <BorrowerHistoryCard
-            coopId={coopId}
-            memberId={record.memberId}
-            currency={coop.currency}
-            excludeLoanId={record.id}
-          />
+          {!isBorrower ? (
+            <BorrowerHistoryCard
+              coopId={coopId}
+              memberId={record.memberId}
+              currency={currency}
+              excludeLoanId={record.id}
+            />
+          ) : null}
         </div>
       </div>
+
+      {approvals && canApprove ? (
+        <ApproveLoanDialog
+          open={approveOpen}
+          onOpenChange={setApproveOpen}
+          record={record}
+          approvals={approvals}
+          loanType={loanType}
+          currency={currency}
+          busy={loanDecision.isPending}
+          onConfirm={handleApprove}
+        />
+      ) : null}
+      {approvals && canDisburse && coopId ? (
+        <DisburseLoanDialog
+          open={disburseOpen}
+          onOpenChange={setDisburseOpen}
+          record={record}
+          approvals={approvals}
+          currency={currency}
+          coopId={coopId}
+        />
+      ) : null}
     </div>
-  );
-}
-
-/** The step after the current one, for the approve dialog's "passes to …" copy. */
-function nextStepLabel(approvals: LoanApprovalStatus | undefined) {
-  if (!approvals?.currentStep) return null;
-  const index = approvals.chain.findIndex(
-    (step) => step.office === approvals.currentStep,
-  );
-  return approvals.chain[index + 1]?.label ?? null;
-}
-
-/** Vice President -> Treasurer -> Secretary, with who holds each office and what each decided. */
-function ApprovalTimeline({
-  approvals,
-  status,
-}: {
-  approvals: LoanApprovalStatus;
-  status: CoopLoanRecord["status"];
-}) {
-  const rejection = approvals.trail.find((d) => d.decision === "Rejected");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Approvals</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ol className="space-y-4">
-          {approvals.chain.map((step) => {
-            const decision = approvals.trail.find(
-              (d) => d.office === step.office,
-            );
-            const isCurrent = approvals.currentStep === step.office;
-            return (
-              <li key={step.office} className="flex gap-3">
-                {decision?.decision === "Approved" ? (
-                  <CheckCircle2
-                    className="mt-0.5 size-4 shrink-0 text-emerald-600"
-                    aria-hidden="true"
-                  />
-                ) : decision?.decision === "Rejected" ? (
-                  <XCircle
-                    className="mt-0.5 size-4 shrink-0 text-destructive"
-                    aria-hidden="true"
-                  />
-                ) : isCurrent ? (
-                  <CircleDot
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <Circle
-                    className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                )}
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-medium text-foreground">
-                    {step.label}
-                    {step.office === "SECRETARY" ? (
-                      <span className="font-normal text-muted-foreground">
-                        {" "}
-                        · approval pays the loan out
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {decision
-                      ? `${decision.decision} by ${decision.memberName}${
-                          decision.covering ? " (admin, covering)" : ""
-                        } · ${formatDateLong(new Date(decision.actedAt))}`
-                      : isCurrent
-                        ? step.holderName
-                          ? `Waiting for ${step.holderName}`
-                          : "Office vacant — the co-op admin can approve this step"
-                        : step.holderName
-                          ? step.holderName
-                          : "Office vacant — the co-op admin covers it"}
-                  </p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-        {rejection && rejection.office === "PRESIDENT" ? (
-          <p className="mt-4 text-xs text-muted-foreground">
-            Rejected by the President ({rejection.memberName}) ·{" "}
-            {formatDateLong(new Date(rejection.actedAt))}
-          </p>
-        ) : null}
-        {status === "Awaiting Guarantor" ? (
-          <p className="mt-4 text-xs text-muted-foreground">
-            Approvals start once every guarantor accepts.
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -717,78 +752,6 @@ function RejectGuarantorDialog({
             onClick={handleConfirm}
           >
             Reject
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
-function ApproveLoanDialog({
-  record,
-  currency,
-  finalStep,
-  netAmount,
-  nextStepLabel,
-  onConfirm,
-}: {
-  record: CoopLoanRecord;
-  currency: string;
-  finalStep: boolean;
-  netAmount: number | null;
-  nextStepLabel: string | null;
-  onConfirm: () => Promise<void> | void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  const handleConfirm = async () => {
-    setBusy(true);
-    await onConfirm();
-    setBusy(false);
-    setOpen(false);
-  };
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger render={<Button type="button" />}>
-        Approve Request
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {finalStep ? "Approve and pay out loan" : "Approve loan"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {finalStep ? (
-              <>
-                This is the final approval. It immediately sends{" "}
-                {formatMoney(netAmount ?? record.amount, currency)}
-                {netAmount != null && netAmount !== record.amount
-                  ? " (after loan charges)"
-                  : ""}{" "}
-                to {record.memberName}&apos;s bank account and sets the loan
-                Active. This can&apos;t be undone.
-              </>
-            ) : (
-              <>
-                {record.memberName}&apos;s{" "}
-                {formatMoney(record.amount, currency)} {record.loanType} will
-                pass to the {nextStepLabel ?? "next officer"} for approval.
-              </>
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={busy} onClick={handleConfirm}>
-            {busy ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : finalStep ? (
-              "Approve & pay out"
-            ) : (
-              "Approve"
-            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
