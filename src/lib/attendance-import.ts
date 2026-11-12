@@ -75,7 +75,7 @@ export function downloadAttendanceTemplate(register: MeetingRegister) {
     ["Note", "Optional — e.g. the reason someone was absent."],
     [
       "When",
-      "Attendance can be uploaded only while the meeting's attendance is open.",
+      "Officers can upload this at any time: before, during or after the meeting.",
     ],
   ]);
   reference["!cols"] = [{ wch: 16 }, { wch: 100 }];

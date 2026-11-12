@@ -153,6 +153,29 @@ export function useMarkAttendance(noticeId: string) {
   });
 }
 
+/** Officers upload attendance from a spreadsheet, for any meeting, at any time. */
+export function useImportAttendance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      noticeId,
+      entries,
+    }: {
+      noticeId: string;
+      entries: {
+        memberId: string;
+        attendance: MeetingAttendanceMark | null;
+        note: string | null;
+      }[];
+    }) => noticeService.importAttendance(noticeId, entries),
+    onSuccess: (register, { noticeId }) => {
+      queryClient.setQueryData(registerKey(noticeId), register);
+      queryClient.invalidateQueries({ queryKey: myResponseKey(noticeId) });
+      queryClient.invalidateQueries({ queryKey: ATTENDANCE_KEY });
+    },
+  });
+}
+
 /** The member checks themselves in (in person or online). */
 export function useCheckIn(noticeId: string) {
   const queryClient = useQueryClient();

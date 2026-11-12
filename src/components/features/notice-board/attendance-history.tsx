@@ -8,6 +8,7 @@ import {
   ChevronRight,
   MonitorSmartphone,
   Search,
+  Upload,
   UserCheck,
   UserX,
 } from "lucide-react";
@@ -22,6 +23,11 @@ import { Input } from "@/components/ui/input";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import { Button } from "@/components/ui/button";
+import {
+  AttendanceImportDialog,
+  type ImportableMeeting,
+} from "@/components/features/notice-board/attendance-import-dialog";
 import { useCoopAttendance, useMyAttendance } from "@/hooks/use-notices";
 import { formatMeetingWhen, meetingDay, responseLabel } from "@/lib/meeting";
 import { formatTimeLabel } from "@/components/ui/time-picker";
@@ -286,6 +292,24 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
   const [view, setView] = useState<View>("meeting");
   const [search, setSearch] = useState("");
   const [openMember, setOpenMember] = useState<MemberGroup | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+
+  // Every meeting can be imported into, at any time — held or not.
+  const importable = useMemo(() => {
+    const seen = new Map<
+      string,
+      ImportableMeeting & { meetingTime: string | null }
+    >();
+    for (const item of data)
+      if (!seen.has(item.noticeId))
+        seen.set(item.noticeId, {
+          noticeId: item.noticeId,
+          title: item.title,
+          meetingDate: item.meetingDate,
+          meetingTime: item.meetingTime,
+        });
+    return [...seen.values()].sort(byNewest);
+  }, [data]);
 
   const held = useMemo(() => data.filter((item) => item.held), [data]);
   const query = search.trim().toLowerCase();
@@ -398,7 +422,16 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
               aria-label="Search"
             />
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={importable.length === 0}
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload className="size-3.5" aria-hidden="true" />
+              Import attendance
+            </Button>
             {view === "meeting" ? (
               <ExportImportMenu
                 rows={shownMeetings}
@@ -527,6 +560,12 @@ export function CoopAttendanceHistory({ coopId }: { coopId: string }) {
           </>
         )}
       </div>
+
+      <AttendanceImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        meetings={importable}
+      />
 
       <Dialog
         open={openMember !== null}

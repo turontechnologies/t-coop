@@ -115,6 +115,22 @@ export const noticeService = {
     return data;
   },
 
+  /** Officers upload attendance from a spreadsheet — allowed at any time. */
+  async importAttendance(
+    noticeId: string,
+    entries: {
+      memberId: string;
+      attendance: MeetingAttendanceMark | null;
+      note: string | null;
+    }[],
+  ): Promise<MeetingRegister> {
+    const { data } = await apiClient.put<MeetingRegister>(
+      `/notices/${noticeId}/attendance/import`,
+      { entries },
+    );
+    return data;
+  },
+
   /** The member checks themselves in during the meeting. */
   async checkIn(
     noticeId: string,

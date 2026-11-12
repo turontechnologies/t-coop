@@ -9,6 +9,7 @@ import {
   Loader2,
   MonitorSmartphone,
   Search,
+  Upload,
   UserCheck,
   UserX,
   Wand2,
@@ -28,16 +29,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
-import {
-  ExportImportMenu,
-  type ImportConfig,
-  type ImportResult,
-} from "@/components/features/shared/export-import-menu";
-import {
-  downloadAttendanceTemplate,
-  parseAttendanceFile,
-  type ImportedAttendanceRow,
-} from "@/lib/attendance-import";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import { AttendanceImportDialog } from "@/components/features/notice-board/attendance-import-dialog";
 import type { ExportColumn } from "@/lib/table-export";
 import {
   useApproveCheckIns,
@@ -152,6 +145,7 @@ function RegisterBody({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [noteFor, setNoteFor] = useState<MeetingAttendanceEntry | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
 
   const entries = register.entries;
   const total = entries.length;
@@ -310,7 +304,7 @@ function RegisterBody({
     setNoteFor(null);
   };
 
-  // Excel round-trip, while attendance is open.
+  // Export the sheet as it stands. Importing a filled-in template works at any time.
   const exportColumns: ExportColumn<MeetingAttendanceEntry>[] = [
     { header: "Membership ID", accessor: (row) => row.memberId },
     { header: "Member", accessor: (row) => row.memberName },
@@ -339,39 +333,6 @@ function RegisterBody({
       accessor: (row) => row.attendanceNote ?? row.responseReason ?? "",
     },
   ];
-  const importConfig: ImportConfig<ImportedAttendanceRow> | undefined = canMark
-    ? {
-        templateStorageKey: `attendance-template-${noticeId}`,
-        downloadTemplate: () => downloadAttendanceTemplate(register),
-        parseFile: (file) => parseAttendanceFile(file, register),
-        onImport: async (rows): Promise<ImportResult> => {
-          if (rows.length === 0) return { imported: 0, errors: [] };
-          try {
-            await mark.mutateAsync(
-              rows.map((row) => ({
-                memberId: row.memberId,
-                attendance: row.attendance,
-                note: row.note,
-              })),
-            );
-            return { imported: rows.length, errors: [] };
-          } catch (error) {
-            return {
-              imported: 0,
-              errors: [
-                {
-                  row: rows[0].rowNumber,
-                  message:
-                    error instanceof Error
-                      ? error.message
-                      : "Couldn't save the uploaded attendance",
-                },
-              ],
-            };
-          }
-        },
-      }
-    : undefined;
 
   const filters: { value: Filter; label: string }[] = [
     { value: "all", label: "Everyone" },
@@ -487,14 +448,22 @@ function RegisterBody({
             <Wand2 className="size-4" aria-hidden="true" />
             Mark as they said
           </Button>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="mr-2"
+              onClick={() => setImportOpen(true)}
+            >
+              <Upload className="size-3.5" aria-hidden="true" />
+              Import
+            </Button>
             <ExportImportMenu
               rows={entries}
               columns={exportColumns}
               filenamePrefix={`attendance-${register.meetingDate ?? noticeId}`}
               exportTitle={`Attendance — ${register.title}`}
               entityLabel="attendance record"
-              importConfig={importConfig}
             />
           </div>
         </div>
@@ -654,6 +623,12 @@ function RegisterBody({
           </table>
         </div>
       )}
+
+      <AttendanceImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        noticeId={noticeId}
+      />
 
       <Dialog
         open={noteFor !== null}
