@@ -173,8 +173,12 @@ export function ExportImportMenu<T, TImportRow = never>({
             />
           }
         >
-          <Upload className="size-3.5" aria-hidden="true" />
-          Export / Import
+          {importConfig ? (
+            <Upload className="size-3.5" aria-hidden="true" />
+          ) : (
+            <Download className="size-3.5" aria-hidden="true" />
+          )}
+          {importConfig ? "Export / Import" : "Export"}
           <ChevronDown className="size-3.5" aria-hidden="true" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

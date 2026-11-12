@@ -92,7 +92,8 @@
       "Bash(rm -rf h1 h2 h3 h4)",
       "Bash(HEIGHT=1300 WAIT=12000 CLICK=\"Members Attendance\" node shot.mjs COOP-0001 admin123 h1 1440 /notice-board)",
       "Bash(HEIGHT=1100 CLICK=\"Members Attendance|By member\" node shot.mjs COOP-0001 admin123 h2 1440 /notice-board)",
-      "Bash(HEIGHT=1000 CLICK=\"Members Attendance|Import attendance\" node shot.mjs COOP-0001 admin123 h3 1440 /notice-board)"
+      "Bash(HEIGHT=1000 CLICK=\"Members Attendance|Import attendance\" node shot.mjs COOP-0001 admin123 h3 1440 /notice-board)",
+      "Bash(python - documentation/api-contracts.md)"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"

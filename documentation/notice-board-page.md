@@ -82,9 +82,31 @@ t-coop/notice-attachments`, `resource_type: auto` so PDFs/Word docs work, not ju
 
 ## Meetings: RSVP and attendance
 
-A **Meeting Notice** needs a date and a **time** (time picker on web, `HH:MM` on mobile). When it's
-sent, the backend creates its **attendance register** — one line per active member it reaches
+A **Meeting Notice** needs a date, a **start time** (time picker on web, `HH:MM` on mobile) and a
+duration (30 minutes to 4 hours on web), plus an optional **venue or link**. When it's sent, the
+backend creates its **attendance register**, one line per active member it reaches
 (`meeting_attendance`, V42, `MeetingAttendanceService`).
+
+**Who can do what, and when** (V47; Africa/Lagos time):
+
+|                                                    | Before the meeting | From the start until 30 min before the end | Last 30 min | After the end |
+| -------------------------------------------------- | ------------------ | ------------------------------------------ | ----------- | ------------- |
+| Member answers "Will you attend?"                  | ✓                  |                                            |             |               |
+| Member checks in (in person / online)              |                    | ✓ (until an officer decides)               |             |               |
+| Officer approves / rejects check-ins, marks anyone |                    | ✓                                          | ✓           |               |
+| Officer imports a spreadsheet                      | ✓                  | ✓                                          | ✓           | ✓             |
+
+- **Check-in:** once the meeting starts, the notice page shows "Mark your attendance" with
+  _I'm here in person_ / _I'm here online_. A check-in is only a claim: it shows as
+  _Awaiting confirmation_ to the member and _Awaiting approval_ to officers until an officer
+  approves it (it becomes In person or Online, as checked in) or rejects it (Absent). For meetings
+  of an hour or less, check-in stays open for at least the first half.
+- **Officer's sheet** (the notice page): status pill (open / check-in closed / closed), totals,
+  progress with what people said beforehand, filter chips (incl. _Awaiting approval_), select rows
+  for bulk In person / Online / Absent / Approve check-ins, a Member check-in column with
+  Approve / Reject, and a note per member (dialog). Every change saves immediately.
+- **Import** (`attendance-import-dialog.tsx`): from the meeting page, or from Members Attendance
+  with a meeting picker. It works at any time, so a paper register can be typed up afterwards.
 
 - **Members answer (optional):** on the notice page, "Will you attend?" — _Attending in person_,
   _Attending online_, or _Not attending_ with a required reason. They can change it until the
@@ -106,7 +128,7 @@ sent, the backend creates its **attendance register** — one line per active me
   pre-filled with everyone invited and their current marks, and uploads a filled-in one
   (`src/lib/attendance-import.ts`). Attendance accepts "In person", "Online" or "Absent"; blank
   leaves a member unchanged; unknown or duplicate members and invalid values are reported by row.
-  Uploading follows the same rule as marking — only while the meeting's attendance is open.
+  Officers can upload at any time, even after the meeting has ended.
 - **History views:** Members Attendance shows totals with an attendance-rate gauge, then either
   _By meeting_ (a card per meeting: date, rate, in-person/online/absent bar) or _By member_ (a row
   per member with their bar and rate; open one for their timeline). My Attendance is the member's
