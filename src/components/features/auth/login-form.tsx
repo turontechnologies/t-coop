@@ -92,7 +92,7 @@ export function LoginForm() {
         <Label htmlFor={membershipIdInputId}>Membership ID</Label>
         <Input
           id={membershipIdInputId}
-          placeholder="Enter your membership ID"
+          placeholder="Membership ID or alternative ID"
           autoComplete="username"
           disabled={busy}
           className="h-11"
