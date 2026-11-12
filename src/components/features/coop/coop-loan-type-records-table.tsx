@@ -29,6 +29,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import {
   coopLoanStatusBadgeVariant,
   type CoopLoanRecord,
+  loanStatusLabelForStaff,
 } from "@/lib/coop-data";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -48,11 +49,12 @@ const STATUS_OPTIONS = [
   "All statuses",
   "Active",
   "Awaiting Guarantor",
-  "Awaiting Vice President",
-  "Awaiting Treasurer",
-  "Awaiting Secretary",
+  "Awaiting Approval",
+  "Awaiting Acceptance",
+  "Pending Disbursement",
   "Completed",
   "Rejected",
+  "Declined",
 ] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
@@ -246,7 +248,7 @@ export function CoopLoanTypeRecordsTable({
                           "bg-primary/10 text-primary",
                       )}
                     >
-                      {record.status}
+                      {loanStatusLabelForStaff(record)}
                     </Badge>
                   </td>
                 </tr>
@@ -273,7 +275,7 @@ export function CoopLoanTypeRecordsTable({
                   record.status === "Completed" && "bg-primary/10 text-primary",
                 )}
               >
-                {record.status}
+                {loanStatusLabelForStaff(record)}
               </Badge>
             }
             fields={[

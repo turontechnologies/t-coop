@@ -80,32 +80,52 @@ export interface SavingsRequest {
   netAmount?: number;
 }
 
-/** A loan moves Guarantor -> Vice President -> Treasurer -> Secretary; the Secretary's approval
- * pays it out and makes it Active. */
+/**
+ * A loan moves: guarantors accept → the loan committee approves in the admin's order (each
+ * suggests an amount and period) → the borrower accepts the approved terms and picks the payout
+ * account → it's paid out (Active). It can be Rejected along the way, or Declined by the borrower.
+ */
 export type CoopLoanStatus =
   | "Awaiting Guarantor"
-  | "Awaiting Vice President"
-  | "Awaiting Treasurer"
-  | "Awaiting Secretary"
+  | "Awaiting Approval"
+  | "Awaiting Acceptance"
+  | "Pending Disbursement"
   | "Active"
   | "Completed"
-  | "Rejected";
+  | "Rejected"
+  | "Declined";
 
-/** Every status a loan request can be in before it's paid out or rejected. */
+/** Every status a loan request can be in before it's paid out, rejected or declined. */
 export const PENDING_LOAN_STATUSES: CoopLoanStatus[] = [
   "Awaiting Guarantor",
-  "Awaiting Vice President",
-  "Awaiting Treasurer",
-  "Awaiting Secretary",
+  "Awaiting Approval",
+  "Awaiting Acceptance",
+  "Pending Disbursement",
 ];
 
-/** Waiting on one of the officers (past the guarantor). */
+/** Waiting on the loan committee (past the guarantors). */
 export function isAwaitingOfficer(status: CoopLoanStatus): boolean {
-  return (
-    status === "Awaiting Vice President" ||
-    status === "Awaiting Treasurer" ||
-    status === "Awaiting Secretary"
-  );
+  return status === "Awaiting Approval";
+}
+
+/** How a loan's status reads: "Awaiting Treasurer" while it's with the committee. */
+export function loanStatusLabel(
+  record: Pick<CoopLoanRecord, "status" | "approvalStepTitle">,
+): string {
+  if (record.status === "Awaiting Approval")
+    return record.approvalStepTitle
+      ? `Awaiting ${record.approvalStepTitle}`
+      : "Awaiting approval";
+  if (record.status === "Awaiting Acceptance") return "Awaiting your answer";
+  return record.status;
+}
+
+/** The same, for someone other than the borrower. */
+export function loanStatusLabelForStaff(
+  record: Pick<CoopLoanRecord, "status" | "approvalStepTitle">,
+): string {
+  if (record.status === "Awaiting Acceptance") return "Awaiting borrower";
+  return loanStatusLabel(record);
 }
 
 export interface CoopLoanRecord {
@@ -139,6 +159,23 @@ export interface CoopLoanRecord {
   disbursedAt?: string | null;
   /** Every guarantor and where each stands — a Times two loan has two or more. */
   guarantors?: LoanGuarantorInfo[];
+  /** What the member asked for; `amount`/`durationMonths` are the terms the committee settled on. */
+  requestedAmount?: number;
+  requestedMonths?: number;
+  /** 1-based committee position while "Awaiting Approval", and who that is (e.g. "Treasurer"). */
+  approvalStep?: number | null;
+  approvalStepTitle?: string | null;
+  offerRespondedAt?: string | null;
+  payoutAccountType?: "Registered" | "Other" | null;
+  payoutBankName?: string | null;
+  payoutAccountNumber?: string | null;
+  payoutAccountName?: string | null;
+  /** False when the bank couldn't be asked to confirm the account name. */
+  payoutNameVerified?: boolean | null;
+  disbursementMethod?: "Online" | "Cheque" | "Import" | null;
+  chequeUrl?: string | null;
+  chequeNumber?: string | null;
+  disbursedByName?: string | null;
 }
 
 export type LoanGuarantorStatus = "Pending" | "Accepted" | "Declined";
@@ -179,6 +216,7 @@ export function coopLoanStatusBadgeVariant(
   status: CoopLoanStatus,
 ): "secondary" | "outline" | "destructive" {
   if (status === "Active" || status === "Completed") return "secondary";
+  if (status === "Declined") return "outline";
   if (PENDING_LOAN_STATUSES.includes(status)) return "outline";
   return "destructive";
 }

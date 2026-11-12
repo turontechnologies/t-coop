@@ -17,6 +17,7 @@ import {
 import {
   coopLoanStatusBadgeVariant,
   type CoopLoanRecord,
+  loanStatusLabelForStaff,
 } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
@@ -138,7 +139,7 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={coopLoanStatusBadgeVariant(record.status)}>
-                      {record.status}
+                      {loanStatusLabelForStaff(record)}
                     </Badge>
                   </td>
                 </tr>
@@ -159,7 +160,7 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
             title={record.memberName}
             badge={
               <Badge variant={coopLoanStatusBadgeVariant(record.status)}>
-                {record.status}
+                {loanStatusLabelForStaff(record)}
               </Badge>
             }
             fields={[

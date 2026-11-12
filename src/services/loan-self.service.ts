@@ -6,8 +6,10 @@ export interface LoanApplicationPayload {
   loanTypeId: string;
   amount: number;
   loanMode: LoanMode;
-  /** Two or more, required for a "TimesTwo" loan; a "Within" loan has no guarantor. */
+  /** Required for a "TimesTwo" loan (the co-op sets how many); a "Within" loan has none. */
   guarantorMemberIds?: string[];
+  /** How many months to repay over, up to the loan type's maximum. */
+  durationMonths: number;
 }
 
 export interface DisbursementPreview {
@@ -66,28 +68,108 @@ export interface LoanHistory {
   }[];
 }
 
-/** Where a loan is in the officer approval chain, as the signed-in member sees it. */
+/** One seat on the loan committee, in approval order. */
+export interface LoanCommitteeStep {
+  position: number;
+  title: string;
+  memberId: string;
+  memberName: string;
+}
+
+/** One committee decision, with the terms the approver suggested. */
+export interface LoanCommitteeDecision {
+  position: number | null;
+  title: string;
+  decision: "Approved" | "Rejected";
+  memberName: string;
+  covering: boolean;
+  note: string | null;
+  actedAt: string;
+  suggestedAmount: number | null;
+  suggestedMonths: number | null;
+  previousAmount: number | null;
+  previousMonths: number | null;
+}
+
+export type LoanStage =
+  | "Guarantors"
+  | "Approval"
+  | "Acceptance"
+  | "Disbursement"
+  | "Active"
+  | "Completed"
+  | "Rejected"
+  | "Declined";
+
+/** Where a loan is (committee, offer, payout) and what the signed-in member can do now. */
 export interface LoanApprovalStatus {
-  /** Vice President -> Treasurer -> Secretary, with whoever holds each office (null = vacant;
-   * the co-op admin covers it). */
-  chain: { office: CoopOffice; label: string; holderName: string | null }[];
-  trail: {
-    office: CoopOffice;
-    label: string;
-    decision: "Approved" | "Rejected";
-    memberName: string;
-    covering: boolean;
-    note: string | null;
-    actedAt: string;
-  }[];
-  /** The office the loan is waiting on, or null when it isn't in the chain. */
-  currentStep: CoopOffice | null;
+  chain: LoanCommitteeStep[];
+  trail: LoanCommitteeDecision[];
+  stage: LoanStage;
+  /** 1-based committee position the loan is waiting on, during "Approval". */
+  currentStep: number | null;
   canApprove: boolean;
   canReject: boolean;
-  /** e.g. "Treasurer", "Admin (covering for Treasurer)", "President". */
+  /** e.g. "Treasurer", "Admin (covering for Treasurer)". */
   actingAs: string | null;
+  /** The caller is the last approver: their figures become the offer. */
+  finalStep: boolean;
+  canRespondToOffer: boolean;
+  canDisburse: boolean;
+  /** The longest repayment period this loan's type allows. */
+  maxMonths: number;
+  minAmount: number;
   netDisbursement: number | null;
+  /** The borrower's own account on file (only sent to the borrower). */
+  registeredAccount: {
+    bankCode: string;
+    accountNumberMasked: string;
+    accountName: string;
+  } | null;
 }
+
+export interface OfferResponsePayload {
+  decision: "Accepted" | "Declined";
+  accountType?: "Registered" | "Other";
+  bankCode?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+  reason?: string;
+}
+
+export interface DisbursePayload {
+  method: "Online" | "Cheque";
+  chequeUrl?: string;
+  chequeNumber?: string;
+}
+
+/** Settings -> Loans: the committee, loan rules and dividend rules. */
+export interface LoanSettings {
+  minAmount: number;
+  savingsMultiplier: number;
+  withinPercent: number;
+  minMembershipMonths: number;
+  minSavings: number;
+  allowConcurrentLoans: boolean;
+  minGuarantors: number;
+  dividendMethod: "SavingsPercent" | "InterestShare" | "None";
+  dividendRate: number;
+  dividendFrequency: "Monthly" | "Quarterly" | "Annually";
+  committee: {
+    position: number;
+    memberId: string;
+    memberName: string;
+    title: string;
+  }[];
+  adminApprovesAlone: boolean;
+  canEdit: boolean;
+}
+
+export type LoanSettingsPayload = Omit<
+  LoanSettings,
+  "committee" | "adminApprovesAlone" | "canEdit"
+> & { committee: { memberId: string; title: string }[] };
 
 /**
  * The real backend behind a member's own "Take a Loan" application, a named guarantor's
@@ -150,11 +232,67 @@ export const loanSelfService = {
     coopId: string,
     loanId: string,
     decision: "Approved" | "Rejected",
-    options?: { rejectionReason?: string },
+    options?: {
+      rejectionReason?: string;
+      suggestedAmount?: number;
+      suggestedMonths?: number;
+      note?: string;
+    },
   ): Promise<CoopLoanRecord> {
     const { data } = await apiClient.patch<CoopLoanRecord>(
       `/cooperatives/${coopId}/loans/${loanId}/decision`,
       { decision, ...options },
+    );
+    return data;
+  },
+
+  /** The borrower accepts (choosing the payout account) or declines the approved terms. */
+  async respondToOffer(
+    coopId: string,
+    loanId: string,
+    payload: OfferResponsePayload,
+  ): Promise<CoopLoanRecord> {
+    const { data } = await apiClient.post<CoopLoanRecord>(
+      `/cooperatives/${coopId}/loans/${loanId}/offer-response`,
+      payload,
+    );
+    return data;
+  },
+
+  async disburse(
+    coopId: string,
+    loanId: string,
+    payload: DisbursePayload,
+  ): Promise<CoopLoanRecord> {
+    const { data } = await apiClient.post<CoopLoanRecord>(
+      `/cooperatives/${coopId}/loans/${loanId}/disburse`,
+      payload,
+    );
+    return data;
+  },
+
+  /** Loans waiting on the signed-in member as a committee member. */
+  async awaitingMe(coopId: string): Promise<CoopLoanRecord[]> {
+    const { data } = await apiClient.get<CoopLoanRecord[]>(
+      `/cooperatives/${coopId}/loans/awaiting-me`,
+    );
+    return data;
+  },
+
+  async getSettings(coopId: string): Promise<LoanSettings> {
+    const { data } = await apiClient.get<LoanSettings>(
+      `/cooperatives/${coopId}/loan-settings`,
+    );
+    return data;
+  },
+
+  async updateSettings(
+    coopId: string,
+    payload: LoanSettingsPayload,
+  ): Promise<LoanSettings> {
+    const { data } = await apiClient.put<LoanSettings>(
+      `/cooperatives/${coopId}/loan-settings`,
+      payload,
     );
     return data;
   },

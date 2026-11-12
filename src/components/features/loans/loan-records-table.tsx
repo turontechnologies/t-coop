@@ -29,6 +29,7 @@ import {
   PENDING_LOAN_STATUSES,
   type CoopLoanRecord,
   type CoopLoanStatus,
+  loanStatusLabel,
 } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
@@ -49,12 +50,13 @@ interface LoanRecordsTableProps {
 const STATUS_OPTIONS = [
   "All statuses",
   "Awaiting Guarantor",
-  "Awaiting Vice President",
-  "Awaiting Treasurer",
-  "Awaiting Secretary",
+  "Awaiting Approval",
+  "Awaiting Acceptance",
+  "Pending Disbursement",
   "Active",
   "Completed",
   "Rejected",
+  "Declined",
 ] as const;
 const PAGE_SIZE_OPTIONS = [5, 10, 25];
 
@@ -315,7 +317,7 @@ export function LoanRecordsTable({ records, viewerId }: LoanRecordsTableProps) {
                           "bg-primary/10 text-primary",
                       )}
                     >
-                      {record.status}
+                      {loanStatusLabel(record)}
                     </Badge>
                   </td>
                 </tr>
@@ -342,7 +344,7 @@ export function LoanRecordsTable({ records, viewerId }: LoanRecordsTableProps) {
                   record.status === "Completed" && "bg-primary/10 text-primary",
                 )}
               >
-                {record.status}
+                {loanStatusLabel(record)}
               </Badge>
             }
             fields={[

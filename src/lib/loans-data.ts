@@ -39,14 +39,24 @@ export interface LoanTypeDef {
   durationMonths: number;
 }
 
+/** The co-op's own loan rules (Settings -> Loans). Defaults: 2x savings, Within up to 100%. */
+export interface LoanRules {
+  savingsMultiplier: number;
+  withinPercent: number;
+}
+
 /** The most a member can borrow on this type in this mode — capped by the type's maximum. */
 export function computeEligibleAmount(
   totalSavings: number,
   loanType: LoanTypeDef,
   mode: LoanMode,
+  rules: LoanRules = { savingsMultiplier: 2, withinPercent: 100 },
 ): number {
   const savings = Math.max(totalSavings, 0);
-  const byMode = mode === "Within" ? savings : savings * 2;
+  const byMode =
+    mode === "Within"
+      ? (savings * rules.withinPercent) / 100
+      : savings * rules.savingsMultiplier;
   return Math.floor(Math.min(byMode, loanType.maxAmount) * 100) / 100;
 }
 
@@ -76,16 +86,18 @@ export interface LoanTerms {
   totalRepayment: number;
 }
 
+/** Terms for an amount over `months` (the borrower's choice, at most the type's maximum). */
 export function computeLoanTerms(
   loanType: LoanTypeDef,
   amount: number,
+  months: number = loanType.durationMonths,
 ): LoanTerms {
   const totalInterest = computeInterest(loanType, amount);
   const totalRepayment = amount + totalInterest;
-  const numberOfRepayments = loanType.durationMonths;
+  const numberOfRepayments = Math.max(1, months);
   return {
     totalInterest,
-    durationMonths: loanType.durationMonths,
+    durationMonths: numberOfRepayments,
     numberOfRepayments,
     monthlyRepayment: totalRepayment / numberOfRepayments,
     totalRepayment,
