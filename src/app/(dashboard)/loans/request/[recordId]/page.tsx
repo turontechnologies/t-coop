@@ -43,7 +43,7 @@ import { formatDateLong, formatMoney, getInitials } from "@/lib/format";
 import { useCoopLoanRecord, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { useTabAccess } from "@/hooks/use-permission";
 import { useCoopMembers } from "@/hooks/use-coop-members";
-import { useCooperative } from "@/hooks/use-cooperative";
+import { useCurrency } from "@/components/providers/currency-provider";
 import {
   useGuarantorResponse,
   useLoanApprovals,
@@ -77,7 +77,8 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     (authMember?.role === "admin" ? authMember.id : undefined);
 
   const { data: record, isLoading } = useCoopLoanRecord(recordId);
-  const { data: coop } = useCooperative(coopId);
+  // Plain members can't load the co-op itself; the currency comes from the app's provider.
+  const currency = useCurrency();
   const { data: members = [] } = useCoopMembers(coopId);
   const { data: loanTypes = [] } = useCoopLoanTypes(coopId);
   const guarantorResponse = useGuarantorResponse(coopId ?? "");
@@ -90,7 +91,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
   }
 
-  if (!coop || !record) {
+  if (!record) {
     return (
       <div className="space-y-4 pt-6">
         <p className="text-sm text-muted-foreground">
@@ -104,7 +105,6 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
     );
   }
 
-  const currency = coop.currency;
   const isBorrower = record.memberId === authMember?.id;
   const loanType = loanTypes.find((type) => type.name === record.loanType);
   const guarantors = loanGuarantorsOf(record);
