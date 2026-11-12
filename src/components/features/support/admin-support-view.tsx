@@ -20,10 +20,8 @@ import { SupportTransactionHistory } from "@/components/features/support/support
 import { useMySubscription } from "@/hooks/use-my-subscription";
 import { useMySubscriptionHistory } from "@/hooks/use-my-subscription-history";
 import { useSubscriptionCheckout } from "@/hooks/use-subscription-checkout";
-import { openFlutterwaveCheckout } from "@/lib/flutterwave";
 import { formatDateLong, formatNaira } from "@/lib/format";
-import { redirectToOpayCheckout } from "@/lib/opay";
-import { openPaystackCheckout } from "@/lib/paystack";
+import { useGatewayCheckout } from "@/components/features/payments/use-gateway-checkout";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import type {
@@ -93,49 +91,35 @@ export function AdminSupportView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handlePay = async () => {
+  const checkout = useGatewayCheckout();
+
+  const handlePay = () => {
     if (!subscription || !activeGateway || !member || !planId) return;
     setPaying(true);
-    try {
-      const init = await initialize.mutateAsync({
-        planId,
-        gateway: activeGateway,
-      });
-
-      const onClose = () => setPaying(false);
-
-      if (activeGateway === "Paystack") {
-        await openPaystackCheckout({
-          email: member.email,
-          amountNaira: init.amount,
-          reference: init.reference,
-          publicKey: init.publicKey,
-          onSuccess: confirmAndShowReceipt,
-          onClose,
+    checkout.start({
+      merchant: "T-Coop",
+      label: `${selectedPlan?.label ?? "Subscription"} subscription`,
+      email: member.email,
+      amount: selectedPlan?.amount ?? 0,
+      currency: "NGN",
+      initialize: async () => {
+        const init = await initialize.mutateAsync({
+          planId,
+          gateway: activeGateway,
         });
-      } else if (activeGateway === "Flutterwave") {
-        await openFlutterwaveCheckout({
-          publicKey: init.publicKey,
-          email: member.email,
-          amountNaira: init.amount,
-          reference: init.reference,
-          onSuccess: confirmAndShowReceipt,
-          onClose,
-        });
-      } else if (init.checkoutUrl) {
-        redirectToOpayCheckout(init.checkoutUrl);
-      } else {
-        throw new Error(
-          "OPay didn't return a checkout link. Please try again.",
-        );
-      }
-    } catch (error) {
-      setPaying(false);
-      toast.error("Couldn't start checkout", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
-    }
+        return { ...init, gateway: activeGateway };
+      },
+      confirm: async (reference) => {
+        const result = await confirm.mutateAsync(reference);
+        setReceipt(result);
+        await Promise.all([
+          subscriptionQuery.refetch(),
+          historyQuery.refetch(),
+        ]);
+      },
+      onComplete: () => setPaying(false),
+      onCancel: () => setPaying(false),
+    });
   };
 
   const handleViewHistoryReceipt = (payment: SubscriptionPayment) => {
@@ -371,6 +355,7 @@ export function AdminSupportView() {
           {receipt ? <SubscriptionReceiptCard receipt={receipt} /> : null}
         </DialogContent>
       </Dialog>
+      {checkout.dialog}
     </div>
   );
 }

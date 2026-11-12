@@ -36,7 +36,13 @@ import {
 } from "@/components/ui/select";
 import type { CooperativeSummary } from "@/types/cooperative";
 import { formatDateLong } from "@/lib/format";
-import { noticeExcerpt, type Notice, type NoticeType } from "@/types/notice";
+import {
+  noticeExcerpt,
+  noticeStatusLabel,
+  type Notice,
+  type NoticeType,
+} from "@/types/notice";
+import { useAuthStore } from "@/store/auth.store";
 import { useNoticeMutations } from "@/hooks/use-notices";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +89,7 @@ export function NoticeListTable({
 }: NoticeListTableProps) {
   const router = useRouter();
   const { resend, remove } = useNoticeMutations();
+  const viewerId = useAuthStore((state) => state.member?.id);
 
   const [month, setMonth] = useState<string>("All months");
   const [year, setYear] = useState<string>("All years");
@@ -399,7 +406,7 @@ export function NoticeListTable({
               </tr>
             ) : (
               pageNotices.map((notice) => {
-                const status = notice.status;
+                const status = noticeStatusLabel(notice, viewerId);
                 return (
                   <tr
                     key={notice.id}
@@ -434,9 +441,12 @@ export function NoticeListTable({
                     </td>
                     <td className="px-4 py-3">
                       <Badge
-                        variant={status === "Sent" ? "secondary" : "outline"}
+                        variant={
+                          status !== "Scheduled" ? "secondary" : "outline"
+                        }
                         className={cn(
-                          status === "Sent" && "bg-success/15 text-success",
+                          status !== "Scheduled" &&
+                            "bg-success/15 text-success",
                         )}
                       >
                         {status}
@@ -455,7 +465,7 @@ export function NoticeListTable({
         emptyMessage="No notices match your filters."
       >
         {pageNotices.map((notice) => {
-          const status = notice.status;
+          const status = noticeStatusLabel(notice, viewerId);
           return (
             <MobileRecordCard
               key={notice.id}
@@ -463,9 +473,9 @@ export function NoticeListTable({
               title={notice.title}
               badge={
                 <Badge
-                  variant={status === "Sent" ? "secondary" : "outline"}
+                  variant={status !== "Scheduled" ? "secondary" : "outline"}
                   className={cn(
-                    status === "Sent" && "bg-success/15 text-success",
+                    status !== "Scheduled" && "bg-success/15 text-success",
                   )}
                 >
                   {status}

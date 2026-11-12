@@ -20,6 +20,7 @@ import {
 import { MemberNoticeList } from "@/components/features/notice-board/member-notice-list";
 import { NoticeListTable } from "@/components/features/notice-board/notice-list-table";
 import { useCooperatives } from "@/hooks/use-cooperatives";
+import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { useNotices } from "@/hooks/use-notices";
 import { useModuleAccess } from "@/hooks/use-permission";
 import { useAuthStore } from "@/store/auth.store";
@@ -37,7 +38,18 @@ export default function NoticeBoardPage() {
     refetch,
     isRefetching,
   } = useNotices();
-  const { data: cooperatives = [] } = useCooperatives();
+  const { data: coopList = [] } = useCooperatives();
+  const ownCoopId =
+    member?.cooperativeId ?? (member?.role === "admin" ? member.id : undefined);
+  const { data: branding } = useCooperativeBranding(ownCoopId);
+  // Admins can't list co-operatives; add their own by name so the table never shows a raw ID.
+  const cooperatives =
+    ownCoopId && branding && !coopList.some((coop) => coop.id === ownCoopId)
+      ? [
+          ...coopList,
+          { id: ownCoopId, name: branding.name } as (typeof coopList)[number],
+        ]
+      : coopList;
   const [tab, setTab] = useState<NoticeBoardTab>("notices");
 
   if (!member) return null;

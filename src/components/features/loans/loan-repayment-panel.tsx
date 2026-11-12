@@ -1,5 +1,8 @@
 "use client";
 
+import { useGatewayCheckout } from "@/components/features/payments/use-gateway-checkout";
+import { useCooperativeBranding } from "@/hooks/use-cooperative";
+
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -40,7 +43,6 @@ import {
   generateRepaymentSchedule,
   type RepaymentStatus,
 } from "@/lib/loans-data";
-import { openCoopCheckout } from "@/lib/coop-checkout";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -84,42 +86,38 @@ export function LoanRepaymentPanel({
   const confirmRepayment = useConfirmRepayment(coopId, record.id);
   const manualRepayment = useManualRepayment(coopId, record.id);
 
-  const handlePay = async () => {
+  const checkout = useGatewayCheckout();
+  const { data: branding } = useCooperativeBranding(coopId);
+  const nextDue =
+    schedule.find((item) => item.status !== "Paid")?.totalAmount ??
+    record.monthlyRepayment;
+
+  const handlePay = () => {
     if (!memberEmail) return;
+    let installment = record.repaymentsMade + 1;
+    let paid = 0;
     setPayBusy(true);
-    try {
-      const intent = await initializeRepayment.mutateAsync();
-      await openCoopCheckout({
-        gateway: intent.gateway,
-        email: memberEmail,
-        amountNaira: intent.amount,
-        reference: intent.reference,
-        publicKey: intent.publicKey,
-        title: "Loan repayment",
-        description: `Installment ${intent.installmentNumber} of ${record.numberOfRepayments}`,
-        onSuccess: async (reference) => {
-          try {
-            await confirmRepayment.mutateAsync(reference);
-            toast.success("Repayment recorded", {
-              description: `Installment ${intent.installmentNumber} of ${record.numberOfRepayments} — ${formatMoney(intent.amount, currency)}.`,
-            });
-          } catch (error) {
-            toast.error("Couldn't confirm payment", {
-              description:
-                error instanceof Error ? error.message : "Please try again.",
-            });
-          } finally {
-            setPayBusy(false);
-          }
-        },
-        onClose: () => setPayBusy(false),
-      });
-    } catch (error) {
-      toast.error("Couldn't start payment", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-      setPayBusy(false);
-    }
+    checkout.start({
+      merchant: branding?.name ?? "Your co-operative",
+      label: "Loan repayment",
+      email: memberEmail,
+      amount: nextDue,
+      currency,
+      initialize: async () => {
+        const intent = await initializeRepayment.mutateAsync();
+        installment = intent.installmentNumber;
+        paid = intent.amount;
+        return intent;
+      },
+      confirm: (reference) => confirmRepayment.mutateAsync(reference),
+      onComplete: () => {
+        setPayBusy(false);
+        toast.success("Repayment recorded", {
+          description: `Installment ${installment} of ${record.numberOfRepayments} — ${formatMoney(paid, currency)}.`,
+        });
+      },
+      onCancel: () => setPayBusy(false),
+    });
   };
 
   const handleRecordManually = async () => {
@@ -369,6 +367,7 @@ export function LoanRepaymentPanel({
           </TabsPanel>
         </Tabs>
       </CardContent>
+      {checkout.dialog}
     </Card>
   );
 }

@@ -27,6 +27,8 @@ import { MeetingMinutesCard } from "@/components/features/notice-board/meeting-m
 import { formatMeetingWhen } from "@/lib/meeting";
 import { formatDateLong } from "@/lib/format";
 import { useCooperatives } from "@/hooks/use-cooperatives";
+import { useCooperativeBranding } from "@/hooks/use-cooperative";
+import { noticeStatusLabel } from "@/types/notice";
 import { useNotice, useNoticeMutations } from "@/hooks/use-notices";
 import { useAuthStore } from "@/store/auth.store";
 import { useModuleAccess } from "@/hooks/use-permission";
@@ -50,6 +52,11 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
     isRefetching,
   } = useNotice(id);
   const { data: cooperatives = [] } = useCooperatives();
+  // Co-op admins and members can't list co-operatives; their own co-op's name comes from its
+  // branding, same as the sidebar.
+  const ownCoopId =
+    member?.cooperativeId ?? (member?.role === "admin" ? member.id : undefined);
+  const { data: branding } = useCooperativeBranding(ownCoopId);
   const { resend, remove } = useNoticeMutations();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -127,7 +134,7 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                             "bg-success/15 text-success",
                         )}
                       >
-                        {notice.status}
+                        {noticeStatusLabel(notice, member.id)}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -218,6 +225,7 @@ export default function NoticeDetailsPage({ params }: NoticeDetailsPageProps) {
                       .map(
                         (cid) =>
                           cooperatives.find((coop) => coop.id === cid)?.name ??
+                          (cid === ownCoopId ? branding?.name : null) ??
                           cid,
                       )
                       .join(", ")}

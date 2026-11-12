@@ -30,6 +30,7 @@ export interface Notice {
   attachment?: NoticeAttachment;
   sendAt: string;
   status: NoticeStatus;
+  createdById: string;
   createdByName: string;
   createdByRole: UserRole;
   createdAt: string;
@@ -152,6 +153,17 @@ export interface MeetingAttendanceHistoryItem {
   attendanceNote: string | null;
   checkInMode: CheckInMode | null;
   awaitingApproval: boolean;
+}
+
+/** "Received" for a sent notice someone else wrote; "Sent" / "Scheduled" for your own. */
+export function noticeStatusLabel(
+  notice: Pick<Notice, "status" | "createdById">,
+  viewerId: string | undefined,
+): "Sent" | "Received" | "Scheduled" {
+  if (notice.status === "Scheduled") return "Scheduled";
+  return notice.createdById && notice.createdById === viewerId
+    ? "Sent"
+    : "Received";
 }
 
 export function noticeExcerpt(message: string, maxLength = 90): string {

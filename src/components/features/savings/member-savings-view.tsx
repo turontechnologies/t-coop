@@ -13,7 +13,8 @@ import {
   type WithdrawalPayload,
 } from "@/components/features/savings/request-withdrawal-modal";
 import { SavingsRecordsTable } from "@/components/features/savings/savings-records-table";
-import { openCoopCheckout } from "@/lib/coop-checkout";
+import { useGatewayCheckout } from "@/components/features/payments/use-gateway-checkout";
+import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
@@ -81,49 +82,32 @@ export function MemberSavingsView({
   const [internalWithdrawOpen, setInternalWithdrawOpen] = useState(false);
   const withdrawOpen = withdrawOpenProp ?? internalWithdrawOpen;
   const setWithdrawOpen = onWithdrawOpenChange ?? setInternalWithdrawOpen;
-  const [busy, setBusy] = useState(false);
+  // The shared checkout shows its own progress; the deposit form is closed by then.
+  const busy = false;
   const [withdrawBusy, setWithdrawBusy] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
-  const [lastAmount, setLastAmount] = useState(0);
+  const [lastAmount] = useState(0);
 
-  const handleProceed = async (savingsTypeId: string, amount: number) => {
-    setBusy(true);
-    try {
-      const intent = await initializeDeposit.mutateAsync({
-        savingsTypeId,
-        amount,
-      });
-      await openCoopCheckout({
-        gateway: intent.gateway,
-        email: memberEmail,
-        amountNaira: amount,
-        reference: intent.reference,
-        publicKey: intent.publicKey,
-        title: "Savings deposit",
-        description: "Deposit into your co-operative savings",
-        onSuccess: async (reference) => {
-          try {
-            await confirmDeposit.mutateAsync(reference);
-            setAddOpen(false);
-            setLastAmount(amount);
-            setSuccessOpen(true);
-          } catch (error) {
-            toast.error("Couldn't confirm payment", {
-              description:
-                error instanceof Error ? error.message : "Please try again.",
-            });
-          } finally {
-            setBusy(false);
-          }
-        },
-        onClose: () => setBusy(false),
-      });
-    } catch (error) {
-      toast.error("Couldn't start payment", {
-        description: error instanceof Error ? error.message : undefined,
-      });
-      setBusy(false);
-    }
+  const checkout = useGatewayCheckout();
+  const { data: branding } = useCooperativeBranding(coopId);
+
+  const handleProceed = (savingsTypeId: string, amount: number) => {
+    // One window at a time: the deposit form closes and the checkout takes over.
+    setAddOpen(false);
+    checkout.start({
+      merchant: branding?.name ?? "Your co-operative",
+      label: "Savings deposit",
+      email: memberEmail,
+      amount,
+      currency,
+      initialize: () =>
+        initializeDeposit.mutateAsync({ savingsTypeId, amount }),
+      confirm: (reference) => confirmDeposit.mutateAsync(reference),
+      onComplete: () =>
+        toast.success("Savings added", {
+          description: `${formatMoney(amount, currency)} is now in your savings.`,
+        }),
+    });
   };
 
   const handleRequestWithdrawal = async ({
@@ -226,6 +210,7 @@ export function MemberSavingsView({
         memberRecords={memberRecords}
         onProceed={handleRequestWithdrawal}
       />
+      {checkout.dialog}
     </div>
   );
 }
