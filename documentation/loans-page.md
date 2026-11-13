@@ -104,6 +104,22 @@ The co-op's own Paystack account if it has connected one (Settings → Integrati
 the platform's. The online transfer reference is fixed per loan (`loan-<loanId>`), so retrying
 can never pay the same loan twice.
 
+### What guarantors see after approval
+
+Once the committee approves, the loan request page shows an **approved terms card**
+(`approved-terms-card.tsx`) above Loan Details. Guarantors see it as "The loan you guaranteed",
+the borrower as "Your approved loan", and staff as "Approved terms". The card has:
+
+- An Approved → Accepted → Paid out progress line.
+- The approved amount, with the requested amount if the committee changed it.
+- The repayment plan.
+- **To be paid out**: the approved amount minus the loans charge (`netDisbursement` from the
+  approvals endpoint).
+- After payout, **Paid out** with the method (cheque number or online) and the date.
+
+Guarantors also get a notification at approval and at payout. The borrower answering an offer
+sees the offer card instead.
+
 ### Recording a repayment by hand
 
 When a borrower pays offline (cash or bank transfer), an admin or co-op staff member uses

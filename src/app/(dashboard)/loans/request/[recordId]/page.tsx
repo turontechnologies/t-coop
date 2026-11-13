@@ -55,6 +55,10 @@ import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 import { BorrowerHistoryCard } from "@/components/features/loans/borrower-history-card";
 import {
+  ApprovedTermsCard,
+  isApprovedLoan,
+} from "@/components/features/loans/approved-terms-card";
+import {
   ApprovalSteps,
   ApproveLoanDialog,
   DisburseLoanDialog,
@@ -256,6 +260,22 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
               coopId={coopId}
               record={record}
               approvals={approvals}
+              currency={currency}
+            />
+          ) : null}
+
+          {/* The borrower answering an offer already sees it above. */}
+          {isApprovedLoan(record) && !approvals?.canRespondToOffer ? (
+            <ApprovedTermsCard
+              record={record}
+              viewer={
+                isBorrower
+                  ? "borrower"
+                  : guarantors.some((g) => g.memberId === authMember?.id)
+                    ? "guarantor"
+                    : "staff"
+              }
+              netDisbursement={approvals?.netDisbursement}
               currency={currency}
             />
           ) : null}
