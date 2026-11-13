@@ -20,11 +20,16 @@ export function useLoanFeeStatus(coopId: string | undefined, enabled = true) {
  * Pays the application fee: starts it server-side, opens the gateway's secure window on the
  * chosen channel, then has the server verify it. Resolves with the reference.
  */
-export function useLoanFeePayment(coopId: string | undefined, email: string) {
+export function useLoanFeePayment(
+  coopId: string | undefined,
+  email: string,
+  /** The loan type being paid for, when fees are set per type. */
+  loanTypeId?: string,
+) {
   const queryClient = useQueryClient();
   return async (channel: PaystackChannel, onVerifying: () => void) => {
     if (!coopId) throw new Error("No co-operative selected.");
-    const checkout = await loanFeeService.initialize(coopId);
+    const checkout = await loanFeeService.initialize(coopId, loanTypeId);
     return new Promise<string>((resolve, reject) => {
       openCoopCheckout({
         gateway: checkout.gateway,

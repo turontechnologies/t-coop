@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -44,6 +44,8 @@ interface TakeLoanModalProps {
   totalSavings: number;
   /** The application fee paid for this application, when the co-op charges one. */
   feeCredit?: LoanFeeCredit | null;
+  /** The loan type already chosen (and paid for) before the form opened; it can't be changed. */
+  lockedLoanTypeId?: string;
   onProceed: (application: {
     loanTypeId: string;
     amount: number;
@@ -65,6 +67,7 @@ export function TakeLoanModal({
   members,
   totalSavings,
   feeCredit,
+  lockedLoanTypeId,
   onProceed,
 }: TakeLoanModalProps) {
   const typeId = useId();
@@ -73,7 +76,10 @@ export function TakeLoanModal({
   const guarantorId = useId();
   const currency = useCurrency();
   const [loanMode, setLoanMode] = useState<LoanMode>("TimesTwo");
-  const [loanTypeId, setLoanTypeId] = useState("");
+  const [loanTypeId, setLoanTypeId] = useState(lockedLoanTypeId ?? "");
+  useEffect(() => {
+    if (lockedLoanTypeId) setLoanTypeId(lockedLoanTypeId);
+  }, [lockedLoanTypeId]);
   const [amountText, setAmountText] = useState("");
   const [monthsText, setMonthsText] = useState("");
   const [guarantorMemberIds, setGuarantorMemberIds] = useState<string[]>([]);
@@ -99,6 +105,11 @@ export function TakeLoanModal({
     [types],
   );
   const selectedType = loanTypes.find((type) => type.id === loanTypeId);
+  // A type chosen before the form opened still pre-fills its usual repayment period.
+  useEffect(() => {
+    if (lockedLoanTypeId && selectedType && !monthsText)
+      setMonthsText(String(selectedType.durationMonths));
+  }, [lockedLoanTypeId, selectedType, monthsText]);
   const maxMonths = selectedType?.durationMonths ?? 0;
   // The backend's numbers, so the form, the dashboard and the application check agree:
   // co-op rules, minus what's already tied up in current loans, capped by the type.
@@ -156,7 +167,7 @@ export function TakeLoanModal({
 
   const reset = () => {
     setLoanMode("TimesTwo");
-    setLoanTypeId("");
+    setLoanTypeId(lockedLoanTypeId ?? "");
     setAmountText("");
     setMonthsText("");
     setGuarantorMemberIds([]);
@@ -262,7 +273,7 @@ export function TakeLoanModal({
                 if (type && !monthsText)
                   setMonthsText(String(type.durationMonths));
               }}
-              disabled={busy}
+              disabled={busy || !!lockedLoanTypeId}
             >
               <SelectTrigger id={typeId} className="w-full">
                 <SelectValue placeholder="Select" />

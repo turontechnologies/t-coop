@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
 } from "@/components/features/loans/loan-status-cards";
 import { LoanSuccessModal } from "@/components/features/loans/loan-success-modal";
 import { TakeLoanModal } from "@/components/features/loans/take-loan-modal";
+import { ChooseLoanTypeDialog } from "@/components/features/loans/choose-loan-type-dialog";
 import { CheckoutDialog } from "@/components/features/payments/checkout-dialog";
 import { useLoanFeePayment, useLoanFeeStatus } from "@/hooks/use-loan-fee";
 import { useAuthStore } from "@/store/auth.store";
@@ -102,8 +103,23 @@ export function MemberLoansView({
     coopId,
     takeOpen,
   );
-  const payFee = useLoanFeePayment(coopId, email);
-  const feeDue = !!feeStatus && feeStatus.fee > 0 && !feeStatus.credit;
+  // With a fee per loan type, the member picks the type first, then pays that type's fee.
+  const perType = feeStatus?.mode === "PerType";
+  const [chosenTypeId, setChosenTypeId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!takeOpen) setChosenTypeId(null);
+  }, [takeOpen]);
+  const chosenType = perType
+    ? feeStatus?.types.find((type) => type.loanTypeId === chosenTypeId)
+    : undefined;
+  const payFee = useLoanFeePayment(coopId, email, chosenType?.loanTypeId);
+  const feeAmount = perType ? (chosenType?.fee ?? 0) : (feeStatus?.fee ?? 0);
+  const feeCredit = perType
+    ? (chosenType?.credit ?? null)
+    : (feeStatus?.credit ?? null);
+  const choosingType = takeOpen && perType && !chosenType;
+  const feeDue = !!feeStatus && !choosingType && feeAmount > 0 && !feeCredit;
+  const formReady = takeOpen && !!feeStatus && !choosingType && !feeDue;
   const [lastAmount, setLastAmount] = useState(0);
 
   const handleProceed = async (application: LoanApplicationPayload) => {
@@ -177,22 +193,40 @@ export function MemberLoansView({
         </CardContent>
       </Card>
 
-      <CheckoutDialog
-        open={takeOpen && feeDue}
+      <ChooseLoanTypeDialog
+        open={choosingType}
         onOpenChange={(next) => {
           if (!next) setTakeOpen(false);
         }}
+        types={feeStatus?.types ?? []}
+        currency={currency}
+        onChoose={setChosenTypeId}
+      />
+      <CheckoutDialog
+        open={takeOpen && feeDue}
+        onOpenChange={(next) => {
+          if (!next) {
+            // Back to the loan types when fees differ by type; otherwise close.
+            if (perType) setChosenTypeId(null);
+            else setTakeOpen(false);
+          }
+        }}
         merchant={feeStatus?.merchantName ?? "Your co-operative"}
-        label="Loan application fee"
+        label={
+          chosenType
+            ? `${chosenType.loanTypeName} application fee`
+            : "Loan application fee"
+        }
         email={email}
-        amount={feeStatus?.fee ?? 0}
+        amount={feeAmount}
         currency={currency}
         onPay={payFee}
         onDone={() => void refetchFee()}
       />
       <TakeLoanModal
-        open={takeOpen && !!feeStatus && !feeDue}
-        feeCredit={feeStatus?.credit ?? null}
+        open={formReady}
+        feeCredit={feeCredit}
+        lockedLoanTypeId={chosenType?.loanTypeId}
         onOpenChange={setTakeOpen}
         coopId={coopId}
         busy={busy}
