@@ -253,6 +253,7 @@ export function MembersDirectoryTable({
 
       {!readOnly && editingMember ? (
         <EditMemberModal
+          coopId={coopId}
           member={editingMember}
           open={true}
           onOpenChange={(open) => {

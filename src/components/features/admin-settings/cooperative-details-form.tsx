@@ -29,7 +29,61 @@ import {
   editCooperativeSchema,
   type EditCooperativeFormValues,
 } from "@/lib/validations/coop.schema";
+import { cn } from "@/lib/utils";
+import type { CooperativeSummary } from "@/types/cooperative";
 import { useAuthStore } from "@/store/auth.store";
+
+/** The form's values from what's saved — used to load the form and to reset it. */
+function formValuesOf(
+  coop: CooperativeSummary,
+  profile: { firstName: string; lastName: string; nin?: string | null },
+): EditCooperativeFormValues {
+  return {
+    name: coop.name,
+    adminFirstName: profile.firstName,
+    adminLastName: profile.lastName,
+    adminNin: profile.nin ?? "",
+    contactEmail: coop.contactEmail,
+    contactPhone: coop.contactPhone,
+    address: coop.address,
+    country: coop.country,
+    state: coop.state,
+    city: coop.city,
+    currency: coop.currency,
+    withdrawalFeeAmount: coop.withdrawalFeeAmount,
+    withdrawalFeeType: coop.withdrawalFeeType,
+    memberIdPrefix: coop.memberIdPrefix,
+    memberIdPadding: coop.memberIdPadding,
+    memberIdType: coop.memberIdType,
+    requireMemberGuarantors: !!coop.requireMemberGuarantors,
+    minGuarantors: Math.max(1, coop.minGuarantors || 1),
+    memberGuarantorSource: coop.memberGuarantorSource ?? "Any",
+    memberGuarantorsFromCoop: coop.memberGuarantorsFromCoop ?? 0,
+    memberGuarantorsFromOutside: coop.memberGuarantorsFromOutside ?? 0,
+    alternativeIdLabel:
+      coop.alternativeIdLabel && coop.alternativeIdLabel !== "Alternative ID"
+        ? coop.alternativeIdLabel
+        : "",
+  };
+}
+
+const GUARANTOR_SOURCES = [
+  {
+    value: "Any",
+    title: "Anyone",
+    hint: "Members of the co-operative or people outside it.",
+  },
+  {
+    value: "CoopOnly",
+    title: "Co-op members only",
+    hint: "Every guarantor must be a member of this co-operative.",
+  },
+  {
+    value: "Mix",
+    title: "A set mix",
+    hint: "Choose how many must come from the co-operative and from outside.",
+  },
+] as const;
 
 export function CooperativeDetailsForm() {
   const member = useAuthStore((state) => state.member);
@@ -47,6 +101,10 @@ export function CooperativeDetailsForm() {
   const memberIdPaddingId = useId();
   const memberIdTypeId = useId();
   const requireGuarantorId = useId();
+  const minGuarantorsId = useId();
+  const fromCoopId = useId();
+  const fromOutsideId = useId();
+  const altLabelId = useId();
 
   const {
     control,
@@ -62,30 +120,22 @@ export function CooperativeDetailsForm() {
 
   useEffect(() => {
     if (!coop || !profile) return;
-    reset({
-      name: coop.name,
-      adminFirstName: profile.firstName,
-      adminLastName: profile.lastName,
-      adminNin: profile.nin ?? "",
-      contactEmail: coop.contactEmail,
-      contactPhone: coop.contactPhone,
-      address: coop.address,
-      country: coop.country,
-      state: coop.state,
-      city: coop.city,
-      currency: coop.currency,
-      withdrawalFeeAmount: coop.withdrawalFeeAmount,
-      withdrawalFeeType: coop.withdrawalFeeType,
-      memberIdPrefix: coop.memberIdPrefix,
-      memberIdPadding: coop.memberIdPadding,
-      memberIdType: coop.memberIdType,
-      requireMemberGuarantors: !!coop.requireMemberGuarantors,
-    });
+    reset(formValuesOf(coop, profile));
   }, [coop, profile, reset]);
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await updateCooperative.mutateAsync(values);
+      // With guarantors off, the where-from rules aren't in play, so leave them as saved.
+      await updateCooperative.mutateAsync(
+        values.requireMemberGuarantors
+          ? values
+          : {
+              ...values,
+              memberGuarantorSource: undefined,
+              memberGuarantorsFromCoop: undefined,
+              memberGuarantorsFromOutside: undefined,
+            },
+      );
       reset(values);
       toast.success("Co-operative details saved");
     } catch (error) {
@@ -97,6 +147,15 @@ export function CooperativeDetailsForm() {
   });
 
   const busy = updateCooperative.isPending;
+  const requireGuarantors = watch("requireMemberGuarantors");
+  const guarantorSource = watch("memberGuarantorSource") ?? "Any";
+  const minGuarantors = watch("minGuarantors") || 1;
+  const fromCoopCount = watch("memberGuarantorsFromCoop") || 0;
+  const fromOutsideCount = watch("memberGuarantorsFromOutside") || 0;
+  const freeGuarantors = Math.max(
+    0,
+    minGuarantors - fromCoopCount - fromOutsideCount,
+  );
 
   if (isLoading || !coop || !profile) {
     return <div className="h-64 animate-pulse rounded-xl bg-muted" />;
@@ -304,63 +363,195 @@ export function CooperativeDetailsForm() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">New members</p>
+          <p className="text-sm font-medium text-foreground">Alternative ID</p>
           <p className="text-xs text-muted-foreground">
-            Whether adding a member needs a guarantor. Loans always need at
-            least two guarantors, whatever this is set to.
+            A second ID members can have, such as a staff number. Choose what
+            it&apos;s called. The name shows on tables and forms.
           </p>
         </div>
-        <Controller
-          control={control}
-          name="requireMemberGuarantors"
-          render={({ field }) => (
-            <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-4 sm:max-w-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor={requireGuarantorId}>
-                  Require a guarantor when adding a member
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {field.value
-                    ? "The guarantor field is required on Add Member."
-                    : "The guarantor field is optional on Add Member."}
-                </p>
+        <div className="space-y-2 sm:max-w-sm">
+          <Label htmlFor={altLabelId}>Call it</Label>
+          <Input
+            id={altLabelId}
+            placeholder="Alternative ID"
+            maxLength={40}
+            disabled={busy}
+            aria-invalid={!!errors.alternativeIdLabel}
+            className="h-11"
+            {...register("alternativeIdLabel")}
+          />
+          <p className="text-xs text-muted-foreground">
+            e.g. Staff No., Old Register No., IPPIS No. Leave it empty for
+            &ldquo;Alternative ID&rdquo;.
+          </p>
+          <FieldError message={errors.alternativeIdLabel?.message} />
+        </div>
+      </div>
+
+      <div className="h-px bg-border" />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">New members</p>
+          <p className="text-xs text-muted-foreground">
+            Whether adding a member needs guarantors, how many, and where they
+            can come from. Loan guarantors are set in Settings → Loans.
+          </p>
+        </div>
+        <div className="space-y-4 sm:max-w-xl">
+          <Controller
+            control={control}
+            name="requireMemberGuarantors"
+            render={({ field }) => (
+              <div className="flex items-start justify-between gap-4 rounded-xl border border-border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor={requireGuarantorId}>
+                    Require guarantors when adding a member
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {field.value
+                      ? "Add Member won't save until the rules below are met."
+                      : "Guarantors are optional on Add Member."}
+                  </p>
+                </div>
+                <Switch
+                  id={requireGuarantorId}
+                  checked={!!field.value}
+                  onCheckedChange={(checked) => field.onChange(checked)}
+                  disabled={busy}
+                />
               </div>
-              <Switch
-                id={requireGuarantorId}
-                checked={!!field.value}
-                onCheckedChange={(checked) => field.onChange(checked)}
-                disabled={busy}
-              />
+            )}
+          />
+
+          {requireGuarantors ? (
+            <div className="space-y-5 rounded-xl border border-border p-4">
+              <div className="space-y-2">
+                <Label htmlFor={minGuarantorsId}>
+                  Minimum number of guarantors
+                </Label>
+                <Input
+                  id={minGuarantorsId}
+                  type="number"
+                  min={1}
+                  max={10}
+                  disabled={busy}
+                  aria-invalid={!!errors.minGuarantors}
+                  className="h-11 w-28"
+                  {...register("minGuarantors", { valueAsNumber: true })}
+                />
+                <FieldError message={errors.minGuarantors?.message} />
+              </div>
+
+              <fieldset className="space-y-2">
+                <legend className="mb-2 text-sm font-medium text-foreground">
+                  Where can guarantors come from?
+                </legend>
+                <Controller
+                  control={control}
+                  name="memberGuarantorSource"
+                  render={({ field }) => (
+                    <div
+                      role="radiogroup"
+                      className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+                    >
+                      {GUARANTOR_SOURCES.map((option) => {
+                        const selected =
+                          (field.value ?? "Any") === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            disabled={busy}
+                            onClick={() => field.onChange(option.value)}
+                            className={cn(
+                              "space-y-1 rounded-lg border p-3 text-left transition-colors disabled:opacity-50",
+                              selected
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border hover:bg-muted/50",
+                            )}
+                          >
+                            <span className="block text-sm font-medium text-foreground">
+                              {option.title}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              {option.hint}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                />
+              </fieldset>
+
+              {guarantorSource === "Mix" ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={fromCoopId}>
+                        At least this many from the co-operative
+                      </Label>
+                      <Input
+                        id={fromCoopId}
+                        type="number"
+                        min={0}
+                        max={10}
+                        disabled={busy}
+                        aria-invalid={!!errors.memberGuarantorsFromCoop}
+                        className="h-11 w-28"
+                        {...register("memberGuarantorsFromCoop", {
+                          valueAsNumber: true,
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={fromOutsideId}>
+                        At least this many from outside
+                      </Label>
+                      <Input
+                        id={fromOutsideId}
+                        type="number"
+                        min={0}
+                        max={10}
+                        disabled={busy}
+                        aria-invalid={!!errors.memberGuarantorsFromOutside}
+                        className="h-11 w-28"
+                        {...register("memberGuarantorsFromOutside", {
+                          valueAsNumber: true,
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <FieldError
+                    message={
+                      errors.memberGuarantorsFromCoop?.message ??
+                      errors.memberGuarantorsFromOutside?.message
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Every new member needs {minGuarantors} guarantor
+                    {minGuarantors === 1 ? "" : "s"}: at least {fromCoopCount}{" "}
+                    from the co-operative and {fromOutsideCount} from outside
+                    {freeGuarantors > 0
+                      ? `; the other ${freeGuarantors} can be anyone`
+                      : ""}
+                    .
+                  </p>
+                </div>
+              ) : null}
             </div>
-          )}
-        />
+          ) : null}
+        </div>
       </div>
 
       <div className="flex justify-end gap-3">
         <Button
           type="button"
           variant="ghost"
-          onClick={() =>
-            reset({
-              name: coop.name,
-              adminFirstName: profile.firstName,
-              adminLastName: profile.lastName,
-              adminNin: profile.nin ?? "",
-              contactEmail: coop.contactEmail,
-              contactPhone: coop.contactPhone,
-              address: coop.address,
-              country: coop.country,
-              state: coop.state,
-              city: coop.city,
-              currency: coop.currency,
-              withdrawalFeeAmount: coop.withdrawalFeeAmount,
-              withdrawalFeeType: coop.withdrawalFeeType,
-              memberIdPrefix: coop.memberIdPrefix,
-              memberIdPadding: coop.memberIdPadding,
-              memberIdType: coop.memberIdType,
-              requireMemberGuarantors: !!coop.requireMemberGuarantors,
-            })
-          }
+          onClick={() => reset(formValuesOf(coop, profile))}
           disabled={busy}
         >
           Reset

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { BadgeCheck, Loader2, TriangleAlert } from "lucide-react";
@@ -25,6 +25,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LocationFields } from "@/components/features/shared/location-fields";
+import { GuarantorListEditor } from "@/components/features/members-directory/guarantor-list-editor";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
+import { useCoopMembers, useMemberGuarantors } from "@/hooks/use-coop-members";
+import { useCooperative } from "@/hooks/use-cooperative";
+import {
+  checkGuarantors,
+  entriesFromRecords,
+  guarantorRulesOf,
+  hasGuarantorProblems,
+  toGuarantorPayload,
+  type GuarantorEntry,
+  type GuarantorPayload,
+  type GuarantorProblems,
+} from "@/lib/member-guarantors";
 import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
@@ -34,25 +48,57 @@ import {
 } from "@/lib/validations/coop.schema";
 
 interface EditMemberModalProps {
+  coopId: string;
   member: CoopMember;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: EditMemberFormValues) => Promise<void>;
+  /** guarantors is null when the admin didn't touch them, so the ones on file stay. */
+  onSubmit: (
+    values: EditMemberFormValues & { guarantors: GuarantorPayload[] | null },
+  ) => Promise<void>;
 }
 
 export function EditMemberModal({
+  coopId,
   member,
   open,
   onOpenChange,
   onSubmit: submitMember,
 }: EditMemberModalProps) {
   const { banks, loading: banksLoading } = useBankList();
+  const altLabel = useAlternativeIdLabel(coopId);
+  const { data: coop } = useCooperative(coopId);
+  const { data: coopMembers = [] } = useCoopMembers(coopId);
+  const { data: records, isLoading: loadingGuarantors } = useMemberGuarantors(
+    coopId,
+    member.id,
+  );
+  const guarantorRules = guarantorRulesOf(coop);
+  const [guarantors, setGuarantors] = useState<GuarantorEntry[] | null>(null);
+  const [guarantorsTouched, setGuarantorsTouched] = useState(false);
+  const [guarantorProblems, setGuarantorProblems] =
+    useState<GuarantorProblems>();
+  const [guarantorServerError, setGuarantorServerError] = useState<string>();
+  useEffect(() => {
+    if (records && guarantors === null)
+      setGuarantors(entriesFromRecords(records));
+  }, [records, guarantors]);
+  const guarantorEntries = guarantors ?? [];
+  // Older members only have names on file, recorded before guarantors had their own rows.
+  const legacyGuarantor =
+    records && records.length === 0 && member.guarantor ? member.guarantor : "";
+  const changeGuarantors = (next: GuarantorEntry[]) => {
+    setGuarantors(next);
+    setGuarantorsTouched(true);
+    setGuarantorServerError(undefined);
+    if (guarantorProblems)
+      setGuarantorProblems(checkGuarantors(guarantorRules, next));
+  };
 
   const firstNameId = useId();
   const lastNameId = useId();
   const emailId = useId();
   const roleId = useId();
-  const guarantorId = useId();
   const alternativeIdId = useId();
   const bankId = useId();
   const accountNumberId = useId();
@@ -72,7 +118,6 @@ export function EditMemberModal({
       lastName: member.lastName,
       email: member.email,
       role: member.role,
-      guarantor: member.guarantor,
       alternativeId: member.alternativeId ?? "",
       country: member.country,
       state: member.state,
@@ -99,13 +144,27 @@ export function EditMemberModal({
   });
 
   const onSubmit = handleSubmit(async (values) => {
+    if (guarantorsTouched) {
+      const problems = checkGuarantors(guarantorRules, guarantorEntries);
+      setGuarantorProblems(problems);
+      if (hasGuarantorProblems(problems)) return;
+    }
     try {
-      await submitMember(values);
+      await submitMember({
+        ...values,
+        guarantors: guarantorsTouched
+          ? toGuarantorPayload(guarantorEntries)
+          : null,
+      });
       toast.success("Member updated", {
         description: `${values.firstName} ${values.lastName}'s details were saved.`,
       });
       onOpenChange(false);
     } catch (error) {
+      if (error instanceof Error && /guarantor/i.test(error.message)) {
+        setGuarantorServerError(error.message);
+        return;
+      }
       toast.error("Couldn't update member", {
         description:
           error instanceof Error ? error.message : "Please try again.",
@@ -115,7 +174,7 @@ export function EditMemberModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit {coopMemberFullName(member)}</DialogTitle>
         </DialogHeader>
@@ -183,18 +242,7 @@ export function EditMemberModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor={guarantorId}>Guarantor (optional)</Label>
-              <Input
-                id={guarantorId}
-                disabled={isSubmitting}
-                aria-invalid={!!errors.guarantor}
-                className="h-11"
-                {...register("guarantor")}
-              />
-              <FieldError message={errors.guarantor?.message} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={alternativeIdId}>Alternative ID (optional)</Label>
+              <Label htmlFor={alternativeIdId}>{altLabel} (optional)</Label>
               <Input
                 id={alternativeIdId}
                 placeholder="e.g. staff number"
@@ -282,6 +330,32 @@ export function EditMemberModal({
                 {accountName}
               </p>
             ) : null}
+          </div>
+
+          <div className="space-y-2 border-t border-border pt-4">
+            {loadingGuarantors ? (
+              <div className="h-24 animate-pulse rounded-xl bg-muted" />
+            ) : (
+              <>
+                {legacyGuarantor && !guarantorsTouched ? (
+                  <p className="text-xs text-muted-foreground">
+                    On file: {legacyGuarantor}. Add guarantors below to replace
+                    it.
+                  </p>
+                ) : null}
+                <GuarantorListEditor
+                  coopId={coopId}
+                  rules={guarantorRules}
+                  entries={guarantorEntries}
+                  onChange={changeGuarantors}
+                  members={coopMembers}
+                  selfId={member.id}
+                  problems={guarantorProblems}
+                  serverError={guarantorServerError}
+                  disabled={isSubmitting}
+                />
+              </>
+            )}
           </div>
 
           <DialogFooter>

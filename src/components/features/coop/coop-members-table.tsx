@@ -283,6 +283,7 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
 
       {editingMember ? (
         <EditMemberModal
+          coopId={coopId}
           member={editingMember}
           open={true}
           onOpenChange={(open) => {
