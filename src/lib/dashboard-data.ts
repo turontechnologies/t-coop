@@ -17,7 +17,8 @@ export interface SummaryCard {
 }
 
 export interface ActivityPoint {
-  hour: string;
+  /** The day, e.g. "12 Nov". */
+  label: string;
   savings: number;
   loans: number;
   dividends: number;
@@ -33,7 +34,7 @@ export interface RecentActivity {
 
 export function getChartSeries(
   role: UserRole,
-): Array<{ key: keyof Omit<ActivityPoint, "hour">; label: string }> {
+): Array<{ key: keyof Omit<ActivityPoint, "label">; label: string }> {
   if (role === "super_admin") {
     return [
       { key: "savings", label: "Savings" },

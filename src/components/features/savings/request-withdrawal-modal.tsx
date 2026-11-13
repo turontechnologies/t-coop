@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   TOTAL_SAVINGS_WITHDRAWAL,
   type CoopSavingsRecord,
+  totalSaved,
 } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopSavingsTypes } from "@/hooks/use-coop-savings";
@@ -104,6 +105,7 @@ export function RequestWithdrawalModal({
   const balanceByType = useMemo(() => {
     const balances = new Map<string, number>();
     for (const record of memberRecords) {
+      if (record.status !== "Success") continue;
       balances.set(
         record.savingsType,
         (balances.get(record.savingsType) ?? 0) + record.amount,
@@ -113,7 +115,7 @@ export function RequestWithdrawalModal({
   }, [memberRecords]);
 
   const totalBalance = useMemo(
-    () => memberRecords.reduce((sum, record) => sum + record.amount, 0),
+    () => totalSaved(memberRecords),
     [memberRecords],
   );
 

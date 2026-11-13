@@ -142,6 +142,16 @@ export function useLoansAwaitingMe(coopId: string | undefined) {
   });
 }
 
+/** What the signed-in member can borrow right now (same numbers as the dashboard). */
+export function useLoanEligibility(coopId: string | undefined) {
+  return useQuery({
+    queryKey: ["coop-loans", coopId, "eligibility"],
+    queryFn: () => loanSelfService.getEligibility(coopId as string),
+    enabled: Boolean(coopId),
+    staleTime: 0,
+  });
+}
+
 export function useLoanSettings(coopId: string | undefined) {
   return useQuery({
     queryKey: ["loan-settings", coopId],

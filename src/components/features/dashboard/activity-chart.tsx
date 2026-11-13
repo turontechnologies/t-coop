@@ -12,7 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ActivityPoint } from "@/lib/dashboard-data";
 
-type SeriesKey = keyof Omit<ActivityPoint, "hour">;
+type SeriesKey = keyof Omit<ActivityPoint, "label">;
 type SeriesDef = { key: SeriesKey; label: string };
 
 const CHART_COLOR_VARS: CSSProperties = {
@@ -25,12 +25,15 @@ interface ActivityChartProps {
   data: ActivityPoint[];
   series: SeriesDef[];
   activityRate: number;
+  /** What the rate measures, e.g. "of members saved or repaid a loan in the last 30 days". */
+  activityLabel?: string | null;
 }
 
 export function ActivityChart({
   data,
   series,
   activityRate,
+  activityLabel,
 }: ActivityChartProps) {
   return (
     <Card>
@@ -38,11 +41,16 @@ export function ActivityChart({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Average Activity Rate
+              Activity rate
             </CardTitle>
             <p className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
               {activityRate.toFixed(2)}%
             </p>
+            {activityLabel ? (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {activityLabel} · last 30 days below
+              </p>
+            ) : null}
           </div>
           <ul className="flex flex-wrap items-center gap-4">
             {series.map(({ key, label }) => (
@@ -74,7 +82,9 @@ export function ActivityChart({
                 strokeDasharray="0"
               />
               <XAxis
-                dataKey="hour"
+                dataKey="label"
+                interval="preserveStartEnd"
+                minTickGap={24}
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
@@ -123,7 +133,7 @@ function ActivityTooltip({
   return (
     <div className="rounded-lg border border-border bg-popover p-3 text-sm shadow-md ring-1 ring-foreground/10">
       <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-        {label}:00
+        {label}
       </p>
       <dl className="space-y-1">
         {payload.map((entry) => (

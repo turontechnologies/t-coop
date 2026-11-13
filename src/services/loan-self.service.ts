@@ -144,6 +144,24 @@ export interface DisbursePayload {
   chequeNumber?: string;
 }
 
+/** What the signed-in member can borrow right now — the same numbers the dashboard shows and
+ * the application check enforces (LoanEligibilityService). */
+export interface LoanEligibilityResult {
+  savings: number;
+  /** Why the member can't borrow at all right now; "" when they can. */
+  problem: string;
+  best: number;
+  tiedTimesTwo: number;
+  tiedWithin: number;
+  perType: {
+    loanTypeId: string;
+    loanTypeName: string;
+    timesTwo: number;
+    within: number;
+    maxMonths: number;
+  }[];
+}
+
 /** Settings -> Loans: the committee, loan rules and dividend rules. */
 export interface LoanSettings {
   minAmount: number;
@@ -277,6 +295,13 @@ export const loanSelfService = {
   async awaitingMe(coopId: string): Promise<CoopLoanRecord[]> {
     const { data } = await apiClient.get<CoopLoanRecord[]>(
       `/cooperatives/${coopId}/loans/awaiting-me`,
+    );
+    return data;
+  },
+
+  async getEligibility(coopId: string): Promise<LoanEligibilityResult> {
+    const { data } = await apiClient.get<LoanEligibilityResult>(
+      `/cooperatives/${coopId}/loans/eligibility`,
     );
     return data;
   },

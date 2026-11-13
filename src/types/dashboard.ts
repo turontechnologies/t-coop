@@ -11,7 +11,8 @@ export interface DashboardLoanTypeEligibility {
 }
 
 export interface DashboardActivityPoint {
-  hour: string;
+  /** The day, e.g. "12 Nov" — the chart covers the last 30 days. */
+  label: string;
   savings: number;
   loans: number;
   dividends: number;
@@ -30,4 +31,7 @@ export interface DashboardSummaryResponse {
   chart: DashboardActivityPoint[];
   recentActivity: DashboardRecentActivity[];
   loanEligibilityByType?: DashboardLoanTypeEligibility[];
+  /** 0-100; `activityLabel` says what it measures. */
+  activityRate?: number;
+  activityLabel?: string;
 }

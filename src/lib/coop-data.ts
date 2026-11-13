@@ -176,6 +176,33 @@ export interface CoopLoanRecord {
   chequeUrl?: string | null;
   chequeNumber?: string | null;
   disbursedByName?: string | null;
+  /** Repaid so far and still owed (principal + interest), from the backend — the same figures
+   * the dashboard uses. */
+  amountRepaid?: number;
+  outstandingBalance?: number;
+}
+
+/** What's still owed on these loans — "Total Loans" / "My Loans" everywhere. */
+export function totalOwed(records: CoopLoanRecord[]): number {
+  return (
+    Math.round(
+      records.reduce(
+        (sum, record) => sum + (record.outstandingBalance ?? 0),
+        0,
+      ) * 100,
+    ) / 100
+  );
+}
+
+/** Savings that actually went through — pending and failed payments don't count. */
+export function totalSaved(records: CoopSavingsRecord[]): number {
+  return (
+    Math.round(
+      records
+        .filter((record) => record.status === "Success")
+        .reduce((sum, record) => sum + record.amount, 0) * 100,
+    ) / 100
+  );
 }
 
 export type LoanGuarantorStatus = "Pending" | "Accepted" | "Declined";

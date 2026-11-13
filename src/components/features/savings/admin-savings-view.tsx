@@ -33,6 +33,7 @@ import {
 import { formatMoney } from "@/lib/format";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
+import { totalSaved } from "@/lib/coop-data";
 
 type AdminSavingsTab = "members" | "my" | "request";
 
@@ -55,7 +56,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   const manualDeposit = useManualSavingsDeposit(coopId);
   const decideWithdrawal = useDecideWithdrawal(coopId);
 
-  const myTotal = myRecords.reduce((sum, record) => sum + record.amount, 0);
+  const myTotal = totalSaved(myRecords);
 
   const membersAccess = useTabAccess(MODULE, "Members Savings");
   const myAccess = useTabAccess(MODULE, "My Savings");

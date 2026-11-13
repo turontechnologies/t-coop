@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-summary-table";
 import { LoanRequestsTable } from "@/components/features/loans/loan-requests-table";
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
-import { PENDING_LOAN_STATUSES } from "@/lib/coop-data";
+import { PENDING_LOAN_STATUSES, totalOwed } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { formatMoney } from "@/lib/format";
@@ -38,16 +38,11 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
     memberId: member.id,
   });
 
+  // Still owed on my running loans — the dashboard's "My Loans".
   const myTotal = useMemo(
     () =>
-      myRecords
-        .filter(
-          (record) =>
-            record.status === "Active" ||
-            PENDING_LOAN_STATUSES.includes(record.status),
-        )
-        .reduce((sum, record) => sum + record.amount, 0),
-    [myRecords],
+      totalOwed(myRecords.filter((record) => record.memberId === member.id)),
+    [myRecords, member.id],
   );
 
   const requestsAccess = useTabAccess(MODULE, "Requests");

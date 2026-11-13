@@ -73,6 +73,7 @@ export default function DashboardPage() {
             data={data.chart}
             series={data.chartSeries}
             activityRate={data.activityRate}
+            activityLabel={data.activityLabel}
           />
         </div>
         <RecentActivities activities={data.recentActivity} />

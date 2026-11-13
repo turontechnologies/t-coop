@@ -25,6 +25,7 @@ import {
   useRequestWithdrawal,
 } from "@/hooks/use-savings-self";
 import type { ExportColumn } from "@/lib/table-export";
+import { totalSaved } from "@/lib/coop-data";
 
 const EXPORT_COLUMNS: ExportColumn<CoopSavingsRecord>[] = [
   { header: "Savings Type", accessor: (record) => record.savingsType },
@@ -67,10 +68,7 @@ export function MemberSavingsView({
   const { data: memberRecords = [] } = useCoopSavingsRecords(coopId, {
     memberId,
   });
-  const total = useMemo(
-    () => memberRecords.reduce((sum, record) => sum + record.amount, 0),
-    [memberRecords],
-  );
+  const total = useMemo(() => totalSaved(memberRecords), [memberRecords]);
 
   const initializeDeposit = useInitializeSavingsDeposit(coopId);
   const confirmDeposit = useConfirmSavingsDeposit(coopId);

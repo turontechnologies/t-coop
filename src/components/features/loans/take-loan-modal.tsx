@@ -26,7 +26,7 @@ import {
 } from "@/lib/loans-data";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { useCoopLoanTypes } from "@/hooks/use-coop-loans";
-import { useLoanSettings } from "@/hooks/use-loans-self";
+import { useLoanEligibility, useLoanSettings } from "@/hooks/use-loans-self";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -100,9 +100,20 @@ export function TakeLoanModal({
   );
   const selectedType = loanTypes.find((type) => type.id === loanTypeId);
   const maxMonths = selectedType?.durationMonths ?? 0;
+  // The backend's numbers, so the form, the dashboard and the application check agree:
+  // co-op rules, minus what's already tied up in current loans, capped by the type.
+  const { data: eligibility } = useLoanEligibility(open ? coopId : undefined);
+  const typeLimit = eligibility?.perType.find(
+    (t) => t.loanTypeId === loanTypeId,
+  );
   const eligibleAmount = selectedType
-    ? computeEligibleAmount(totalSavings, selectedType, loanMode, rules)
+    ? typeLimit
+      ? loanMode === "Within"
+        ? typeLimit.within
+        : typeLimit.timesTwo
+      : computeEligibleAmount(totalSavings, selectedType, loanMode, rules)
     : 0;
+  const blockedReason = eligibility?.problem || null;
   const amount = digits(amountText);
   const months = Number(monthsText) || 0;
 
@@ -135,6 +146,7 @@ export function TakeLoanModal({
           : null;
 
   const isValid =
+    !blockedReason &&
     !!selectedType &&
     amount > 0 &&
     !amountError &&
@@ -176,6 +188,12 @@ export function TakeLoanModal({
         </DialogHeader>
 
         <div className="space-y-5">
+          {blockedReason ? (
+            <p className="rounded-xl bg-destructive/10 px-3.5 py-3 text-sm font-medium text-destructive">
+              {blockedReason}
+            </p>
+          ) : null}
+
           {feeCredit ? (
             <p className="flex flex-wrap items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
               <CheckCircle2 className="size-4" aria-hidden="true" />
@@ -317,6 +335,12 @@ export function TakeLoanModal({
               ) : selectedType ? (
                 <p className="text-xs text-muted-foreground">
                   You can borrow up to {formatMoney(eligibleAmount, currency)}
+                  {eligibility &&
+                  (loanMode === "Within"
+                    ? eligibility.tiedWithin
+                    : eligibility.tiedTimesTwo) > 0
+                    ? ` (after ${formatMoney(loanMode === "Within" ? eligibility.tiedWithin : eligibility.tiedTimesTwo, currency)} in your current loans)`
+                    : ""}
                   {minAmount > 0
                     ? ` · at least ${formatMoney(minAmount, currency)}`
                     : ""}

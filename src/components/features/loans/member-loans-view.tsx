@@ -13,9 +13,10 @@ import { useLoanFeePayment, useLoanFeeStatus } from "@/hooks/use-loan-fee";
 import { useAuthStore } from "@/store/auth.store";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
 import {
-  PENDING_LOAN_STATUSES,
   type CoopLoanRecord,
   loanStatusLabel,
+  totalOwed,
+  totalSaved,
 } from "@/lib/coop-data";
 import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 import { useCoopMembers } from "@/hooks/use-coop-members";
@@ -73,22 +74,17 @@ export function MemberLoansView({
   const email = useAuthStore((state) => state.member?.email) ?? "";
 
   const totalSavings = useMemo(
-    () => savingsRecords.reduce((sum, record) => sum + record.amount, 0),
+    () => totalSaved(savingsRecords),
     [savingsRecords],
   );
   // memberRecords now also includes loans where this member is only the named guarantor (see
   // LoanController's records() filter) — the summary total below stays scoped to loans they
   // actually borrowed, otherwise a guarantee they stood for would inflate their own balance.
+  // Still owed on my running loans — the dashboard's "My Loans". Loans this member only
+  // guarantees are in the list too, so keep to the ones they borrowed.
   const totalActive = useMemo(
     () =>
-      memberRecords
-        .filter((record) => record.memberId === memberId)
-        .filter(
-          (record) =>
-            record.status === "Active" ||
-            PENDING_LOAN_STATUSES.includes(record.status),
-        )
-        .reduce((sum, record) => sum + record.amount, 0),
+      totalOwed(memberRecords.filter((record) => record.memberId === memberId)),
     [memberRecords, memberId],
   );
 
@@ -146,7 +142,9 @@ export function MemberLoansView({
           <Card className="max-w-xs">
             <CardContent className="flex items-start justify-between gap-3">
               <div className="space-y-1.5">
-                <p className="text-sm text-muted-foreground">Active Loans</p>
+                <p className="text-sm text-muted-foreground">
+                  My Loans (still owed)
+                </p>
                 <p className="text-xl font-semibold text-foreground sm:text-2xl">
                   {formatMoney(totalActive, currency)}
                 </p>

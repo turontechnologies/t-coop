@@ -23,6 +23,7 @@ export interface DashboardSummary {
   chart: ActivityPoint[];
   chartSeries: ReturnType<typeof getChartSeries>;
   activityRate: number;
+  activityLabel: string | null;
   recentActivity: RecentActivity[];
 }
 
@@ -153,7 +154,8 @@ export const dashboardService = {
       ),
       chart: data.chart,
       chartSeries: getChartSeries(role),
-      activityRate: toActivityRate(data.cards),
+      activityRate: data.activityRate ?? toActivityRate(data.cards),
+      activityLabel: data.activityLabel ?? null,
       recentActivity: toRecentActivities(role, data.recentActivity, currency),
     };
   },
