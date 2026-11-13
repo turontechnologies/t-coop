@@ -93,6 +93,15 @@ The co-op's own Paystack account if it has connected one (Settings → Integrati
 the platform's. The online transfer reference is fixed per loan (`loan-<loanId>`), so retrying
 can never pay the same loan twice.
 
+### Recording a repayment by hand
+
+When a borrower pays offline (cash or bank transfer), an admin or co-op staff member uses
+**Record Repayment** on the loan. The amount is always the loan's next installment. A
+**receipt is required**: a photo or PDF, up to 5 MB, uploaded with it. A note is optional. The
+server refuses a manual repayment without a receipt
+(`POST …/repayments/manual` `{ receiptUrl, note? }`). Each repayment stores the receipt, who
+recorded it, and the note (V54). The Transactions tab shows a "View receipt" link next to it.
+
 ## Borrower history
 
 Before approving, officers see the **borrower history** on the request page
