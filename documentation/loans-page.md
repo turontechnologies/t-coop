@@ -59,6 +59,27 @@ there is no mock mode.
 - Every decision, with the suggested terms and what changed, is in the loan's trail
   (`loan_approvals`).
 
+### Loan status cards
+
+The Loans page opens with four cards (`loan-status-cards.tsx`): the co-op's loans for the admin
+and staff, the member's own loans for a member. Click a card to filter the list to those loans;
+click it again (or "Clear filter") to go back.
+
+| Card            | Counts                                                                                                                                   |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Still owed**  | What's left to repay on running (Active) loans, principal + interest — the dashboard's Loans figure                                      |
+| **Repaid**      | Repaid so far, and how many loans are fully repaid                                                                                       |
+| **In progress** | Loans not yet paid out: awaiting approval (guarantors or committee), awaiting the borrower, ready to pay out. Never part of "still owed" |
+| **Overdue**     | Repayments past their due date and unpaid (instalment _i_ is due _i_ months after payout), with how many members (admin)                 |
+
+The backend computes these per loan (`LoanBalances`: `amountRepaid`, `outstandingBalance`,
+`overdueInstallments`, `overdueAmount`, `nextDueDate` on every loan record), so every screen uses
+the same figures. The dashboard's Loans card shows the in-progress line underneath.
+
+**Application fee:** each new loan needs its own paid fee. A fee is used up by the application
+it pays for; a paid fee that hasn't been used (the member closed the form) carries over to their
+next "New Loan" so nobody pays twice.
+
 ### Dividends
 
 Settings → Loan Settings → Dividends: **a share of savings** (rate% of each member's savings),
