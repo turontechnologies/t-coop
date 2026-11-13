@@ -27,12 +27,15 @@ import {
   loanStatusLabel,
 } from "@/lib/coop-data";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
-import { useGuarantorResponse, useLoanApprovals } from "@/hooks/use-loans-self";
+import {
+  useGuarantorResponse,
+  useLoanApprovals,
+  useTimesLabel,
+} from "@/hooks/use-loans-self";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
-import { loanModeLabel } from "@/lib/loans-data";
 
 interface LoanDetailsPageProps {
   params: Promise<{ id: string }>;
@@ -53,6 +56,7 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
 
   const coopId =
     member?.cooperativeId ?? (member?.role === "admin" ? member.id : "");
+  const times = useTimesLabel(coopId || undefined);
   const guarantorResponse = useGuarantorResponse(coopId);
   const { data: approvals } = useLoanApprovals(coopId || undefined, id);
 
@@ -245,7 +249,7 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
               </Link>
             }
           />
-          <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
+          <Field label="Loan Mode" value={times.modeLabel(record.loanMode)} />
           <Field
             label={guarantors.length > 1 ? "Guarantors" : "Guarantor"}
             value={

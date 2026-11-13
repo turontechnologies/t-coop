@@ -1,5 +1,6 @@
 "use client";
 
+import { timesLabel } from "@/lib/loans-data";
 import { useEffect, useId, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -393,7 +394,7 @@ function RulesForm({
             />
             <NumberField
               id={ids.guarantors}
-              label="Guarantors for a Times two loan"
+              label={`Guarantors for a ${timesLabel(form.savingsMultiplier)} loan`}
               hint="Within loans never need one."
               value={form.minGuarantors}
               onChange={(v) =>
@@ -446,7 +447,7 @@ function RulesForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <NumberField
               id={ids.multiplier}
-              label="Times two: up to"
+              label={`${timesLabel(form.savingsMultiplier)}: up to`}
               suffix="× savings"
               step={0.5}
               hint={`₦100,000 saved → up to ${formatMoney(100000 * (form.savingsMultiplier || 0), "NGN")}.`}

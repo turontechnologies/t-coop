@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimesLabel } from "@/hooks/use-loans-self";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
@@ -27,6 +28,7 @@ interface QuickSummaryCardsProps {
 
 export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
   const router = useRouter();
+  const times = useTimesLabel();
   const [selectedLoanTypeId, setSelectedLoanTypeId] = useState("");
 
   return (
@@ -91,7 +93,7 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                         </Select>
                         <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/60 p-2.5 text-xs">
                           <p className="text-muted-foreground">
-                            Times two
+                            {times.label}
                             <span className="block font-semibold text-foreground">
                               {selectedEligibility.timesTwo}
                             </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimesLabel } from "@/hooks/use-loans-self";
 import { use, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,7 +16,6 @@ import { useCooperative } from "@/hooks/use-cooperative";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
-import { loanModeLabel } from "@/lib/loans-data";
 
 interface AdminLoanRecordPageProps {
   params: Promise<{ recordId: string }>;
@@ -31,6 +31,7 @@ export default function AdminLoanRecordPage({
     authMember?.cooperativeId ??
     (authMember?.role === "admin" ? authMember.id : undefined);
   const { data: coop } = useCooperative(coopId);
+  const times = useTimesLabel(coopId);
   const { data: record, isLoading } = useCoopLoanRecord(recordId);
   const { data: members = [] } = useCoopMembers(coopId);
   const member = members.find((item) => item.id === record?.memberId);
@@ -104,7 +105,7 @@ export default function AdminLoanRecordPage({
               )
             }
           />
-          <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
+          <Field label="Loan Mode" value={times.modeLabel(record.loanMode)} />
           <Field
             label="Guarantor"
             value={record.guarantorName ?? "None (Within loan)"}

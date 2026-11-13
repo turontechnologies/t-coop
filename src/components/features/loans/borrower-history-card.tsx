@@ -3,9 +3,8 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLoanHistory } from "@/hooks/use-loans-self";
+import { useLoanHistory, useTimesLabel } from "@/hooks/use-loans-self";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { loanModeLabel } from "@/lib/loans-data";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,6 +29,7 @@ export function BorrowerHistoryCard({
     isLoading,
     isError,
   } = useLoanHistory(coopId, memberId);
+  const times = useTimesLabel(coopId);
 
   if (isError) return null;
   if (isLoading || !history) {
@@ -129,7 +129,7 @@ export function BorrowerHistoryCard({
                           {loan.loanType}
                         </span>
                         <Badge variant="outline">
-                          {loanModeLabel(loan.loanMode)}
+                          {times.modeLabel(loan.loanMode)}
                         </Badge>
                         <Badge
                           variant={

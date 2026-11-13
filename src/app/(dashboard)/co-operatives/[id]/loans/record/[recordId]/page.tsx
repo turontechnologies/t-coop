@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimesLabel } from "@/hooks/use-loans-self";
 import { use, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,7 +15,6 @@ import { formatDateLong, formatMoney } from "@/lib/format";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecord } from "@/hooks/use-coop-loans";
 import { cn } from "@/lib/utils";
-import { loanModeLabel } from "@/lib/loans-data";
 
 interface CoopLoanRecordPageProps {
   params: Promise<{ id: string; recordId: string }>;
@@ -26,6 +26,7 @@ export default function CoopLoanRecordPage({
   const { id, recordId } = use(params);
   const router = useRouter();
   const coopQuery = useCooperative(id);
+  const times = useTimesLabel(id);
   const coop = coopQuery.data;
   const recordQuery = useCoopLoanRecord(recordId);
   const record = recordQuery.data;
@@ -112,7 +113,7 @@ export default function CoopLoanRecordPage({
                 </Link>
               }
             />
-            <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
+            <Field label="Loan Mode" value={times.modeLabel(record.loanMode)} />
             <Field
               label="Guarantor"
               value={record.guarantorName ?? "None (Within loan)"}

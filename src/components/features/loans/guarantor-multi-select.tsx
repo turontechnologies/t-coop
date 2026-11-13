@@ -26,6 +26,8 @@ interface GuarantorMultiSelectProps {
   onChange: (value: string[]) => void;
   min: number;
   disabled?: boolean;
+  /** What the co-op calls this loan mode, e.g. "Times three". */
+  modeName?: string;
 }
 
 /**
@@ -39,6 +41,7 @@ export function GuarantorMultiSelect({
   onChange,
   min,
   disabled,
+  modeName = "Times two",
 }: GuarantorMultiSelectProps) {
   const [search, setSearch] = useState("");
   const selected = options.filter((option) => value.includes(option.id));
@@ -182,7 +185,7 @@ export function GuarantorMultiSelect({
         )}
       >
         {remaining > 0
-          ? `Pick ${remaining} more — a Times two loan needs at least ${min} guarantors. Each one is asked to accept.`
+          ? `Pick ${remaining} more — a ${modeName} loan needs at least ${min} guarantors. Each one is asked to accept.`
           : `${value.length} guarantors selected. Each one will be asked to accept.`}
       </p>
     </div>

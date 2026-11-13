@@ -48,11 +48,11 @@ import {
   useGuarantorResponse,
   useLoanApprovals,
   useLoanDecision,
+  useTimesLabel,
 } from "@/hooks/use-loans-self";
 import { uploadService } from "@/services/upload.service";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
-import { loanModeLabel } from "@/lib/loans-data";
 import { BorrowerHistoryCard } from "@/components/features/loans/borrower-history-card";
 import {
   ApprovalSteps,
@@ -80,6 +80,7 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
   const { data: record, isLoading } = useCoopLoanRecord(recordId);
   // Plain members can't load the co-op itself; the currency comes from the app's provider.
   const currency = useCurrency();
+  const times = useTimesLabel(coopId);
   const { data: members = [] } = useCoopMembers(coopId);
   const { data: loanTypes = [] } = useCoopLoanTypes(coopId);
   const guarantorResponse = useGuarantorResponse(coopId ?? "");
@@ -362,7 +363,10 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                   </Link>
                 }
               />
-              <Field label="Loan Mode" value={loanModeLabel(record.loanMode)} />
+              <Field
+                label="Loan Mode"
+                value={times.modeLabel(record.loanMode)}
+              />
               <Field
                 label={guarantors.length > 1 ? "Guarantors" : "Guarantor"}
                 value={

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimesLabel } from "@/hooks/use-loans-self";
 import { useEffect, useId, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,6 +58,7 @@ export default function LoanTypeCreationPage() {
   const member = useAuthStore((state) => state.member);
   const coopId = member?.cooperativeId ?? member?.id;
   const typesQuery = useCoopLoanTypes(coopId);
+  const times = useTimesLabel(coopId);
   const mutations = useCoopLoanTypeMutations(coopId ?? "");
 
   const editingSetting = useMemo(
@@ -182,7 +184,9 @@ export default function LoanTypeCreationPage() {
                 <Label>How much members can borrow</Label>
                 <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
                   Set by the mode the member picks when applying —{" "}
-                  <span className="font-medium text-foreground">Times two</span>
+                  <span className="font-medium text-foreground">
+                    {times.label}
+                  </span>
                   : up to twice their savings;{" "}
                   <span className="font-medium text-foreground">Within</span>:
                   up to their savings. Both are capped at the maximum amount.

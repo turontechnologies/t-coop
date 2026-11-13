@@ -23,6 +23,7 @@ import {
   computeEligibleAmount,
   describeInterest,
   type LoanMode,
+  timesLabel,
 } from "@/lib/loans-data";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { useCoopLoanTypes } from "@/hooks/use-coop-loans";
@@ -181,7 +182,7 @@ export function TakeLoanModal({
   const modes: { value: LoanMode; title: string; body: string }[] = [
     {
       value: "TimesTwo",
-      title: "Times two",
+      title: timesLabel(rules.savingsMultiplier),
       body: `Borrow up to ${rules.savingsMultiplier}× your savings (${formatMoney(totalSavings, currency)} saved → up to ${formatMoney(totalSavings * rules.savingsMultiplier, currency)}).${minGuarantors > 0 ? ` Needs at least ${plural(minGuarantors, "guarantor")}.` : ""}`,
     },
     {
@@ -416,6 +417,7 @@ export function TakeLoanModal({
                 onChange={setGuarantorMemberIds}
                 min={minGuarantors}
                 disabled={busy}
+                modeName={timesLabel(rules.savingsMultiplier)}
               />
               {/* The picker already says how many are still needed. */}
               {guarantorMemberIds.length >= minGuarantors ? (
