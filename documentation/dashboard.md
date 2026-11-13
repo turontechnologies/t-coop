@@ -17,6 +17,21 @@ architecture per role) without literally cloning their dated visual style.
 The user explicitly asked for this distinction — see
 [Design Decisions](#design-decisions).
 
+## Where the numbers come from
+
+Every dashboard figure uses the same definition as the rest of the app (backend
+`DashboardService`), so the dashboard always matches the Savings and Loans pages:
+
+| Figure           | Definition                                                                                                                                                                     | Also shown on                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Savings          | Successful savings records only (pending and failed payments don't count)                                                                                                      | Savings pages (`totalSaved`), withdrawal balances            |
+| Loans            | Still owed on **running** loans, principal + interest (`LoanBalances.outstanding`). Loans still being approved or paid out don't count                                         | Loans pages (`totalOwed`), co-op summary                     |
+| Dividends        | The co-op's dividend method (Settings → Loan Settings, `DividendCalculator`)                                                                                                   | —                                                            |
+| Loan Eligibility | `LoanEligibilityService`: co-op rules, minus what's tied up in current loans, capped per type                                                                                  | Loan form (`GET …/loans/eligibility`), the application check |
+| Chart            | Real daily totals for the last 30 days: deposits, loans paid out, dividends earned that day                                                                                    | —                                                            |
+| Activity rate    | Co-op: members who saved or repaid in the last 30 days. Member: months of the last 6 they saved in. Platform: co-ops active in the last 30 days. The label under it says which | —                                                            |
+| Recent activity  | Real records; loan statuses worded like the Loans pages ("Awaiting Treasurer")                                                                                                 | Loans tables                                                 |
+
 ## Design Decisions
 
 - **Redesigned, not cloned.** The reference mockups (see the project's
