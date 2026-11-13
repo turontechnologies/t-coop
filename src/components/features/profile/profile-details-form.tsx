@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Controller,
@@ -52,6 +53,7 @@ export function ProfileDetailsForm({
   profile,
 }: ProfileDetailsFormProps) {
   const [editing, setEditing] = useState(false);
+  const altLabel = useAlternativeIdLabel();
   const [displayProfile, setDisplayProfile] = useState(profile);
   const membershipIdFieldId = useId();
   const bankId = useId();
@@ -217,7 +219,7 @@ export function ProfileDetailsForm({
             }
           />
           <ProfileField
-            label="Alternative ID"
+            label={altLabel}
             registration={register("alternativeId")}
             error={errors.alternativeId?.message}
             disabled={busy}
@@ -391,6 +393,7 @@ function ProfileReadOnlyView({
   onEdit,
 }: ProfileReadOnlyViewProps) {
   const { banks } = useBankList();
+  const altLabel = useAlternativeIdLabel();
   const verifiedBadge = (
     <span className="flex items-center gap-1 text-xs font-medium text-success">
       <BadgeCheck className="size-3.5" aria-hidden="true" />
@@ -435,7 +438,7 @@ function ProfileReadOnlyView({
             }
           />
           <ProfileViewField
-            label="Alternative ID"
+            label={altLabel}
             value={profile.alternativeId || undefined}
           />
           <ProfileViewField label="First Name" value={profile.firstName} />

@@ -15,12 +15,19 @@ import type { CoopMember } from "@/lib/coop-data";
 import { coopMemberFullName } from "@/lib/coop-data";
 import { findBankByCode } from "@/lib/bank-data";
 import { getInitials } from "@/lib/format";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
 
 interface CoopMemberHeaderCardProps {
   member: CoopMember;
+  /** Whose naming of the alternative ID to use; defaults to the signed-in member's co-op. */
+  coopId?: string;
 }
 
-export function CoopMemberHeaderCard({ member }: CoopMemberHeaderCardProps) {
+export function CoopMemberHeaderCard({
+  member,
+  coopId,
+}: CoopMemberHeaderCardProps) {
+  const altLabel = useAlternativeIdLabel(coopId);
   const fullName = coopMemberFullName(member);
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -40,7 +47,7 @@ export function CoopMemberHeaderCard({ member }: CoopMemberHeaderCardProps) {
           <div className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Membership ID" value={member.id} />
             {member.alternativeId ? (
-              <Field label="Alternative ID" value={member.alternativeId} />
+              <Field label={altLabel} value={member.alternativeId} />
             ) : null}
             <Field label="Email" value={member.email} />
             <Field label="Guarantor" value={member.guarantor} />
@@ -62,6 +69,7 @@ export function CoopMemberHeaderCard({ member }: CoopMemberHeaderCardProps) {
 
       <FullProfileDialog
         member={member}
+        coopId={coopId}
         open={profileOpen}
         onOpenChange={setProfileOpen}
       />
@@ -90,14 +98,17 @@ function Avatar({ name, avatarUrl }: { name: string; avatarUrl?: string }) {
 
 function FullProfileDialog({
   member,
+  coopId,
   open,
   onOpenChange,
 }: {
   member: CoopMember;
+  coopId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const { banks } = useBankList();
+  const altLabel = useAlternativeIdLabel(coopId);
   const fullName = coopMemberFullName(member);
   const bankName = member.bankCode
     ? (findBankByCode(banks, member.bankCode)?.name ?? member.bankCode)
@@ -122,7 +133,7 @@ function FullProfileDialog({
           <ProfileSection title="Personal Information">
             <Field label="Membership ID" value={member.id} />
             {member.alternativeId ? (
-              <Field label="Alternative ID" value={member.alternativeId} />
+              <Field label={altLabel} value={member.alternativeId} />
             ) : null}
             <Field label="Status" value={member.status} />
             <Field label="First Name" value={member.firstName} />

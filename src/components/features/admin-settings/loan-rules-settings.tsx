@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import {
   MemberIdText,
   formatMemberId,
+  useAlternativeIdLabel,
 } from "@/components/features/shared/member-id";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -106,6 +107,7 @@ function RulesForm({
 }) {
   const update = useUpdateLoanSettings(coopId);
   const { data: members = [] } = useCoopMembers(coopId);
+  const altLabel = useAlternativeIdLabel(coopId);
   const canEdit = settings.canEdit;
   const ids = {
     fee: useId(),
@@ -329,7 +331,7 @@ function RulesForm({
                   onValueChange={setPicked}
                   options={available.map((m) => ({
                     value: m.id,
-                    label: `${coopMemberFullName(m)} · ${formatMemberId(m.id, m.alternativeId)}`,
+                    label: `${coopMemberFullName(m)} · ${formatMemberId(m.id, m.alternativeId, altLabel)}`,
                   }))}
                   placeholder="Choose a member"
                   searchPlaceholder="Search members…"

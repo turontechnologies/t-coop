@@ -81,7 +81,7 @@ export default function CoopMemberDetailsPage({
           Back
         </Button>
 
-        <CoopMemberHeaderCard member={member} />
+        <CoopMemberHeaderCard member={member} coopId={id} />
 
         <Tabs defaultValue="savings">
           <TabsList>
