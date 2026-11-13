@@ -19,6 +19,12 @@ there is no mock mode.
   co-op's loan figures (`GET /api/v1/cooperatives`). Super admins oversee but
   never act on a loan.
 
+> **"Times two" follows the co-op's multiple.** This page says "Times two" for the
+> borrow-a-multiple mode, but on screen it's named from Settings → Loan Settings → savings
+> multiple: 2 → "Times two", 3 → "Times three", 2.5 → "Times 2.5" (`timesLabel` in
+> `lib/loans-data.ts`, `useTimesLabel` in `hooks/use-loans-self.ts`). The stored mode stays
+> `TimesTwo`, so existing loans and imports are unaffected.
+
 ## The loan lifecycle
 
 ```
