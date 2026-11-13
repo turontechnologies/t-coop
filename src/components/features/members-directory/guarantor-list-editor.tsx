@@ -115,7 +115,7 @@ export function GuarantorListEditor({
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-0.5">
           <p className="text-sm font-medium text-foreground">
-            Guarantors{rules.required ? "" : " (optional)"}
+            {rules.required ? "Required" : "Optional"}
           </p>
           <p className="text-xs text-muted-foreground">
             {describeGuarantorRules(rules)}

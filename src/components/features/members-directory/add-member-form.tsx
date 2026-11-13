@@ -174,6 +174,10 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
     onError: (message) => setError("accountNumber", { message }),
   });
 
+  // Show guarantor problems together with the other field errors, not only once those pass.
+  const onInvalid = () =>
+    setGuarantorProblems(checkGuarantors(guarantorRules, guarantorEntries));
+
   const onSubmit = handleSubmit(async (values) => {
     const problems = checkGuarantors(guarantorRules, guarantorEntries);
     setGuarantorProblems(problems);
@@ -233,7 +237,7 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
           error instanceof Error ? error.message : "Please try again.",
       });
     }
-  });
+  }, onInvalid);
 
   return (
     <motion.form
