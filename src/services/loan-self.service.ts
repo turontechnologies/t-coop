@@ -165,8 +165,17 @@ export interface LoanEligibilityResult {
 /** Settings -> Loans: the committee, loan rules and dividend rules. */
 export interface LoanSettings {
   minAmount: number;
-  /** Paid online before the loan form opens; 0 for no fee. */
+  /** Paid online before the loan form opens; 0 for no fee. Used when feeMode is "General". */
   applicationFee: number;
+  /** One fee for every loan, or a fee set on each loan type. */
+  feeMode: "General" | "PerType";
+  /** Each loan type's own fee, used when feeMode is "PerType". */
+  typeFees: {
+    loanTypeId: string;
+    loanTypeName: string;
+    fee: number;
+    status: string;
+  }[];
   savingsMultiplier: number;
   withinPercent: number;
   minMembershipMonths: number;
@@ -188,8 +197,11 @@ export interface LoanSettings {
 
 export type LoanSettingsPayload = Omit<
   LoanSettings,
-  "committee" | "adminApprovesAlone" | "canEdit"
-> & { committee: { memberId: string; title: string }[] };
+  "committee" | "adminApprovesAlone" | "canEdit" | "typeFees"
+> & {
+  committee: { memberId: string; title: string }[];
+  typeFees: { loanTypeId: string; fee: number }[];
+};
 
 /**
  * The real backend behind a member's own "Take a Loan" application, a named guarantor's

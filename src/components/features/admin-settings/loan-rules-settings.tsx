@@ -48,6 +48,25 @@ interface Seat {
 
 type Form = Omit<LoanSettings, "committee" | "adminApprovesAlone" | "canEdit">;
 
+/** The editable part of the settings, in the shape the form keeps. */
+function formOf(settings: LoanSettings): Form {
+  return {
+    minAmount: settings.minAmount,
+    applicationFee: settings.applicationFee,
+    feeMode: settings.feeMode ?? "General",
+    typeFees: (settings.typeFees ?? []).map((t) => ({ ...t, fee: t.fee ?? 0 })),
+    savingsMultiplier: settings.savingsMultiplier,
+    withinPercent: settings.withinPercent,
+    minMembershipMonths: settings.minMembershipMonths,
+    minSavings: settings.minSavings,
+    allowConcurrentLoans: settings.allowConcurrentLoans,
+    minGuarantors: settings.minGuarantors,
+    dividendMethod: settings.dividendMethod,
+    dividendRate: settings.dividendRate,
+    dividendFrequency: settings.dividendFrequency,
+  };
+}
+
 const DIVIDEND_METHODS: {
   value: Form["dividendMethod"];
   title: string;
@@ -123,19 +142,7 @@ function RulesForm({
     picker: useId(),
   };
 
-  const [form, setForm] = useState<Form>(() => ({
-    minAmount: settings.minAmount,
-    applicationFee: settings.applicationFee,
-    savingsMultiplier: settings.savingsMultiplier,
-    withinPercent: settings.withinPercent,
-    minMembershipMonths: settings.minMembershipMonths,
-    minSavings: settings.minSavings,
-    allowConcurrentLoans: settings.allowConcurrentLoans,
-    minGuarantors: settings.minGuarantors,
-    dividendMethod: settings.dividendMethod,
-    dividendRate: settings.dividendRate,
-    dividendFrequency: settings.dividendFrequency,
-  }));
+  const [form, setForm] = useState<Form>(() => formOf(settings));
   const [seats, setSeats] = useState<Seat[]>(() =>
     settings.committee.map((c) => ({
       key: c.memberId,
@@ -183,20 +190,7 @@ function RulesForm({
   };
 
   const dirty =
-    JSON.stringify(form) !==
-      JSON.stringify({
-        minAmount: settings.minAmount,
-        applicationFee: settings.applicationFee,
-        savingsMultiplier: settings.savingsMultiplier,
-        withinPercent: settings.withinPercent,
-        minMembershipMonths: settings.minMembershipMonths,
-        minSavings: settings.minSavings,
-        allowConcurrentLoans: settings.allowConcurrentLoans,
-        minGuarantors: settings.minGuarantors,
-        dividendMethod: settings.dividendMethod,
-        dividendRate: settings.dividendRate,
-        dividendFrequency: settings.dividendFrequency,
-      }) ||
+    JSON.stringify(form) !== JSON.stringify(formOf(settings)) ||
     JSON.stringify(seats.map((s) => [s.memberId, s.title])) !==
       JSON.stringify(settings.committee.map((c) => [c.memberId, c.title]));
 
@@ -208,6 +202,10 @@ function RulesForm({
     try {
       await update.mutateAsync({
         ...form,
+        typeFees: form.typeFees.map((t) => ({
+          loanTypeId: t.loanTypeId,
+          fee: t.fee,
+        })),
         committee: seats.map((s) => ({
           memberId: s.memberId,
           title: s.title.trim(),
@@ -369,15 +367,22 @@ function RulesForm({
             title="Applying for a loan"
             body="What members pay and need before they can apply."
           />
+          <ApplicationFeeEditor
+            form={form}
+            feeId={ids.fee}
+            disabled={!canEdit}
+            onMode={(mode) => set("feeMode", mode)}
+            onGeneralFee={(fee) => set("applicationFee", fee)}
+            onTypeFee={(loanTypeId, fee) =>
+              set(
+                "typeFees",
+                form.typeFees.map((t) =>
+                  t.loanTypeId === loanTypeId ? { ...t, fee } : t,
+                ),
+              )
+            }
+          />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <MoneyField
-              id={ids.fee}
-              label="Application fee"
-              hint="Paid online before the loan form opens. 0 for no fee."
-              value={form.applicationFee}
-              onChange={(v) => set("applicationFee", v)}
-              disabled={!canEdit}
-            />
             <MoneyField
               id={ids.min}
               label="Minimum loan"
@@ -590,9 +595,131 @@ function SectionHead({ title, body }: { title: string; body: string }) {
   );
 }
 
+/**
+ * The loan application fee: one fee for every loan, or a fee on each loan type. Either way the
+ * member pays it before the loan form opens.
+ */
+function ApplicationFeeEditor({
+  form,
+  feeId,
+  disabled,
+  onMode,
+  onGeneralFee,
+  onTypeFee,
+}: {
+  form: Form;
+  feeId: string;
+  disabled: boolean;
+  onMode: (mode: Form["feeMode"]) => void;
+  onGeneralFee: (fee: number) => void;
+  onTypeFee: (loanTypeId: string, fee: number) => void;
+}) {
+  const modes: { value: Form["feeMode"]; title: string; body: string }[] = [
+    {
+      value: "General",
+      title: "Same fee for every loan",
+      body: "One application fee, whatever the loan type.",
+    },
+    {
+      value: "PerType",
+      title: "Different fee per loan type",
+      body: "Members choose the loan type first, then pay that type's fee.",
+    },
+  ];
+  return (
+    <div className="space-y-4 rounded-xl border border-border p-4">
+      <div>
+        <p className="text-sm font-medium text-foreground">Application fee</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Paid online before the loan form opens. Every new loan application
+          pays it once.
+        </p>
+      </div>
+      <div role="radiogroup" className="grid gap-2 sm:grid-cols-2">
+        {modes.map((mode) => {
+          const selected = form.feeMode === mode.value;
+          return (
+            <button
+              key={mode.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              disabled={disabled}
+              onClick={() => onMode(mode.value)}
+              className={cn(
+                "space-y-1 rounded-lg border p-3 text-left transition-colors disabled:opacity-60",
+                selected
+                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                  : "border-border hover:bg-muted/50",
+              )}
+            >
+              <span className="block text-sm font-medium text-foreground">
+                {mode.title}
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                {mode.body}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {form.feeMode === "General" ? (
+        <div className="sm:max-w-xs">
+          <MoneyField
+            id={feeId}
+            label="Fee for every loan"
+            hint="0 for no fee."
+            value={form.applicationFee}
+            onChange={onGeneralFee}
+            disabled={disabled}
+          />
+        </div>
+      ) : form.typeFees.length === 0 ? (
+        <p className="rounded-lg bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+          No loan types yet. Add loan types first, then set a fee on each.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {form.typeFees.map((type) => (
+            <li
+              key={type.loanTypeId}
+              className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {type.loanTypeName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {type.status === "Active"
+                    ? type.fee > 0
+                      ? "Members pay this before applying."
+                      : "No fee for this type."
+                    : "Inactive: members can't apply for it now."}
+                </p>
+              </div>
+              <div className="sm:w-48">
+                <MoneyField
+                  id={`${feeId}-${type.loanTypeId}`}
+                  label={`${type.loanTypeName} fee`}
+                  hideLabel
+                  value={type.fee}
+                  onChange={(fee) => onTypeFee(type.loanTypeId, fee)}
+                  disabled={disabled}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function MoneyField({
   id,
   label,
+  hideLabel,
   hint,
   value,
   onChange,
@@ -600,6 +727,8 @@ function MoneyField({
 }: {
   id: string;
   label: string;
+  /** Keep the label for screen readers only (the row already names it). */
+  hideLabel?: boolean;
   hint?: string;
   value: number;
   onChange: (value: number) => void;
@@ -613,7 +742,9 @@ function MoneyField({
   }, []);
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={cn(hideLabel && "sr-only")}>
+        {label}
+      </Label>
       <div className="relative">
         <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 font-semibold text-muted-foreground">
           ₦
