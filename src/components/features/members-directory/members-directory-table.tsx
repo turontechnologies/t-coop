@@ -20,7 +20,10 @@ import {
 } from "@/hooks/use-coop-members";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
 import { cn } from "@/lib/utils";
-import { formatMemberId } from "@/components/features/shared/member-id";
+import {
+  AlternativeIdValue,
+  useAlternativeIdColumn,
+} from "@/components/features/shared/member-id";
 
 interface MembersDirectoryTableProps {
   coopId: string;
@@ -36,6 +39,7 @@ export function MembersDirectoryTable({
   readOnly = false,
 }: MembersDirectoryTableProps) {
   const router = useRouter();
+  const alt = useAlternativeIdColumn(coopId);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -109,6 +113,9 @@ export function MembersDirectoryTable({
                 Members Id
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {alt.label}
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 First Name
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -131,7 +138,7 @@ export function MembersDirectoryTable({
             {pageMembers.length === 0 ? (
               <tr>
                 <td
-                  colSpan={readOnly ? 6 : 7}
+                  colSpan={readOnly ? 7 : 8}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No members match your search.
@@ -153,7 +160,10 @@ export function MembersDirectoryTable({
                       />
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {formatMemberId(member.id, member.alternativeId)}
+                      {member.id}
+                    </td>
+                    <td className="px-4 py-3">
+                      <AlternativeIdValue value={alt.get(member.id)} />
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       {member.firstName}
@@ -219,6 +229,7 @@ export function MembersDirectoryTable({
               }
               fields={[
                 { label: "Member Id", value: member.id },
+                { label: alt.label, value: alt.get(member.id) ?? "—" },
                 { label: "First Name", value: member.firstName },
                 { label: "Last Name", value: member.lastName },
                 { label: "Email Address", value: member.email },

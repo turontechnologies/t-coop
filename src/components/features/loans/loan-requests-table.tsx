@@ -21,7 +21,10 @@ import {
 } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatDateLong, formatMoney } from "@/lib/format";
-import { MemberIdText } from "@/components/features/shared/member-id";
+import {
+  AlternativeIdValue,
+  useAlternativeIdColumn,
+} from "@/components/features/shared/member-id";
 
 interface LoanRequestsTableProps {
   requests: CoopLoanRecord[];
@@ -29,6 +32,7 @@ interface LoanRequestsTableProps {
 
 export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
   const router = useRouter();
+  const alt = useAlternativeIdColumn();
   const currency = useCurrency();
   const [type, setType] = useState<string>("All types");
 
@@ -84,6 +88,9 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
                 Members Id
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {alt.label}
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Full Name
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -107,7 +114,7 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No loan requests match your filter.
@@ -121,7 +128,10 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
-                    <MemberIdText id={record.memberId} />
+                    {record.memberId}
+                  </td>
+                  <td className="px-4 py-3">
+                    <AlternativeIdValue value={alt.get(record.memberId)} />
                   </td>
                   <td className="px-4 py-3 text-foreground">
                     {record.memberName}
@@ -166,6 +176,7 @@ export function LoanRequestsTable({ requests }: LoanRequestsTableProps) {
             }
             fields={[
               { label: "Members Id", value: record.memberId },
+              { label: alt.label, value: alt.get(record.memberId) ?? "—" },
               { label: "Loan Type", value: record.loanType },
               {
                 label: "Loan Amount",

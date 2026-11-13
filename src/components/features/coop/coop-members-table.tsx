@@ -19,7 +19,10 @@ import {
   useUpdateCoopMemberStatus,
 } from "@/hooks/use-coop-members";
 import { cn } from "@/lib/utils";
-import { formatMemberId } from "@/components/features/shared/member-id";
+import {
+  AlternativeIdValue,
+  useAlternativeIdColumn,
+} from "@/components/features/shared/member-id";
 
 interface CoopMembersTableProps {
   coopId: string;
@@ -28,6 +31,7 @@ interface CoopMembersTableProps {
 
 export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
   const router = useRouter();
+  const alt = useAlternativeIdColumn(coopId);
   const [search, setSearch] = useState("");
   const [editingMember, setEditingMember] = useState<CoopMember | null>(null);
   const updateMember = useUpdateCoopMember(coopId);
@@ -90,6 +94,9 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
                 Members Id
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {alt.label}
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 First Name
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -113,7 +120,7 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No members match your search.
@@ -140,7 +147,10 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
                       />
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      {formatMemberId(member.id, member.alternativeId)}
+                      {member.id}
+                    </td>
+                    <td className="px-4 py-3">
+                      <AlternativeIdValue value={alt.get(member.id)} />
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       {member.firstName}
@@ -238,6 +248,7 @@ export function CoopMembersTable({ coopId, members }: CoopMembersTableProps) {
               }
               fields={[
                 { label: "Members Id", value: member.id },
+                { label: alt.label, value: alt.get(member.id) ?? "—" },
                 { label: "Email Address", value: member.email },
                 { label: "Role", value: member.role },
               ]}

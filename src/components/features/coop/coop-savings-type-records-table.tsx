@@ -29,7 +29,10 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import type { CoopSavingsRecord } from "@/lib/coop-data";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { MemberIdText } from "@/components/features/shared/member-id";
+import {
+  AlternativeIdValue,
+  useAlternativeIdColumn,
+} from "@/components/features/shared/member-id";
 
 function toIsoDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -56,6 +59,7 @@ export function CoopSavingsTypeRecordsTable({
   basePath = `/co-operatives/${coopId}/savings/record`,
 }: CoopSavingsTypeRecordsTableProps) {
   const router = useRouter();
+  const alt = useAlternativeIdColumn(coopId);
   const currency = useCurrency();
   const [search, setSearch] = useState("");
   const [status, setStatus] =
@@ -188,6 +192,9 @@ export function CoopSavingsTypeRecordsTable({
                 Members Id
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                {alt.label}
+              </th>
+              <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Full Name
               </th>
               <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -205,7 +212,7 @@ export function CoopSavingsTypeRecordsTable({
             {pageRecords.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-8 text-center text-muted-foreground"
                 >
                   No savings records match your filters.
@@ -219,7 +226,10 @@ export function CoopSavingsTypeRecordsTable({
                   className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-3 font-medium text-foreground">
-                    <MemberIdText id={record.memberId} coopId={coopId} />
+                    {record.memberId}
+                  </td>
+                  <td className="px-4 py-3">
+                    <AlternativeIdValue value={alt.get(record.memberId)} />
                   </td>
                   <td className="px-4 py-3 text-foreground">
                     {record.memberName}
@@ -281,6 +291,7 @@ export function CoopSavingsTypeRecordsTable({
             }
             fields={[
               { label: "Members Id", value: record.memberId },
+              { label: alt.label, value: alt.get(record.memberId) ?? "—" },
               {
                 label: "Savings Amount",
                 value: formatMoney(record.amount, currency),
