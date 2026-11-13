@@ -20,6 +20,33 @@ this file (form design, bank verification, bulk import, responsive layout)
 is still accurate as _implementation_ detail, just now backed by real
 network calls instead of a Zustand store.
 
+## What changed 2026-11-13
+
+- **New-member guarantor rules are back, and configurable.** Settings →
+  Co-operative → New members: when "Require guarantors when adding a member"
+  is on, the admin sets the **minimum number** and **where guarantors can come
+  from**: _Anyone_, _Co-op members only_, or _A set mix_ (at least N from
+  the co-operative and at least M from outside; N + M can't exceed the
+  minimum, and the remainder can be anyone).
+- **Add/Edit Member take a list of guarantors** (`GuarantorListEditor`). Each
+  row is either a co-op member (picked from the list, active members only,
+  never the member themself) or an outsider (full name + phone, optional
+  email). A live tally shows what the rules still need. The same checks run
+  in the browser (`lib/member-guarantors.ts`) and on the server
+  (`MemberGuarantorRules`). Errors name the exact problem, e.g. "At least 1
+  guarantor has to be from outside the co-operative — you've added 0."
+- Guarantors are stored as `member_guarantors` rows (status `Named`, V52);
+  `members.guarantor` keeps the names for display. Co-op members recorded as
+  guarantors get a `MEMBER_GUARANTOR` notification (V53). Edit Member only
+  replaces guarantors when the admin changes them, so older members keep the
+  names already on file.
+- **The alternative ID has its own name and column.** Settings →
+  Co-operative → Alternative ID → "Call it" (e.g. "Staff No."). Members,
+  loan requests, and loan/savings type record tables show it as a separate
+  column headed with that name (mobile cards get a matching row); forms,
+  member pages and profiles use the name as the label; inline text reads
+  "MB-001 · Staff No. 507".
+
 ## What changed 2026-10-27
 
 - **No guarantor to join.** Add Member no longer asks for guarantors and
