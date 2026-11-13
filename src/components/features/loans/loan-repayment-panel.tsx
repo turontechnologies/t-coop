@@ -3,20 +3,27 @@
 import { useGatewayCheckout } from "@/components/features/payments/use-gateway-checkout";
 import { useCooperativeBranding } from "@/hooks/use-cooperative";
 
-import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  FileText,
+  Loader2,
+  Receipt,
+  TriangleAlert,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { uploadService } from "@/services/upload.service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -120,18 +127,14 @@ export function LoanRepaymentPanel({
     });
   };
 
-  const handleRecordManually = async () => {
-    try {
-      const result = await manualRepayment.mutateAsync();
-      toast.success("Repayment recorded", {
-        description: `Installment ${result.repayment.installmentNumber} of ${record.numberOfRepayments} — ${formatMoney(result.repayment.amount, currency)}.`,
-      });
-    } catch (error) {
-      toast.error("Couldn't record repayment", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
-    }
+  const handleRecordManually = async (proof: {
+    receiptUrl: string;
+    note?: string;
+  }) => {
+    const result = await manualRepayment.mutateAsync(proof);
+    toast.success("Repayment recorded", {
+      description: `Installment ${result.repayment.installmentNumber} of ${record.numberOfRepayments} — ${formatMoney(result.repayment.amount, currency)}. Receipt attached.`,
+    });
   };
 
   return (
@@ -287,6 +290,9 @@ export function LoanRepaymentPanel({
                       Method
                     </th>
                     <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                      Receipt
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                       Status
                     </th>
                   </tr>
@@ -295,7 +301,7 @@ export function LoanRepaymentPanel({
                   {!repaymentsLoading && repayments.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         className="px-4 py-8 text-center text-muted-foreground"
                       >
                         No repayment transactions yet.
@@ -318,6 +324,14 @@ export function LoanRepaymentPanel({
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {transaction.method}
+                          {transaction.recordedByName ? (
+                            <span className="block text-xs">
+                              by {transaction.recordedByName}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3">
+                          <ReceiptLink url={transaction.receiptUrl} />
                         </td>
                         <td className="px-4 py-3">
                           <Badge
@@ -360,6 +374,14 @@ export function LoanRepaymentPanel({
                       value: formatDateLong(new Date(transaction.date)),
                     },
                     { label: "Method", value: transaction.method },
+                    ...(transaction.receiptUrl
+                      ? [
+                          {
+                            label: "Receipt",
+                            value: <ReceiptLink url={transaction.receiptUrl} />,
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               ))}
@@ -372,6 +394,28 @@ export function LoanRepaymentPanel({
   );
 }
 
+function ReceiptLink({ url }: { url?: string | null }) {
+  if (!url) return <span className="text-muted-foreground">—</span>;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(event) => event.stopPropagation()}
+      className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+    >
+      <Receipt className="size-3.5" aria-hidden="true" />
+      View receipt
+    </a>
+  );
+}
+
+const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Record a payment received offline (cash or bank transfer). The receipt is required — a photo
+ * or PDF scan — so every hand-recorded repayment has proof attached.
+ */
 function RecordRepaymentDialog({
   coopId,
   loanId,
@@ -383,41 +427,233 @@ function RecordRepaymentDialog({
   loanId: string;
   currency: string;
   busy: boolean;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: (proof: { receiptUrl: string; note?: string }) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const { data: next } = useNextInstallment(coopId, loanId, open);
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [problem, setProblem] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const noteId = useId();
 
-  const handleConfirm = async () => {
-    await onConfirm();
-    setOpen(false);
+  useEffect(() => {
+    if (!open) {
+      setReceipt(null);
+      setPreview(null);
+      setNote("");
+      setProblem(null);
+    }
+  }, [open]);
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview],
+  );
+
+  const takeReceipt = (file: File | undefined) => {
+    setProblem(null);
+    if (!file) return;
+    if (!/^image\//.test(file.type) && !/\.pdf$/i.test(file.name)) {
+      setProblem("Upload a photo (JPG or PNG) or a PDF of the receipt.");
+      return;
+    }
+    if (file.size > MAX_RECEIPT_BYTES) {
+      setProblem("That file is over 5 MB. Try a smaller photo.");
+      return;
+    }
+    setReceipt(file);
+    setPreview(/^image\//.test(file.type) ? URL.createObjectURL(file) : null);
+  };
+
+  const working = busy || uploading;
+
+  const submit = async () => {
+    setProblem(null);
+    if (!receipt) {
+      setProblem("Upload the receipt for this payment before recording it.");
+      return;
+    }
+    try {
+      setUploading(true);
+      const receiptUrl = await uploadService.uploadAttachment(receipt);
+      setUploading(false);
+      await onConfirm({ receiptUrl, note: note.trim() || undefined });
+      setOpen(false);
+    } catch (error) {
+      setProblem(
+        error instanceof Error
+          ? error.message
+          : "Couldn't record the repayment.",
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger render={<Button type="button" size="sm" />}>
+    <>
+      <Button type="button" size="sm" onClick={() => setOpen(true)}>
         Record Repayment
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Record a repayment</AlertDialogTitle>
-          <AlertDialogDescription>
-            {next
-              ? `This records installment ${next.installmentNumber} — ${formatMoney(next.amount, currency)} — as received offline (cash/bank transfer). This can't be undone from here.`
-              : "Loading the next installment amount…"}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={busy || !next} onClick={handleConfirm}>
-            {busy ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              "Record"
-            )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+      </Button>
+      <Dialog open={open} onOpenChange={(value) => !working && setOpen(value)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record a repayment</DialogTitle>
+            <DialogDescription>
+              For a payment received offline (cash or bank transfer). Attach the
+              receipt as proof.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-4 py-3">
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  {next
+                    ? `Installment ${next.installmentNumber}`
+                    : "Next installment"}
+                </p>
+                <p className="text-lg font-semibold text-foreground">
+                  {next ? formatMoney(next.amount, currency) : "…"}
+                </p>
+              </div>
+              <Receipt
+                className="size-6 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Receipt</Label>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="sr-only"
+                aria-label="Upload receipt"
+                onChange={(event) => {
+                  takeReceipt(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+              {receipt ? (
+                <div className="flex items-center gap-3 rounded-xl border border-border p-3">
+                  {preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={preview}
+                      alt="Receipt preview"
+                      className="size-14 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-14 items-center justify-center rounded-lg bg-muted">
+                      <FileText
+                        className="size-6 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {receipt.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(receipt.size / 1024).toFixed(0)} KB
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Remove receipt"
+                    disabled={working}
+                    onClick={() => {
+                      setReceipt(null);
+                      setPreview(null);
+                    }}
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={working}
+                  onClick={() => inputRef.current?.click()}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    takeReceipt(event.dataTransfer.files?.[0]);
+                  }}
+                  className="flex w-full flex-col items-center gap-1.5 rounded-xl border border-dashed border-border px-4 py-6 text-center transition-colors hover:bg-muted/50"
+                >
+                  <Upload
+                    className="size-5 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    Upload the receipt
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Photo or PDF, up to 5 MB
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={noteId}>Note (optional)</Label>
+              <Textarea
+                id={noteId}
+                value={note}
+                maxLength={500}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="e.g. Paid in cash at the office, bank transfer ref…"
+                disabled={working}
+                rows={2}
+              />
+            </div>
+
+            {problem ? (
+              <p
+                role="alert"
+                className="flex items-center gap-1.5 text-sm text-destructive"
+              >
+                <TriangleAlert
+                  className="size-3.5 shrink-0"
+                  aria-hidden="true"
+                />
+                {problem}
+              </p>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={working}
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="button" disabled={working || !next} onClick={submit}>
+              {working ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  {uploading ? "Uploading…" : "Recording…"}
+                </>
+              ) : (
+                "Record repayment"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

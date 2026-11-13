@@ -24,6 +24,10 @@ export interface LoanRepaymentRecord {
   transactionId: string;
   date: string;
   status: "Success";
+  /** The receipt uploaded when the repayment was recorded by hand. */
+  receiptUrl?: string | null;
+  recordedByName?: string | null;
+  note?: string | null;
 }
 
 export interface RepaymentResult {
@@ -70,9 +74,14 @@ export const loanRepaymentService = {
     return data;
   },
 
-  async manual(coopId: string, loanId: string): Promise<RepaymentResult> {
+  async manual(
+    coopId: string,
+    loanId: string,
+    proof: { receiptUrl: string; note?: string },
+  ): Promise<RepaymentResult> {
     const { data } = await apiClient.post<RepaymentResult>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/manual`,
+      proof,
     );
     return data;
   },

@@ -62,7 +62,8 @@ export function useConfirmRepayment(coopId: string, loanId: string) {
 export function useManualRepayment(coopId: string, loanId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => loanRepaymentService.manual(coopId, loanId),
+    mutationFn: (proof: { receiptUrl: string; note?: string }) =>
+      loanRepaymentService.manual(coopId, loanId, proof),
     onSuccess: () => invalidateLoan(queryClient, coopId, loanId),
   });
 }
