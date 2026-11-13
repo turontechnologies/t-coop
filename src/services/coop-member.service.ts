@@ -2,6 +2,13 @@ import { apiClient } from "@/lib/axios";
 import type { CoopMember, CoopMemberRole } from "@/lib/coop-data";
 import type { EditMemberFormValues } from "@/lib/validations/coop.schema";
 import type { AddMemberFormValues } from "@/lib/validations/member-directory.schema";
+import type {
+  GuarantorPayload,
+  MemberGuarantorRecord,
+} from "@/lib/member-guarantors";
+
+/** The guarantor list sent with Add/Edit Member; null on edit keeps what's on file. */
+type WithGuarantors<T> = T & { guarantors?: GuarantorPayload[] | null };
 
 interface CoopMemberDto {
   id: string;
@@ -84,7 +91,7 @@ export const coopMemberService = {
 
   async addMember(
     coopId: string,
-    values: AddMemberFormValues,
+    values: WithGuarantors<AddMemberFormValues>,
   ): Promise<CoopMember> {
     const { data } = await apiClient.post<CoopMemberDto>(
       `/cooperatives/${coopId}/members`,
@@ -96,13 +103,23 @@ export const coopMemberService = {
   async updateMember(
     coopId: string,
     memberId: string,
-    values: EditMemberFormValues,
+    values: WithGuarantors<EditMemberFormValues>,
   ): Promise<CoopMember> {
     const { data } = await apiClient.patch<CoopMemberDto>(
       `/cooperatives/${coopId}/members/${memberId}`,
       { ...values, accountName: values.accountName ?? "" },
     );
     return fromDto(data);
+  },
+
+  async getMemberGuarantors(
+    coopId: string,
+    memberId: string,
+  ): Promise<MemberGuarantorRecord[]> {
+    const { data } = await apiClient.get<MemberGuarantorRecord[]>(
+      `/cooperatives/${coopId}/members/${memberId}/guarantors`,
+    );
+    return data;
   },
 
   async updateMemberStatus(

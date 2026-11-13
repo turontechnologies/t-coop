@@ -36,6 +36,14 @@ export interface CooperativeSummary {
   minGuarantors: number;
   /** Settings → Co-operative: a new member must name a guarantor. Off by default. */
   requireMemberGuarantors?: boolean;
+  /** Where new-member guarantors come from: anyone, co-op members only, or a set mix. */
+  memberGuarantorSource?: "Any" | "CoopOnly" | "Mix";
+  /** With "Mix": at least this many from the co-op. */
+  memberGuarantorsFromCoop?: number;
+  /** With "Mix": at least this many from outside the co-op. */
+  memberGuarantorsFromOutside?: number;
+  /** What the co-op calls the alternative ID. */
+  alternativeIdLabel?: string;
   memberCount: number;
   savingsTypeCount: number;
   loanTypeCount: number;
@@ -50,4 +58,6 @@ export interface CooperativeBranding {
   name: string;
   logoUrl: string | null;
   currency: string;
+  /** What the co-op calls the alternative ID, e.g. "Staff No.". */
+  alternativeIdLabel?: string;
 }

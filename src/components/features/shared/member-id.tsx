@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { useAuthStore } from "@/store/auth.store";
 
 /** "MB-0001 · ALT-77" — a membership (or co-op) ID with its alternative ID, when there is one. */
@@ -15,6 +16,13 @@ function useOwnCoopId() {
   return (
     member?.cooperativeId ?? (member?.role === "admin" ? member.id : undefined)
   );
+}
+
+/** What the co-op calls the alternative ID ("Alternative ID" unless the admin renamed it). */
+export function useAlternativeIdLabel(coopId?: string) {
+  const own = useOwnCoopId();
+  const { data } = useCooperativeBranding(coopId ?? own);
+  return data?.alternativeIdLabel?.trim() || "Alternative ID";
 }
 
 /** memberId → alternative ID for a co-op, from its (cached) member list. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -21,12 +21,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LocationFields } from "@/components/features/shared/location-fields";
+import { GuarantorListEditor } from "@/components/features/members-directory/guarantor-list-editor";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
 import { useAutoVerifyBankAccount } from "@/hooks/use-auto-verify-bank-account";
 import { useBankList } from "@/hooks/use-bank-list";
 import { useAddCoopMember } from "@/hooks/use-coop-members";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useNextMemberId } from "@/hooks/use-next-id";
 import { coopMemberFullName, type CoopMember } from "@/lib/coop-data";
+import {
+  checkGuarantors,
+  guarantorRulesOf,
+  hasGuarantorProblems,
+  startingGuarantorEntries,
+  toGuarantorPayload,
+  type GuarantorEntry,
+  type GuarantorProblems,
+} from "@/lib/member-guarantors";
 import {
   addMemberSchema,
   type AddMemberFormValues,
@@ -56,8 +67,27 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const addMember = useAddCoopMember(coopId);
   const { banks, loading: banksLoading } = useBankList();
   const { data: coop } = useCooperative(coopId);
-  // Settings → Co-operative: "Require a guarantor for new members".
-  const requireGuarantor = !!coop?.requireMemberGuarantors;
+  // Settings → Co-operative → New members: how many guarantors, and from where.
+  const guarantorRules = guarantorRulesOf(coop);
+  const altLabel = useAlternativeIdLabel(coopId);
+  const [guarantors, setGuarantors] = useState<GuarantorEntry[] | null>(null);
+  const [guarantorProblems, setGuarantorProblems] =
+    useState<GuarantorProblems>();
+  const [guarantorServerError, setGuarantorServerError] = useState<string>();
+  const guarantorSectionId = useId();
+  // Start with as many empty rows as the rules ask for, once the co-op's settings are in.
+  useEffect(() => {
+    if (coop && guarantors === null)
+      setGuarantors(startingGuarantorEntries(guarantorRulesOf(coop)));
+  }, [coop, guarantors]);
+  const guarantorEntries = guarantors ?? [];
+  const changeGuarantors = (next: GuarantorEntry[]) => {
+    setGuarantors(next);
+    setGuarantorServerError(undefined);
+    // Once the admin has tried to save, keep the messages in step with what they fix.
+    if (guarantorProblems)
+      setGuarantorProblems(checkGuarantors(guarantorRules, next));
+  };
   const { data: nextMemberId, isLoading: loadingNextId } =
     useNextMemberId(coopId);
 
@@ -74,7 +104,6 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   const facebookId = useId();
   const membershipIdId = useId();
   const alternativeIdId = useId();
-  const guarantorId = useId();
   const roleId = useId();
   const twitterId = useId();
   const nextOfKinNameId = useId();
@@ -146,9 +175,14 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    if (requireGuarantor && !values.guarantor?.trim()) {
-      setError("guarantor", {
-        message: "Your co-operative requires a guarantor for every new member",
+    const problems = checkGuarantors(guarantorRules, guarantorEntries);
+    setGuarantorProblems(problems);
+    if (hasGuarantorProblems(problems)) {
+      document
+        .getElementById(guarantorSectionId)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast.error("Check the guarantors", {
+        description: problems.list ?? "One of the guarantors needs fixing.",
       });
       return;
     }
@@ -170,6 +204,8 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         email: values.email.trim(),
+        guarantor: undefined,
+        guarantors: toGuarantorPayload(guarantorEntries),
       });
       toast.success("Member added", {
         description: `${coopMemberFullName(member)} has been added — a welcome email with their login (membership ID + default password) was sent to ${member.email}.`,
@@ -185,7 +221,11 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
         return;
       }
       if (error instanceof Error && /guarantor/i.test(error.message)) {
-        setError("guarantor", { message: error.message });
+        setGuarantorServerError(error.message);
+        document
+          .getElementById(guarantorSectionId)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        toast.error("Check the guarantors", { description: error.message });
         return;
       }
       toast.error("Couldn't add that member", {
@@ -432,7 +472,7 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
             <FieldError message={errors.membershipId?.message} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={alternativeIdId}>Alternative ID (optional)</Label>
+            <Label htmlFor={alternativeIdId}>{altLabel} (optional)</Label>
             <Input
               id={alternativeIdId}
               placeholder="e.g. staff number or old register number"
@@ -443,20 +483,6 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
               {...register("alternativeId")}
             />
             <FieldError message={errors.alternativeId?.message} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={guarantorId}>
-              Guarantor{requireGuarantor ? "" : " (optional)"}
-            </Label>
-            <Input
-              id={guarantorId}
-              placeholder="Guarantor's full name"
-              disabled={isSubmitting}
-              aria-invalid={!!errors.guarantor}
-              className="h-11"
-              {...register("guarantor")}
-            />
-            <FieldError message={errors.guarantor?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor={nextOfKinNameId}>Next of Kin Name (optional)</Label>
@@ -550,6 +576,24 @@ export function AddMemberForm({ coopId, existingMembers }: AddMemberFormProps) {
               {...register("twitter")}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card id={guarantorSectionId}>
+        <CardHeader>
+          <CardTitle>Guarantors</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <GuarantorListEditor
+            coopId={coopId}
+            rules={guarantorRules}
+            entries={guarantorEntries}
+            onChange={changeGuarantors}
+            members={existingMembers}
+            problems={guarantorProblems}
+            serverError={guarantorServerError}
+            disabled={isSubmitting}
+          />
         </CardContent>
       </Card>
 

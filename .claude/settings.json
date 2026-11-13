@@ -116,7 +116,9 @@
       "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_cards_fix.py\")",
       "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_dash_hint.py\")",
       "Bash(curl -s -o /dev/null -w \"backend %{http_code}\\\\n\" http://localhost:8080/actuator/health)",
-      "Bash(node \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/fee-flow-test.mjs\")"
+      "Bash(node \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/fee-flow-test.mjs\")",
+      "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_fee_type.py\")",
+      "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_settings_fee.py\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"
