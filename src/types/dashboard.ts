@@ -34,4 +34,12 @@ export interface DashboardSummaryResponse {
   /** 0-100; `activityLabel` says what it measures. */
   activityRate?: number;
   activityLabel?: string;
+  /** Loans not yet paid out (they never count in "still owed"). */
+  loanPipeline?: {
+    inProgressAmount: number;
+    inProgressCount: number;
+    awaitingApproval: number;
+    awaitingBorrower: number;
+    readyToPayOut: number;
+  } | null;
 }

@@ -6,6 +6,8 @@ export interface SummaryCard {
   value: string;
   action?: string;
   actionHref?: string;
+  /** A short line under the value, e.g. "₦7,500 in progress · 3 awaiting approval". */
+  hint?: string;
   loanEligibilityByType?: Array<{
     loanTypeId: string;
     loanTypeName: string;

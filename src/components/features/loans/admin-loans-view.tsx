@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Landmark } from "lucide-react";
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Tabs,
@@ -14,10 +13,16 @@ import { Button } from "@/components/ui/button";
 import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-summary-table";
 import { LoanRequestsTable } from "@/components/features/loans/loan-requests-table";
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
-import { PENDING_LOAN_STATUSES, totalOwed } from "@/lib/coop-data";
+import { LoanRecordsTable } from "@/components/features/loans/loan-records-table";
+import {
+  LOAN_SLICE_LABELS,
+  LoanStatusCards,
+  loansInSlice,
+  type LoanSlice,
+} from "@/components/features/loans/loan-status-cards";
+import { PENDING_LOAN_STATUSES } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
-import { formatMoney } from "@/lib/format";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
 
@@ -34,16 +39,9 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
   const { data: coop } = useCooperative(coopId);
   const { data: totalsByType = [] } = useCoopLoanTypes(coopId);
   const { data: allLoans = [] } = useCoopLoanRecords(coopId);
-  const { data: myRecords = [] } = useCoopLoanRecords(coopId, {
-    memberId: member.id,
-  });
 
-  // Still owed on my running loans — the dashboard's "My Loans".
-  const myTotal = useMemo(
-    () =>
-      totalOwed(myRecords.filter((record) => record.memberId === member.id)),
-    [myRecords, member.id],
-  );
+  // Which status card is filtering the list (Still owed / Repaid / In progress / Overdue).
+  const [slice, setSlice] = useState<LoanSlice | null>(null);
 
   const requestsAccess = useTabAccess(MODULE, "Requests");
   const membersAccess = useTabAccess(MODULE, "Members Loans");
@@ -99,18 +97,29 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:max-w-lg">
-        <SummaryCard
-          label="Total Loans"
-          value={coop.totalLoans}
-          currency={coop.currency}
-        />
-        <SummaryCard
-          label="My Loans"
-          value={myTotal}
-          currency={coop.currency}
-        />
-      </div>
+      <LoanStatusCards
+        records={allLoans}
+        currency={coop.currency}
+        scope="coop"
+        active={slice}
+        onSelect={setSlice}
+      />
+
+      {slice ? (
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-semibold text-foreground">
+                {LOAN_SLICE_LABELS[slice]} loans
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setSlice(null)}>
+                Clear filter
+              </Button>
+            </div>
+            <LoanRecordsTable records={loansInSlice(allLoans, slice)} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardContent>
@@ -172,31 +181,5 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  currency = "NGN",
-}: {
-  label: string;
-  value: number;
-  currency?: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3">
-        <div className="space-y-1.5">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-xl font-semibold text-foreground sm:text-2xl">
-            {formatMoney(value, currency)}
-          </p>
-        </div>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Landmark className="size-5" aria-hidden="true" />
-        </span>
-      </CardContent>
-    </Card>
   );
 }

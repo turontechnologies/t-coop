@@ -1,11 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Landmark } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoanRecordsTable } from "@/components/features/loans/loan-records-table";
+import {
+  LOAN_SLICE_LABELS,
+  LoanStatusCards,
+  loansInSlice,
+  type LoanSlice,
+} from "@/components/features/loans/loan-status-cards";
 import { LoanSuccessModal } from "@/components/features/loans/loan-success-modal";
 import { TakeLoanModal } from "@/components/features/loans/take-loan-modal";
 import { CheckoutDialog } from "@/components/features/payments/checkout-dialog";
@@ -15,7 +20,6 @@ import { ExportImportMenu } from "@/components/features/shared/export-import-men
 import {
   type CoopLoanRecord,
   loanStatusLabel,
-  totalOwed,
   totalSaved,
 } from "@/lib/coop-data";
 import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
@@ -25,7 +29,6 @@ import { useApplyForLoan, useLoansAwaitingMe } from "@/hooks/use-loans-self";
 import { LoansAwaitingMeCard } from "@/components/features/loans/loans-awaiting-me-card";
 import type { LoanApplicationPayload } from "@/services/loan-self.service";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatMoney } from "@/lib/format";
 import type { ExportColumn } from "@/lib/table-export";
 
 const EXPORT_COLUMNS: ExportColumn<CoopLoanRecord>[] = [
@@ -77,16 +80,15 @@ export function MemberLoansView({
     () => totalSaved(savingsRecords),
     [savingsRecords],
   );
-  // memberRecords now also includes loans where this member is only the named guarantor (see
-  // LoanController's records() filter) — the summary total below stays scoped to loans they
-  // actually borrowed, otherwise a guarantee they stood for would inflate their own balance.
-  // Still owed on my running loans — the dashboard's "My Loans". Loans this member only
-  // guarantees are in the list too, so keep to the ones they borrowed.
-  const totalActive = useMemo(
-    () =>
-      totalOwed(memberRecords.filter((record) => record.memberId === memberId)),
+  // memberRecords also includes loans this member only guarantees (see LoanController's
+  // records() filter); the cards count the loans they borrowed, so a guarantee doesn't inflate
+  // their own figures.
+  const myOwnLoans = useMemo(
+    () => memberRecords.filter((record) => record.memberId === memberId),
     [memberRecords, memberId],
   );
+  const [slice, setSlice] = useState<LoanSlice | null>(null);
+  const shownRecords = slice ? loansInSlice(myOwnLoans, slice) : memberRecords;
 
   const [internalTakeOpen, setInternalTakeOpen] = useState(false);
   const takeOpen = takeOpenProp ?? internalTakeOpen;
@@ -139,28 +141,31 @@ export function MemberLoansView({
             <Button onClick={() => setTakeOpen(true)}>+ New Loan</Button>
           </div>
 
-          <Card className="max-w-xs">
-            <CardContent className="flex items-start justify-between gap-3">
-              <div className="space-y-1.5">
-                <p className="text-sm text-muted-foreground">
-                  My Loans (still owed)
-                </p>
-                <p className="text-xl font-semibold text-foreground sm:text-2xl">
-                  {formatMoney(totalActive, currency)}
-                </p>
-              </div>
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Landmark className="size-5" aria-hidden="true" />
-              </span>
-            </CardContent>
-          </Card>
+          <LoanStatusCards
+            records={myOwnLoans}
+            currency={currency}
+            scope="member"
+            active={slice}
+            onSelect={setSlice}
+          />
         </>
       ) : null}
 
       <Card>
         <CardContent>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-foreground">{heading}</h3>
+            <h3 className="text-sm font-semibold text-foreground">
+              {heading}
+              {slice ? (
+                <button
+                  type="button"
+                  onClick={() => setSlice(null)}
+                  className="ml-2 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary hover:bg-primary/15 dark:text-emerald-300"
+                >
+                  {LOAN_SLICE_LABELS[slice]} · Clear
+                </button>
+              ) : null}
+            </h3>
             <ExportImportMenu
               rows={memberRecords}
               columns={EXPORT_COLUMNS}
@@ -168,7 +173,7 @@ export function MemberLoansView({
               exportTitle={`${memberName} — Loans`}
             />
           </div>
-          <LoanRecordsTable records={memberRecords} viewerId={memberId} />
+          <LoanRecordsTable records={shownRecords} viewerId={memberId} />
         </CardContent>
       </Card>
 

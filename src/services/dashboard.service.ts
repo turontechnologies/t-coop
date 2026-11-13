@@ -74,7 +74,27 @@ function toSummaryCards(
   cards: DashboardSummaryResponse["cards"],
   dataLoanEligibilityByType: DashboardSummaryResponse["loanEligibilityByType"],
   currency: string,
+  pipeline: DashboardSummaryResponse["loanPipeline"] = null,
+  viewerRole: UserRole = role,
 ): SummaryCard[] {
+  // Loans not yet paid out, shown under the Loans figure (which is only what's still owed).
+  const pipelineHint = (() => {
+    if (!pipeline || pipeline.inProgressCount === 0) return undefined;
+    const parts = [
+      pipeline.awaitingApproval
+        ? `${pipeline.awaitingApproval} awaiting approval`
+        : null,
+      pipeline.awaitingBorrower
+        ? viewerRole === "member"
+          ? `${pipeline.awaitingBorrower} awaiting your answer`
+          : `${pipeline.awaitingBorrower} awaiting borrower`
+        : null,
+      pipeline.readyToPayOut
+        ? `${pipeline.readyToPayOut} ready to pay out`
+        : null,
+    ].filter(Boolean);
+    return `${formatMoney(pipeline.inProgressAmount, currency)} in progress · ${parts.join(" · ")}`;
+  })();
   const style =
     role === "super_admin"
       ? SUPER_ADMIN_CARD_STYLE
@@ -105,6 +125,10 @@ function toSummaryCards(
           ? "Loan Eligibility by Type"
           : card.label,
       value: isCount ? String(card.value) : formatMoney(card.value, currency),
+      hint:
+        card.label.endsWith(" Loans") && !isCount
+          ? (pipelineHint ?? "Still owed on running loans")
+          : undefined,
       loanEligibilityByType,
       ...presentation,
     };
@@ -151,6 +175,8 @@ export const dashboardService = {
         data.cards,
         data.loanEligibilityByType,
         currency,
+        data.loanPipeline ?? null,
+        role,
       ),
       chart: data.chart,
       chartSeries: getChartSeries(role),

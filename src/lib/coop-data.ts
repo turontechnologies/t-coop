@@ -180,6 +180,10 @@ export interface CoopLoanRecord {
    * the dashboard uses. */
   amountRepaid?: number;
   outstandingBalance?: number;
+  /** Repayments past their due date and unpaid, what they come to, and the next due date. */
+  overdueInstallments?: number;
+  overdueAmount?: number;
+  nextDueDate?: string | null;
 }
 
 /** What's still owed on these loans — "Total Loans" / "My Loans" everywhere. */

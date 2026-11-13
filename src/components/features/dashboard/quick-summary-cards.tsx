@@ -115,6 +115,11 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                     {card.value}
                   </p>
                 )}
+                {card.hint ? (
+                  <p className="pt-0.5 text-xs leading-snug text-muted-foreground">
+                    {card.hint}
+                  </p>
+                ) : null}
               </div>
               {card.action ? (
                 <button
