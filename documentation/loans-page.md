@@ -27,7 +27,12 @@ there is no mock mode.
         any open stage → Rejected          borrower says no → Declined
 ```
 
-0. **Application fee.** If the admin set one (Settings → Loan Settings), "+ New Loan" opens a
+0. **Application fee.** Settings → Loan Settings → Application fee is either **Same fee for
+   every loan** or **Different fee per loan type** (a fee on each type; 0 = no fee). With a fee
+   per type, "+ New Loan" first asks the member to **choose a loan type**
+   (`choose-loan-type-dialog.tsx`, showing each type's fee and whether it's already paid), then
+   charges that type's fee. The form then opens with the type filled in and locked. A paid fee
+   only counts for the type it was paid for. With one general fee, "+ New Loan" opens a
    checkout first (`checkout-dialog.tsx`, the preview's design: Card / Bank / Transfer / USSD).
    The card or bank details are entered in Paystack's (or Flutterwave's) own secure window,
    never in T-Coop; the server verifies the payment (`LoanApplicationFeeController`). A paid fee

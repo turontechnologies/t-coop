@@ -1,3 +1,5 @@
+import { useAuthStore } from "@/store/auth.store";
+import { loanModeLabel, timesLabel } from "@/lib/loans-data";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   loanSelfService,
@@ -159,6 +161,24 @@ export function useLoanSettings(coopId: string | undefined) {
     enabled: Boolean(coopId),
     staleTime: 60_000,
   });
+}
+
+/**
+ * What this co-op calls its borrow-a-multiple loan ("Times two", "Times three", …), from its
+ * savings multiple. Defaults to the signed-in member's own co-op.
+ */
+export function useTimesLabel(coopId?: string) {
+  const member = useAuthStore((state) => state.member);
+  const own =
+    member?.cooperativeId ?? (member?.role === "admin" ? member.id : undefined);
+  const { data } = useLoanSettings(coopId ?? own);
+  const multiplier = data?.savingsMultiplier ?? 2;
+  return {
+    multiplier,
+    label: timesLabel(multiplier),
+    modeLabel: (mode: string | null | undefined) =>
+      loanModeLabel(mode, multiplier),
+  };
 }
 
 export function useUpdateLoanSettings(coopId: string) {

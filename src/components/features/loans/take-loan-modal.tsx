@@ -417,11 +417,13 @@ export function TakeLoanModal({
                 min={minGuarantors}
                 disabled={busy}
               />
-              <p className="text-xs text-muted-foreground">
-                {guarantorMemberIds.length < minGuarantors
-                  ? `Pick ${minGuarantors - guarantorMemberIds.length} more. Each guarantor is asked to accept.`
-                  : "Each guarantor is asked to accept before the loan goes to the loan committee."}
-              </p>
+              {/* The picker already says how many are still needed. */}
+              {guarantorMemberIds.length >= minGuarantors ? (
+                <p className="text-xs text-muted-foreground">
+                  Each guarantor is asked to accept before the loan goes to the
+                  loan committee.
+                </p>
+              ) : null}
             </div>
           ) : null}
 

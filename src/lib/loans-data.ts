@@ -24,10 +24,36 @@ export const LOAN_MODES: {
   },
 ];
 
+const NUMBER_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+];
+
+/**
+ * The name of the borrow-a-multiple mode, from the co-op's savings multiple: 2 → "Times two",
+ * 3 → "Times three", 2.5 → "Times 2.5". The stored mode stays "TimesTwo" whatever the multiple.
+ */
+export function timesLabel(multiplier: number | null | undefined = 2): string {
+  const n = multiplier && multiplier > 0 ? multiplier : 2;
+  const word = Number.isInteger(n) && n <= 10 ? NUMBER_WORDS[n] : String(n);
+  return `Times ${word}`;
+}
+
 export function loanModeLabel(
   mode: LoanMode | string | null | undefined,
+  /** The co-op's savings multiple; see {@link timesLabel}. */
+  multiplier?: number | null,
 ): string {
-  return mode === "Within" ? "Within" : "Times two";
+  return mode === "Within" ? "Within" : timesLabel(multiplier);
 }
 
 export interface LoanTypeDef {
