@@ -89,10 +89,12 @@ export function LoginForm() {
         variants={fieldVariants}
         className="space-y-2"
       >
-        <Label htmlFor={membershipIdInputId}>Membership ID</Label>
+        <Label htmlFor={membershipIdInputId}>
+          Membership ID or alternative ID
+        </Label>
         <Input
           id={membershipIdInputId}
-          placeholder="Membership ID or alternative ID"
+          placeholder="e.g. MB-0001 or your staff number"
           autoComplete="username"
           disabled={busy}
           className="h-11"

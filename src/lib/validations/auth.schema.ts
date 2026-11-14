@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  membershipId: z.string().trim().min(1, "Enter your membership ID"),
+  membershipId: z
+    .string()
+    .trim()
+    .min(1, "Enter your membership ID or alternative ID"),
   password: z
     .string()
     .min(1, "Enter your password")
