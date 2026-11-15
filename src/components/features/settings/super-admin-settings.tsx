@@ -110,8 +110,13 @@ export function SuperAdminSettings({
 
   // The section is kept in the URL hash, so a refresh or a shared link opens the same one.
   useEffect(() => {
-    const fromHash = window.location.hash.slice(1);
-    if (isSection(fromHash)) setSection(fromHash);
+    const sync = () => {
+      const fromHash = window.location.hash.slice(1);
+      if (isSection(fromHash)) setSection(fromHash);
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
   }, []);
 
   function open(next: Section) {

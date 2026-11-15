@@ -1,6 +1,7 @@
 "use client";
 
 import { QuickSummaryCards } from "@/components/features/dashboard/quick-summary-cards";
+import { SuperAdminCommandCentre } from "@/components/features/dashboard/super-admin-dashboard";
 import { ActivityChart } from "@/components/features/dashboard/activity-chart";
 import { RecentActivities } from "@/components/features/dashboard/recent-activities";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -42,10 +43,18 @@ export default function DashboardPage() {
 
   if (!member) return null;
 
+  // The super admin's dashboard opens with its own command centre instead of the greeting.
+  const header =
+    member.role === "super_admin" ? (
+      <SuperAdminCommandCentre name={member.name} />
+    ) : (
+      <WelcomeHeader name={member.name} role={member.role} />
+    );
+
   if (isLoading || !data) {
     return (
       <div className="space-y-6 pt-8">
-        <WelcomeHeader name={member.name} role={member.role} />
+        {header}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
@@ -64,7 +73,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 pt-8">
-      <WelcomeHeader name={member.name} role={member.role} />
+      {header}
+      {member.role === "super_admin" ? (
+        <h3 className="pt-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+          Across the platform
+        </h3>
+      ) : null}
       <QuickSummaryCards cards={data.cards} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
