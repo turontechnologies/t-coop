@@ -4,12 +4,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
+import { ConsoleSidebar } from "@/components/layouts/console-sidebar";
 import { DashboardSidebar } from "@/components/layouts/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/layouts/dashboard-topbar";
 import { RouteTransition } from "@/components/brand/route-transition";
 import { getRoleLabel } from "@/config/dashboard-nav";
 import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { formatDateLong } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { authService } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
 import type { AuthenticatedMember } from "@/types/auth";
@@ -65,18 +67,36 @@ export function DashboardShell({
   }
 
   return (
-    <div className="flex min-h-dvh bg-background">
-      <DashboardSidebar
-        role={member.role}
-        cooperativeId={member.cooperativeId}
-        permissionModules={member.permissionModules}
-        memberName={member.name}
-        roleLabel={getRoleLabel(member.role, member.roleName)}
-        avatarUrl={member.avatarUrl}
-        mobileOpen={mobileOpen}
-        onMobileClose={() => setMobileOpen(false)}
-        onLogout={handleLogout}
-      />
+    <div
+      className={cn(
+        "flex min-h-dvh bg-background",
+        // A soft gold light falling across the top of every console page.
+        isConsole &&
+          "bg-[radial-gradient(55%_35%_at_75%_0%,rgb(212_162_58/0.10),transparent_70%)] dark:bg-[radial-gradient(55%_35%_at_75%_0%,rgb(226_182_90/0.07),transparent_70%)]",
+      )}
+    >
+      {isConsole ? (
+        <ConsoleSidebar
+          memberName={member.name}
+          roleLabel={getRoleLabel(member.role, member.roleName)}
+          avatarUrl={member.avatarUrl}
+          mobileOpen={mobileOpen}
+          onMobileClose={() => setMobileOpen(false)}
+          onLogout={handleLogout}
+        />
+      ) : (
+        <DashboardSidebar
+          role={member.role}
+          cooperativeId={member.cooperativeId}
+          permissionModules={member.permissionModules}
+          memberName={member.name}
+          roleLabel={getRoleLabel(member.role, member.roleName)}
+          avatarUrl={member.avatarUrl}
+          mobileOpen={mobileOpen}
+          onMobileClose={() => setMobileOpen(false)}
+          onLogout={handleLogout}
+        />
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <DashboardTopbar
