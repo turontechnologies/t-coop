@@ -28,32 +28,56 @@ export const settingsPasswordSchema = z
 
 export type SettingsPasswordFormValues = z.infer<typeof settingsPasswordSchema>;
 
-export const feeChargesSchema = z.object({
-  savingsChargeType: z.enum(["Fixed", "Percentage"]),
-  savingsChargeAmount: z.number().min(0, "Enter an amount of 0 or more"),
-  loansChargeType: z.enum(["Fixed", "Percentage"]),
-  loansChargeAmount: z.number().min(0, "Enter an amount of 0 or more"),
-  withdrawalFeeType: z.enum(["Fixed", "Percentage"]),
-  withdrawalFeeAmount: z.number().min(0, "Enter an amount of 0 or more"),
-  loanApplicationFeePercent: z
-    .number({ message: "Enter a percentage from 0 to 100" })
-    .min(0, "Enter a percentage from 0 to 100")
-    .max(100, "Enter a percentage from 0 to 100"),
-  subscriptionGraceDays: z
-    .number({ message: "Enter 0 or more days" })
-    .int("Enter whole days")
-    .min(0, "Enter 0 or more days")
-    .max(365, "The grace period can be at most 365 days"),
-});
+const chargeType = z.enum(["Fixed", "Percentage"]);
+const amount = z
+  .number({ message: "Enter an amount of 0 or more" })
+  .min(0, "Enter an amount of 0 or more");
+
+/** Each fee as a [type field, amount field] pair, so a percentage can be capped at 100. */
+export const FEE_PAIRS = [
+  ["savingsChargeType", "savingsChargeAmount"],
+  ["loansChargeType", "loansChargeAmount"],
+  ["withdrawalFeeType", "withdrawalFeeAmount"],
+  ["loanApplicationFeeType", "loanApplicationFeeAmount"],
+] as const;
+
+/**
+ * The platform's fees: the defaults a new co-op starts with (Fees & Charges), and each co-op's
+ * own fees (Fees per co-operative). Both include the subscription grace period.
+ */
+export const feeChargesSchema = z
+  .object({
+    savingsChargeType: chargeType,
+    savingsChargeAmount: amount,
+    loansChargeType: chargeType,
+    loansChargeAmount: amount,
+    withdrawalFeeType: chargeType,
+    withdrawalFeeAmount: amount,
+    loanApplicationFeeType: chargeType,
+    loanApplicationFeeAmount: amount,
+    subscriptionGraceDays: z
+      .number({ message: "Enter 0 or more days" })
+      .int("Enter whole days")
+      .min(0, "Enter 0 or more days")
+      .max(365, "The grace period can be at most 365 days"),
+  })
+  .superRefine((values, ctx) => {
+    for (const [type, amt] of FEE_PAIRS) {
+      if (values[type] === "Percentage" && values[amt] > 100) {
+        ctx.addIssue({
+          code: "custom",
+          path: [amt],
+          message: "A percentage can be at most 100%",
+        });
+      }
+    }
+  });
 
 export type FeeChargesFormValues = z.infer<typeof feeChargesSchema>;
 
-/** The platform's fees from one co-operative (no grace period: that's platform-wide). */
-export const coopPlatformFeesSchema = feeChargesSchema.omit({
-  subscriptionGraceDays: true,
-});
+export const coopPlatformFeesSchema = feeChargesSchema;
 
-export type CoopPlatformFeesFormValues = z.infer<typeof coopPlatformFeesSchema>;
+export type CoopPlatformFeesFormValues = FeeChargesFormValues;
 
 export const collectionAccountSchema = z.object({
   bankCode: z.string().trim().min(1, "Select a bank"),

@@ -14,9 +14,10 @@ export interface FeeSettings {
    */
   withdrawalFeeType: ChargeType;
   withdrawalFeeAmount: number;
-  /** Platform's % of every loan application fee (default for new co-ops). */
-  loanApplicationFeePercent: number;
-  /** Days a co-op keeps working after its subscription expires. */
+  /** Platform's share of every loan application fee (default for new co-ops). */
+  loanApplicationFeeType: ChargeType;
+  loanApplicationFeeAmount: number;
+  /** Default days a new co-op keeps working after its subscription expires. */
   subscriptionGraceDays: number;
 }
 
@@ -31,7 +32,15 @@ export interface CoopPlatformFees {
   loansChargeAmount: number;
   withdrawalFeeType: ChargeType;
   withdrawalFeeAmount: number;
-  loanApplicationFeePercent: number;
+  loanApplicationFeeType: ChargeType;
+  loanApplicationFeeAmount: number;
+  /** This co-op's own grace period, in days. */
+  subscriptionGraceDays: number;
+  /** YYYY-MM-DD; null if it has never subscribed. */
+  subscriptionExpiresAt: string | null;
+  /** Last day it can still work (expiry + grace days). */
+  graceEndsAt: string | null;
+  inGracePeriod: boolean;
 }
 
 export type EarningSource =

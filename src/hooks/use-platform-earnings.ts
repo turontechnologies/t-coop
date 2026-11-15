@@ -27,6 +27,33 @@ export function useUpdateCoopPlatformFees() {
   });
 }
 
+/** Saves the same fees to several co-ops at once (e.g. "apply defaults to all"). */
+export function useBulkUpdateCoopPlatformFees() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      cooperativeIds,
+      values,
+    }: {
+      cooperativeIds: string[];
+      values: CoopPlatformFeesFormValues;
+    }) => {
+      const results = await Promise.allSettled(
+        cooperativeIds.map((id) =>
+          platformSettingsService.updateCoopPlatformFees(id, values),
+        ),
+      );
+      return {
+        saved: results.filter((r) => r.status === "fulfilled").length,
+        failed: results.filter((r) => r.status === "rejected").length,
+      };
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["platform-fees"] });
+    },
+  });
+}
+
 /** Super admin: what the platform earned from each co-op between two dates (YYYY-MM-DD). */
 export function usePlatformEarnings(from: string, to: string) {
   return useQuery({
