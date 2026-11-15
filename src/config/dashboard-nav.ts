@@ -19,6 +19,8 @@ export interface NavItem {
   label: string;
   href?: string;
   icon: LucideIcon;
+  /** Heading the item sits under in the sidebar (super admin console only). */
+  section?: string;
 }
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -36,14 +38,49 @@ const ROLE_LABEL: Record<UserRole, string> = {
  * getNavItems). Every other role's list is fixed, unaffected by permissions. */
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   super_admin: [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
-    { label: "Co-operatives", href: "/co-operatives", icon: Building2 },
-    { label: "Notice Board", href: "/notice-board", icon: Megaphone },
-    { label: "Savings & Contributions", href: "/savings", icon: PiggyBank },
-    { label: "Loans", href: "/loans", icon: Landmark },
-    { label: "Subscriptions", href: "/subscriptions", icon: CreditCard },
-    { label: "Support", href: "/support", icon: LifeBuoy },
-    { label: "Settings", href: "/settings", icon: Settings },
+    {
+      label: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutGrid,
+      section: "Overview",
+    },
+    {
+      label: "Co-operatives",
+      href: "/co-operatives",
+      icon: Building2,
+      section: "Platform",
+    },
+    {
+      label: "Subscriptions",
+      href: "/subscriptions",
+      icon: CreditCard,
+      section: "Platform",
+    },
+    {
+      label: "Notice Board",
+      href: "/notice-board",
+      icon: Megaphone,
+      section: "Platform",
+    },
+    {
+      label: "Savings & Contributions",
+      href: "/savings",
+      icon: PiggyBank,
+      section: "Money",
+    },
+    { label: "Loans", href: "/loans", icon: Landmark, section: "Money" },
+    {
+      label: "Support",
+      href: "/support",
+      icon: LifeBuoy,
+      section: "Administration",
+    },
+    {
+      label: "Settings",
+      href: "/settings",
+      icon: Settings,
+      section: "Administration",
+    },
   ],
   admin: [
     { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
