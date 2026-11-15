@@ -146,38 +146,39 @@
 
 /* ── Platform console (super admin only) ──────────────────────────────────────
  * DashboardShell sets data-console on <html> while a super admin is signed in, so every page,
- * dialog, sheet and menu they see switches from the co-operative green to the console's own
- * midnight-navy, ivory and gold. Co-op admins and members never get this attribute. */
+ * dialog, sheet and menu they see gets the console's premium look: the T-Coop green made deeper,
+ * on warm ivory, with gold accents (light), or deep forest with gold (dark). Co-op admins and
+ * members never get this attribute, so their pages stay exactly as they are. */
 html[data-console] {
-  --background: #f7f5ef;
-  --foreground: #0d1226;
+  --background: #f6f5ef;
+  --foreground: #0c1f19;
   --card: #ffffff;
-  --card-foreground: #0d1226;
+  --card-foreground: #0c1f19;
   --popover: #ffffff;
-  --popover-foreground: #0d1226;
-  --primary: #121a38;
+  --popover-foreground: #0c1f19;
+  --primary: #00543d;
   --primary-foreground: #ffffff;
-  --brand: #121a38;
+  --brand: #00543d;
   --brand-foreground: #ffffff;
-  --secondary: #f0ede4;
-  --secondary-foreground: #0d1226;
-  --muted: #f1eee6;
-  --muted-foreground: #696a74;
+  --secondary: #efeee6;
+  --secondary-foreground: #0c1f19;
+  --muted: #f0eee6;
+  --muted-foreground: #63706a;
   --accent: #fbf3dd;
   --accent-foreground: #8a5d0b;
-  --border: #e8e3d6;
-  --input: #ddd7c8;
+  --border: #e6e2d5;
+  --input: #dad5c6;
   --ring: #c99a2e;
-  --chart-1: #121a38;
+  --chart-1: #00543d;
   --chart-2: #d4a23a;
-  --chart-3: #6366f1;
+  --chart-3: #10b981;
   --chart-4: #94a3b8;
   --chart-5: #e5dcc4;
   --shadow-card:
-    0 1px 2px rgb(18 26 56 / 0.04), 0 3px 10px -3px rgb(18 26 56 / 0.08);
+    0 1px 2px rgb(12 31 25 / 0.04), 0 3px 10px -3px rgb(12 31 25 / 0.08);
   --shadow-raised:
-    0 2px 4px rgb(18 26 56 / 0.05), 0 16px 36px -10px rgb(18 26 56 / 0.2);
-  --sidebar: #0b1024;
+    0 2px 4px rgb(12 31 25 / 0.05), 0 16px 36px -10px rgb(12 31 25 / 0.2);
+  --sidebar: #01291f;
   --sidebar-foreground: #f4f1e8;
   --sidebar-primary: #e2b65a;
   --sidebar-primary-foreground: #1b1404;
@@ -185,51 +186,65 @@ html[data-console] {
   --sidebar-accent-foreground: #f6e3b4;
   --sidebar-border: rgba(226, 182, 90, 0.14);
   --sidebar-ring: #e2b65a;
-  --console-gold: #e2b65a;
+  /* The sidebar's own gradient: brand green at the top, deepening downwards. */
+  --console-sidebar-top: #00513b;
+  --console-sidebar-bottom: #012219;
 }
 
 html.dark[data-console] {
-  --background: #060915;
-  --foreground: #eef0f7;
-  --card: #0c1124;
-  --card-foreground: #eef0f7;
-  --popover: #0e142a;
-  --popover-foreground: #eef0f7;
+  --background: #04100c;
+  --foreground: #edf3f0;
+  --card: #0a1914;
+  --card-foreground: #edf3f0;
+  --popover: #0c1d17;
+  --popover-foreground: #edf3f0;
   --primary: #e2b65a;
   --primary-foreground: #1b1404;
   --brand: #e2b65a;
   --brand-foreground: #1b1404;
-  --secondary: #141a33;
-  --secondary-foreground: #eef0f7;
-  --muted: #121831;
-  --muted-foreground: #9198b0;
+  --secondary: #10221c;
+  --secondary-foreground: #edf3f0;
+  --muted: #0f201a;
+  --muted-foreground: #8fa59c;
   --accent: #1d1a10;
   --accent-foreground: #f2cf7e;
   --border: rgba(226, 182, 90, 0.1);
   --input: rgba(255, 255, 255, 0.12);
   --ring: #e2b65a;
   --chart-1: #e2b65a;
-  --chart-2: #818cf8;
+  --chart-2: #34d399;
   --chart-3: #94a3b8;
   --chart-4: #64748b;
-  --chart-5: #334155;
+  --chart-5: #1f3a31;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(226 182 90 / 0.05);
   --shadow-raised:
     0 14px 36px -10px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(226 182 90 / 0.09);
-  --sidebar: #05080f;
+  --sidebar: #011510;
+  --console-sidebar-top: #023a2b;
+  --console-sidebar-bottom: #010d0a;
 }
 
-/* The console's signature surface: midnight navy with a warm gold glow. */
+/* The console's signature surface (hero banners): deep T-Coop green with a warm gold glow.
+ * It stays dark in both themes, like the sidebar, so white text always reads. */
 @utility bg-console {
-  background-color: #0b1024;
+  background-color: #003d2c;
   background-image:
-    radial-gradient(70% 90% at 0% 0%, rgb(226 182 90 / 0.22), transparent 60%),
+    radial-gradient(70% 90% at 0% 0%, rgb(226 182 90 / 0.24), transparent 60%),
     radial-gradient(
       60% 80% at 100% 100%,
-      rgb(99 102 241 / 0.25),
+      rgb(16 185 129 / 0.22),
       transparent 60%
     ),
-    linear-gradient(135deg, #0b1024 0%, #121a38 55%, #1a2350 100%);
+    linear-gradient(135deg, #01261c 0%, #00543d 55%, #0a6b4f 100%);
+}
+
+@utility bg-console-sidebar {
+  background-color: var(--console-sidebar-bottom, #012219);
+  background-image: linear-gradient(
+    180deg,
+    var(--console-sidebar-top, #00513b) 0%,
+    var(--console-sidebar-bottom, #012219) 100%
+  );
 }
 
 /* A gold edge for console cards and the sidebar. */

@@ -39,7 +39,7 @@ const SECTIONS: {
     label: "Fees & grace",
     hint: "Your cut, per co-operative",
     icon: BadgePercent,
-    tone: "from-sky-500 to-indigo-600",
+    tone: "from-amber-300 to-amber-600",
   },
   {
     value: "account",
@@ -53,7 +53,7 @@ const SECTIONS: {
     label: "Subscription plans",
     hint: "What co-ops pay you",
     icon: Crown,
-    tone: "from-violet-500 to-fuchsia-600",
+    tone: "from-teal-500 to-emerald-800",
   },
 ];
 

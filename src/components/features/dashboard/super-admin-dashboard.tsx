@@ -223,7 +223,7 @@ export function SuperAdminCommandCentre({ name }: { name: string }) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: EASE }}
-        className="relative overflow-hidden rounded-3xl bg-[#0a0f1f] p-6 text-white shadow-raised sm:p-8"
+        className="relative overflow-hidden rounded-3xl bg-console p-6 text-white shadow-raised sm:p-8"
       >
         <motion.div
           aria-hidden="true"
@@ -233,7 +233,7 @@ export function SuperAdminCommandCentre({ name }: { name: string }) {
         />
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-20 -bottom-32 size-96 rounded-full bg-indigo-500/30 blur-3xl"
+          className="pointer-events-none absolute -right-20 -bottom-32 size-96 rounded-full bg-emerald-400/20 blur-3xl"
           animate={{ x: [0, -40, 0] }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -410,7 +410,7 @@ export function SuperAdminCommandCentre({ name }: { name: string }) {
               </h3>
               <Link
                 href="/subscriptions"
-                className="text-xs font-medium text-primary hover:underline dark:text-emerald-300"
+                className="text-xs font-medium text-primary hover:underline"
               >
                 Manage
               </Link>
@@ -467,7 +467,7 @@ export function SuperAdminCommandCentre({ name }: { name: string }) {
               </h3>
               <Link
                 href="/settings#payment"
-                className="text-xs font-medium text-primary hover:underline dark:text-emerald-300"
+                className="text-xs font-medium text-primary hover:underline"
               >
                 Full breakdown
               </Link>
@@ -605,7 +605,7 @@ function AttentionRow({
             ))}
           </div>
         ) : null}
-        <span className="hidden shrink-0 items-center gap-1 text-xs font-medium text-primary group-hover:underline sm:flex dark:text-emerald-300">
+        <span className="hidden shrink-0 items-center gap-1 text-xs font-medium text-primary group-hover:underline sm:flex">
           {action}
           <ArrowRight
             className="size-3.5 transition-transform group-hover:translate-x-0.5"

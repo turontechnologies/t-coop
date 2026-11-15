@@ -59,7 +59,7 @@ export function ConsoleSidebar({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed inset-0 z-40 bg-[#05080f]/70 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-[#011510]/70 backdrop-blur-sm lg:hidden"
             onClick={onMobileClose}
             aria-hidden="true"
           />
@@ -68,18 +68,18 @@ export function ConsoleSidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col overflow-hidden bg-[#0b1024] text-white transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col overflow-hidden bg-console-sidebar text-white transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        {/* Atmosphere: gold glow top-left, indigo bottom-right, a fine grain of dots. */}
+        {/* Atmosphere: gold glow top-left, emerald bottom-right, a fine grain of dots. */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-32 -left-24 size-80 rounded-full bg-[#e2b65a]/20 blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -bottom-40 size-96 rounded-full bg-indigo-500/20 blur-3xl"
+          className="pointer-events-none absolute -right-24 -bottom-40 size-96 rounded-full bg-emerald-400/15 blur-3xl"
         />
         <div
           aria-hidden="true"
@@ -221,11 +221,11 @@ export function ConsoleSidebar({
                   className="size-9 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex size-9 items-center justify-center rounded-full bg-[#0b1024] text-xs font-semibold text-gold">
+                <span className="flex size-9 items-center justify-center rounded-full bg-[#012a1f] text-xs font-semibold text-gold">
                   {getInitials(memberName)}
                 </span>
               )}
-              <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-[#0b1024] bg-emerald-400" />
+              <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-[#012a1f] bg-emerald-400" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">

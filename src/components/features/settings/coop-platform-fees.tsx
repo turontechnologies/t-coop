@@ -487,7 +487,7 @@ function EditCoopFeesForm({
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex min-h-full flex-col">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-emerald-700 to-emerald-500 px-6 pt-6 pb-5 text-white">
+      <div className="relative overflow-hidden bg-console px-6 pt-6 pb-5 text-white">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-16 -right-10 size-48 rounded-full bg-white/10 blur-2xl"

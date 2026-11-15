@@ -55,7 +55,7 @@ const SECTIONS: {
     label: "Payments & earnings",
     hint: "Fees, grace periods and what you've earned",
     icon: Wallet,
-    tone: "from-sky-500 to-indigo-600",
+    tone: "from-amber-300 to-amber-600",
   },
   {
     value: "integrations",
@@ -69,14 +69,14 @@ const SECTIONS: {
     label: "Team & roles",
     hint: "Who can work on the platform",
     icon: UsersRound,
-    tone: "from-violet-500 to-fuchsia-600",
+    tone: "from-teal-500 to-emerald-800",
   },
   {
     value: "logs",
     label: "Activity logs",
     hint: "Everything that happened, and who did it",
     icon: ScrollText,
-    tone: "from-rose-500 to-pink-600",
+    tone: "from-stone-500 to-stone-700",
   },
 ];
 
@@ -330,7 +330,7 @@ function SettingsHero({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: EASE }}
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-emerald-800 to-emerald-600 p-6 text-white shadow-raised sm:p-8"
+      className="relative overflow-hidden rounded-3xl bg-console p-6 text-white shadow-raised sm:p-8"
     >
       <motion.div
         aria-hidden="true"

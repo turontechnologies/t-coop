@@ -523,10 +523,10 @@ export function GraceTile({
 
 const AVATAR_GRADIENTS = [
   "from-emerald-500 to-teal-600",
-  "from-sky-500 to-indigo-600",
+  "from-amber-300 to-amber-600",
   "from-amber-400 to-orange-600",
-  "from-violet-500 to-fuchsia-600",
-  "from-rose-500 to-pink-600",
+  "from-teal-500 to-emerald-800",
+  "from-stone-500 to-stone-700",
   "from-lime-500 to-emerald-600",
 ];
 

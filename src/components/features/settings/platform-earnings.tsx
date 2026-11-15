@@ -161,7 +161,7 @@ export function PlatformEarningsPanel() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: EASE }}
-                className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-emerald-700 to-emerald-500 p-6 text-white shadow-raised"
+                className="relative overflow-hidden rounded-3xl bg-console p-6 text-white shadow-raised"
               >
                 <motion.div
                   aria-hidden="true"
@@ -450,10 +450,7 @@ function SourceDonut({
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <TrendingUp
-            className="size-4 text-primary dark:text-emerald-300"
-            aria-hidden="true"
-          />
+          <TrendingUp className="size-4 text-primary" aria-hidden="true" />
           <span className="mt-0.5 text-[11px] text-muted-foreground">
             {empty ? "No fees yet" : "By source"}
           </span>
@@ -615,7 +612,7 @@ function CoopEarningsDetail({
 
   return (
     <div className="flex min-h-full flex-col">
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-emerald-700 to-emerald-500 px-6 pt-6 pb-5 text-white">
+      <div className="relative overflow-hidden bg-console px-6 pt-6 pb-5 text-white">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -top-16 -right-10 size-48 rounded-full bg-white/10 blur-2xl"

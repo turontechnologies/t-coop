@@ -78,7 +78,7 @@ function FeesChargesFormBody({ feeSettings }: { feeSettings: FeeSettings }) {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
       <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:text-emerald-300">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <Sparkles className="size-5" aria-hidden="true" />
         </span>
         <div className="space-y-0.5">

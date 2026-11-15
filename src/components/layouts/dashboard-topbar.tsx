@@ -44,7 +44,7 @@ export function DashboardTopbar({
         "sticky top-0 z-30 flex h-18 items-center justify-between gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8",
         // A thin gold line marks every super admin page as the platform console.
         isConsole &&
-          "after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-amber-400/0 after:via-amber-400/70 after:to-indigo-500/0",
+          "after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-amber-400/0 after:via-amber-400/70 after:to-emerald-500/0",
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
