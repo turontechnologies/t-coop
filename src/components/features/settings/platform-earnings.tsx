@@ -417,10 +417,10 @@ function SourceDonut({
               stroke="none"
               isAnimationActive
               animationDuration={900}
-              onClick={(slice: { key?: string }) => {
-                if (empty || !slice?.key) return;
-                const key = slice.key as EarningSource;
-                onSelect(active === key ? null : key);
+              onClick={(_slice, index) => {
+                if (empty) return;
+                const key = SOURCES[index];
+                if (key) onSelect(active === key ? null : key);
               }}
             >
               {(empty ? [{ key: "none", color: "" }] : slices).map((slice) => (
