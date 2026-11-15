@@ -1,9 +1,13 @@
 import { apiClient } from "@/lib/axios";
 import type {
   CollectionAccountSettings,
+  CoopPlatformFees,
+  EarningEntry,
+  EarningsSummary,
   FeeSettings,
   IntegrationSettings,
 } from "@/lib/settings-data";
+import type { CoopPlatformFeesFormValues } from "@/lib/validations/settings.schema";
 import type { IdGenerationType } from "@/types/cooperative";
 
 export const platformSettingsService = {
@@ -60,6 +64,42 @@ export const platformSettingsService = {
     const { data } = await apiClient.get<
       Pick<FeeSettings, "withdrawalFeeAmount" | "withdrawalFeeType">
     >("/settings/withdrawal-fee");
+    return data;
+  },
+
+  async getCoopPlatformFees(): Promise<CoopPlatformFees[]> {
+    const { data } = await apiClient.get<CoopPlatformFees[]>("/platform-fees");
+    return data;
+  },
+
+  async updateCoopPlatformFees(
+    cooperativeId: string,
+    values: CoopPlatformFeesFormValues,
+  ): Promise<CoopPlatformFees> {
+    const { data } = await apiClient.patch<CoopPlatformFees>(
+      `/platform-fees/${encodeURIComponent(cooperativeId)}`,
+      values,
+    );
+    return data;
+  },
+
+  async getEarnings(from: string, to: string): Promise<EarningsSummary> {
+    const { data } = await apiClient.get<EarningsSummary>(
+      "/platform-earnings",
+      { params: { from, to } },
+    );
+    return data;
+  },
+
+  async getCoopEarnings(
+    cooperativeId: string,
+    from: string,
+    to: string,
+  ): Promise<EarningEntry[]> {
+    const { data } = await apiClient.get<EarningEntry[]>(
+      `/platform-earnings/${encodeURIComponent(cooperativeId)}`,
+      { params: { from, to } },
+    );
     return data;
   },
 

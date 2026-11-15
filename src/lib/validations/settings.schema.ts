@@ -35,9 +35,25 @@ export const feeChargesSchema = z.object({
   loansChargeAmount: z.number().min(0, "Enter an amount of 0 or more"),
   withdrawalFeeType: z.enum(["Fixed", "Percentage"]),
   withdrawalFeeAmount: z.number().min(0, "Enter an amount of 0 or more"),
+  loanApplicationFeePercent: z
+    .number({ message: "Enter a percentage from 0 to 100" })
+    .min(0, "Enter a percentage from 0 to 100")
+    .max(100, "Enter a percentage from 0 to 100"),
+  subscriptionGraceDays: z
+    .number({ message: "Enter 0 or more days" })
+    .int("Enter whole days")
+    .min(0, "Enter 0 or more days")
+    .max(365, "The grace period can be at most 365 days"),
 });
 
 export type FeeChargesFormValues = z.infer<typeof feeChargesSchema>;
+
+/** The platform's fees from one co-operative (no grace period: that's platform-wide). */
+export const coopPlatformFeesSchema = feeChargesSchema.omit({
+  subscriptionGraceDays: true,
+});
+
+export type CoopPlatformFeesFormValues = z.infer<typeof coopPlatformFeesSchema>;
 
 export const collectionAccountSchema = z.object({
   bankCode: z.string().trim().min(1, "Select a bank"),

@@ -14,6 +14,61 @@ export interface FeeSettings {
    */
   withdrawalFeeType: ChargeType;
   withdrawalFeeAmount: number;
+  /** Platform's % of every loan application fee (default for new co-ops). */
+  loanApplicationFeePercent: number;
+  /** Days a co-op keeps working after its subscription expires. */
+  subscriptionGraceDays: number;
+}
+
+/** The platform's fees from one co-operative, set by the super admin. */
+export interface CoopPlatformFees {
+  cooperativeId: string;
+  cooperativeName: string;
+  status: string;
+  savingsChargeType: ChargeType;
+  savingsChargeAmount: number;
+  loansChargeType: ChargeType;
+  loansChargeAmount: number;
+  withdrawalFeeType: ChargeType;
+  withdrawalFeeAmount: number;
+  loanApplicationFeePercent: number;
+}
+
+export type EarningSource =
+  "SavingsCharge" | "LoanCharge" | "WithdrawalFee" | "LoanApplicationFee";
+
+export const EARNING_SOURCE_LABELS: Record<EarningSource, string> = {
+  SavingsCharge: "Savings charge",
+  LoanCharge: "Loan charge",
+  WithdrawalFee: "Withdrawal fee",
+  LoanApplicationFee: "Loan application fee",
+};
+
+export interface CoopEarnings {
+  cooperativeId: string;
+  cooperativeName: string;
+  total: number;
+  count: number;
+  bySource: Record<EarningSource, number>;
+}
+
+export interface EarningsSummary {
+  from: string;
+  to: string;
+  total: number;
+  bySource: Record<EarningSource, number>;
+  cooperatives: CoopEarnings[];
+}
+
+export interface EarningEntry {
+  id: string;
+  source: EarningSource;
+  memberId: string | null;
+  memberName: string | null;
+  baseAmount: number;
+  amount: number;
+  reference: string;
+  createdAt: string;
 }
 
 export interface CollectionAccountSettings {

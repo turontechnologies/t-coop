@@ -58,6 +58,8 @@ function FeesChargesFormBody({
   const loansTypeId = useId();
   const withdrawalFeeTypeId = useId();
   const withdrawalFeeAmountId = useId();
+  const loanFeePercentId = useId();
+  const graceDaysId = useId();
 
   const {
     control,
@@ -88,6 +90,16 @@ function FeesChargesFormBody({
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
+      <div className="space-y-1">
+        <h3 className="text-base font-semibold text-foreground">
+          Defaults for new co-operatives
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          A new co-operative starts with these platform fees. Change any
+          co-operative&apos;s own fees under &ldquo;Fees per co-operative&rdquo;
+          below.
+        </p>
+      </div>
       {/* One shared grid for both rows so the Charge Type / Amount columns
           line up — two separate grids would size their "auto" columns
           independently and drift out of alignment. */}
@@ -143,8 +155,8 @@ function FeesChargesFormBody({
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Loans Charges</p>
           <p className="text-xs text-muted-foreground">
-            Configure how much to charge each member for savings and
-            contributions
+            The platform&apos;s cut of every loan, taken from the amount paid
+            out to the member
           </p>
         </div>
         <div className="space-y-2">
@@ -238,6 +250,60 @@ function FeesChargesFormBody({
             {...register("withdrawalFeeAmount", { valueAsNumber: true })}
           />
           <FieldError message={errors.withdrawalFeeAmount?.message} />
+        </div>
+
+        <div className="h-px bg-border sm:col-span-3" />
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Loan Application Fee
+          </p>
+          <p className="text-xs text-muted-foreground">
+            The platform&apos;s percentage of every loan application fee a
+            co-operative collects. Members pay the co-op&apos;s fee as set; this
+            is the platform&apos;s share of it.
+          </p>
+        </div>
+        <div className="hidden sm:block" />
+        <div className="space-y-2">
+          <Label htmlFor={loanFeePercentId}>Platform Share %</Label>
+          <Input
+            id={loanFeePercentId}
+            type="number"
+            inputMode="decimal"
+            placeholder="0"
+            className="h-11 w-32"
+            aria-invalid={!!errors.loanApplicationFeePercent}
+            {...register("loanApplicationFeePercent", { valueAsNumber: true })}
+          />
+          <FieldError message={errors.loanApplicationFeePercent?.message} />
+        </div>
+
+        <div className="h-px bg-border sm:col-span-3" />
+
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Subscription Grace Period
+          </p>
+          <p className="text-xs text-muted-foreground">
+            How many days a co-operative can keep working after its subscription
+            expires, before it is locked. Applies to every co-operative. 0 locks
+            it the day after expiry.
+          </p>
+        </div>
+        <div className="hidden sm:block" />
+        <div className="space-y-2">
+          <Label htmlFor={graceDaysId}>Days</Label>
+          <Input
+            id={graceDaysId}
+            type="number"
+            inputMode="numeric"
+            placeholder="0"
+            className="h-11 w-32"
+            aria-invalid={!!errors.subscriptionGraceDays}
+            {...register("subscriptionGraceDays", { valueAsNumber: true })}
+          />
+          <FieldError message={errors.subscriptionGraceDays?.message} />
         </div>
       </div>
 
