@@ -1,29 +1,26 @@
 "use client";
 
-import { useId } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, useForm } from "react-hook-form";
-import { Loader2, TriangleAlert } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Loader2, RotateCcw, Sparkles } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import {
+  EASE,
+  FEE_ORDER,
+  FeeTile,
+  GraceTile,
+} from "@/components/features/settings/payment-ui";
 import { useFeeSettings, useUpdateFeeSettings } from "@/hooks/use-fee-settings";
+import type { FeeSettings } from "@/lib/settings-data";
 import {
   feeChargesSchema,
   type FeeChargesFormValues,
 } from "@/lib/validations/settings.schema";
 
-const CHARGE_TYPES = ["Fixed", "Percentage"] as const;
-
+/** Super admin: the platform fees and grace period a newly created co-operative starts with. */
 export function FeesChargesForm() {
   const {
     data: feeSettings,
@@ -48,25 +45,13 @@ export function FeesChargesForm() {
   );
 }
 
-function FeesChargesFormBody({
-  feeSettings,
-}: {
-  feeSettings: FeeChargesFormValues;
-}) {
+function FeesChargesFormBody({ feeSettings }: { feeSettings: FeeSettings }) {
   const updateFeeSettings = useUpdateFeeSettings();
-  const savingsTypeId = useId();
-  const loansTypeId = useId();
-  const withdrawalFeeTypeId = useId();
-  const withdrawalFeeAmountId = useId();
-  const loanFeePercentId = useId();
-  const graceDaysId = useId();
-
   const {
     control,
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isDirty },
   } = useForm<FeeChargesFormValues>({
     resolver: zodResolver(feeChargesSchema),
@@ -77,9 +62,11 @@ function FeesChargesFormBody({
     try {
       await updateFeeSettings.mutateAsync(values);
       reset(values);
-      toast.success("Fees & charges saved");
+      toast.success("Defaults saved", {
+        description: "New co-operatives will start with these fees.",
+      });
     } catch (error) {
-      toast.error("Couldn't save fees & charges", {
+      toast.error("Couldn't save the defaults", {
         description:
           error instanceof Error ? error.message : "Please try again.",
       });
@@ -89,254 +76,84 @@ function FeesChargesFormBody({
   const saving = updateFeeSettings.isPending;
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-6">
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold text-foreground">
-          Defaults for new co-operatives
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          A new co-operative starts with these platform fees. Change any
-          co-operative&apos;s own fees under &ldquo;Fees per co-operative&rdquo;
-          below.
-        </p>
-      </div>
-      {/* One shared grid for both rows so the Charge Type / Amount columns
-          line up — two separate grids would size their "auto" columns
-          independently and drift out of alignment. */}
-      <div className="grid grid-cols-1 items-start gap-x-4 gap-y-6 sm:grid-cols-[1fr_auto_auto]">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">Savings Charges</p>
-          <p className="text-xs text-muted-foreground">
-            The platform&apos;s cut of every savings deposit, on top of the
-            co-op&apos;s own charge
+    <form onSubmit={onSubmit} noValidate className="space-y-5">
+      <div className="flex items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:text-emerald-300">
+          <Sparkles className="size-5" aria-hidden="true" />
+        </span>
+        <div className="space-y-0.5">
+          <h3 className="text-base font-semibold text-foreground">
+            Defaults for new co-operatives
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Every new co-operative starts with these. Change one
+            co-operative&apos;s own fees in &ldquo;Fees per co-operative&rdquo;
+            below.
           </p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={savingsTypeId}>Charge Type</Label>
-          <Controller
-            control={control}
-            name="savingsChargeType"
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={(value) =>
-                  field.onChange(value as (typeof CHARGE_TYPES)[number])
-                }
-              >
-                <SelectTrigger id={savingsTypeId} className="h-11 w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHARGE_TYPES.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Amount</Label>
-          <Input
-            type="number"
-            inputMode="decimal"
-            placeholder="Enter"
-            className="h-11 w-32"
-            aria-invalid={!!errors.savingsChargeAmount}
-            {...register("savingsChargeAmount", { valueAsNumber: true })}
-          />
-          <FieldError message={errors.savingsChargeAmount?.message} />
-        </div>
-
-        <div className="h-px bg-border sm:col-span-3" />
-
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">Loans Charges</p>
-          <p className="text-xs text-muted-foreground">
-            The platform&apos;s cut of every loan, taken from the amount paid
-            out to the member
-          </p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={loansTypeId}>Charge Type</Label>
-          <Controller
-            control={control}
-            name="loansChargeType"
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={(value) =>
-                  field.onChange(value as (typeof CHARGE_TYPES)[number])
-                }
-              >
-                <SelectTrigger id={loansTypeId} className="h-11 w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHARGE_TYPES.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Amount</Label>
-          <Input
-            type="number"
-            inputMode="decimal"
-            placeholder="Enter"
-            className="h-11 w-32"
-            aria-invalid={!!errors.loansChargeAmount}
-            {...register("loansChargeAmount", { valueAsNumber: true })}
-          />
-          <FieldError message={errors.loansChargeAmount?.message} />
-        </div>
-
-        <div className="h-px bg-border sm:col-span-3" />
-
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">Withdrawal Fee</p>
-          <p className="text-xs text-muted-foreground">
-            The platform&apos;s cut of every member withdrawal — stacked on top
-            of each co-op&apos;s own withdrawal fee, and shown to the member
-            before they confirm.
-          </p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={withdrawalFeeTypeId}>Fee Type</Label>
-          <Controller
-            control={control}
-            name="withdrawalFeeType"
-            render={({ field }) => (
-              <Select
-                value={field.value}
-                onValueChange={(value) =>
-                  field.onChange(value as (typeof CHARGE_TYPES)[number])
-                }
-              >
-                <SelectTrigger id={withdrawalFeeTypeId} className="h-11 w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHARGE_TYPES.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={withdrawalFeeAmountId}>
-            {watch("withdrawalFeeType") === "Fixed"
-              ? "Platform Fee Amount"
-              : "Platform Fee %"}
-          </Label>
-          <Input
-            id={withdrawalFeeAmountId}
-            type="number"
-            inputMode="decimal"
-            placeholder="Enter amount"
-            className="h-11 w-32"
-            aria-invalid={!!errors.withdrawalFeeAmount}
-            {...register("withdrawalFeeAmount", { valueAsNumber: true })}
-          />
-          <FieldError message={errors.withdrawalFeeAmount?.message} />
-        </div>
-
-        <div className="h-px bg-border sm:col-span-3" />
-
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">
-            Loan Application Fee
-          </p>
-          <p className="text-xs text-muted-foreground">
-            The platform&apos;s percentage of every loan application fee a
-            co-operative collects. Members pay the co-op&apos;s fee as set; this
-            is the platform&apos;s share of it.
-          </p>
-        </div>
-        <div className="hidden sm:block" />
-        <div className="space-y-2">
-          <Label htmlFor={loanFeePercentId}>Platform Share %</Label>
-          <Input
-            id={loanFeePercentId}
-            type="number"
-            inputMode="decimal"
-            placeholder="0"
-            className="h-11 w-32"
-            aria-invalid={!!errors.loanApplicationFeePercent}
-            {...register("loanApplicationFeePercent", { valueAsNumber: true })}
-          />
-          <FieldError message={errors.loanApplicationFeePercent?.message} />
-        </div>
-
-        <div className="h-px bg-border sm:col-span-3" />
-
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">
-            Subscription Grace Period
-          </p>
-          <p className="text-xs text-muted-foreground">
-            How many days a co-operative can keep working after its subscription
-            expires, before it is locked. Applies to every co-operative. 0 locks
-            it the day after expiry.
-          </p>
-        </div>
-        <div className="hidden sm:block" />
-        <div className="space-y-2">
-          <Label htmlFor={graceDaysId}>Days</Label>
-          <Input
-            id={graceDaysId}
-            type="number"
-            inputMode="numeric"
-            placeholder="0"
-            className="h-11 w-32"
-            aria-invalid={!!errors.subscriptionGraceDays}
-            {...register("subscriptionGraceDays", { valueAsNumber: true })}
-          />
-          <FieldError message={errors.subscriptionGraceDays?.message} />
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => reset(feeSettings)}
-          disabled={saving}
-        >
-          Reset
-        </Button>
-        <Button type="submit" disabled={saving || !isDirty}>
-          {saving ? (
-            <>
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              Saving…
-            </>
-          ) : (
-            "Save Changes"
-          )}
-        </Button>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {FEE_ORDER.map((fee, index) => (
+          <FeeTile
+            key={fee}
+            fee={fee}
+            index={index}
+            control={control}
+            register={register}
+            errors={errors}
+          />
+        ))}
+        <div className="md:col-span-2">
+          <GraceTile
+            control={control}
+            errors={errors}
+            index={FEE_ORDER.length}
+            description="How long a new co-operative keeps working after its subscription runs out. Each co-operative can then have its own."
+          />
+        </div>
       </div>
+
+      <AnimatePresence>
+        {isDirty ? (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-card/95 p-3 pl-4 shadow-raised backdrop-blur"
+          >
+            <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <span className="size-2 animate-pulse rounded-full bg-amber-500" />
+              You have unsaved changes
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => reset(feeSettings)}
+                disabled={saving}
+              >
+                <RotateCcw className="size-4" aria-hidden="true" />
+                Undo
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2
+                      className="size-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Saving…
+                  </>
+                ) : (
+                  "Save defaults"
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </form>
-  );
-}
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return (
-    <p className="flex items-center gap-1.5 text-sm text-destructive">
-      <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-      {message}
-    </p>
   );
 }
