@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
@@ -34,6 +34,16 @@ export function DashboardShell({
   const { data: branding } = useCooperativeBranding(
     showCoopBranding ? member.cooperativeId : null,
   );
+
+  // The super admin gets the platform console palette everywhere (see globals.css). It's set on
+  // <html> so dialogs and menus rendered outside this tree pick it up too.
+  const isConsole = member.role === "super_admin";
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isConsole) root.setAttribute("data-console", "");
+    else root.removeAttribute("data-console");
+    return () => root.removeAttribute("data-console");
+  }, [isConsole]);
 
   const handleLogout = () => {
     setMobileOpen(false);

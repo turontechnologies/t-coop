@@ -144,6 +144,103 @@
   --sidebar-ring: #10b981;
 }
 
+/* ── Platform console (super admin only) ──────────────────────────────────────
+ * DashboardShell sets data-console on <html> while a super admin is signed in, so every page,
+ * dialog, sheet and menu they see switches from the co-operative green to the console's own
+ * midnight-navy, ivory and gold. Co-op admins and members never get this attribute. */
+html[data-console] {
+  --background: #f7f5ef;
+  --foreground: #0d1226;
+  --card: #ffffff;
+  --card-foreground: #0d1226;
+  --popover: #ffffff;
+  --popover-foreground: #0d1226;
+  --primary: #121a38;
+  --primary-foreground: #ffffff;
+  --brand: #121a38;
+  --brand-foreground: #ffffff;
+  --secondary: #f0ede4;
+  --secondary-foreground: #0d1226;
+  --muted: #f1eee6;
+  --muted-foreground: #696a74;
+  --accent: #fbf3dd;
+  --accent-foreground: #8a5d0b;
+  --border: #e8e3d6;
+  --input: #ddd7c8;
+  --ring: #c99a2e;
+  --chart-1: #121a38;
+  --chart-2: #d4a23a;
+  --chart-3: #6366f1;
+  --chart-4: #94a3b8;
+  --chart-5: #e5dcc4;
+  --shadow-card:
+    0 1px 2px rgb(18 26 56 / 0.04), 0 3px 10px -3px rgb(18 26 56 / 0.08);
+  --shadow-raised:
+    0 2px 4px rgb(18 26 56 / 0.05), 0 16px 36px -10px rgb(18 26 56 / 0.2);
+  --sidebar: #0b1024;
+  --sidebar-foreground: #f4f1e8;
+  --sidebar-primary: #e2b65a;
+  --sidebar-primary-foreground: #1b1404;
+  --sidebar-accent: rgba(226, 182, 90, 0.1);
+  --sidebar-accent-foreground: #f6e3b4;
+  --sidebar-border: rgba(226, 182, 90, 0.14);
+  --sidebar-ring: #e2b65a;
+  --console-gold: #e2b65a;
+}
+
+html.dark[data-console] {
+  --background: #060915;
+  --foreground: #eef0f7;
+  --card: #0c1124;
+  --card-foreground: #eef0f7;
+  --popover: #0e142a;
+  --popover-foreground: #eef0f7;
+  --primary: #e2b65a;
+  --primary-foreground: #1b1404;
+  --brand: #e2b65a;
+  --brand-foreground: #1b1404;
+  --secondary: #141a33;
+  --secondary-foreground: #eef0f7;
+  --muted: #121831;
+  --muted-foreground: #9198b0;
+  --accent: #1d1a10;
+  --accent-foreground: #f2cf7e;
+  --border: rgba(226, 182, 90, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #e2b65a;
+  --chart-1: #e2b65a;
+  --chart-2: #818cf8;
+  --chart-3: #94a3b8;
+  --chart-4: #64748b;
+  --chart-5: #334155;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 0 0 1px rgb(226 182 90 / 0.05);
+  --shadow-raised:
+    0 14px 36px -10px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(226 182 90 / 0.09);
+  --sidebar: #05080f;
+}
+
+/* The console's signature surface: midnight navy with a warm gold glow. */
+@utility bg-console {
+  background-color: #0b1024;
+  background-image:
+    radial-gradient(70% 90% at 0% 0%, rgb(226 182 90 / 0.22), transparent 60%),
+    radial-gradient(
+      60% 80% at 100% 100%,
+      rgb(99 102 241 / 0.25),
+      transparent 60%
+    ),
+    linear-gradient(135deg, #0b1024 0%, #121a38 55%, #1a2350 100%);
+}
+
+/* A gold edge for console cards and the sidebar. */
+@utility border-gold {
+  border-color: rgb(226 182 90 / 0.35);
+}
+
+@utility text-gold {
+  color: #e2b65a;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
