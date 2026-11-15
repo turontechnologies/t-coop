@@ -107,8 +107,8 @@ function FeesChargesFormBody({
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">Savings Charges</p>
           <p className="text-xs text-muted-foreground">
-            Configure how much to charge each member for savings and
-            contributions
+            The platform&apos;s cut of every savings deposit, on top of the
+            co-op&apos;s own charge
           </p>
         </div>
         <div className="space-y-2">
