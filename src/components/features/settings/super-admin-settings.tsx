@@ -194,7 +194,7 @@ export function SuperAdminSettings({
                       className={cn(
                         "relative ml-auto hidden size-4 shrink-0 transition-all lg:block",
                         selected
-                          ? "translate-x-0 text-primary opacity-100 dark:text-emerald-300"
+                          ? "translate-x-0 text-primary opacity-100"
                           : "-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-60",
                       )}
                       aria-hidden="true"

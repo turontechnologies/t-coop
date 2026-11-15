@@ -144,7 +144,7 @@ export function CoopPlatformFeesSection() {
     <section className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/12 text-sky-700 dark:text-sky-300">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 text-amber-700 dark:text-amber-300">
             <Building2 className="size-5" aria-hidden="true" />
           </span>
           <div className="space-y-0.5">
