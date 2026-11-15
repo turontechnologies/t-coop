@@ -41,6 +41,8 @@ export interface CoopPlatformFees {
   /** Last day it can still work (expiry + grace days). */
   graceEndsAt: string | null;
   inGracePeriod: boolean;
+  /** True when the co-op has connected its own payment gateway. */
+  onlinePayments: boolean;
 }
 
 export type EarningSource =

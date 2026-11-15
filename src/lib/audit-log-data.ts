@@ -41,4 +41,28 @@ export interface AuditLogEntry {
   location: string;
   /** The public IP the location was resolved from, same lifecycle as `location`. */
   ipAddress: string;
+  /** The actor's co-operative; null for platform accounts. */
+  cooperative?: string | null;
+}
+
+export interface AuditLogFilters {
+  q?: string;
+  module?: string;
+  status?: string;
+  role?: string;
+  cooperativeId?: string;
+  /** YYYY-MM-DD */
+  from?: string;
+  to?: string;
+}
+
+export interface AuditLogPage {
+  content: AuditLogEntry[];
+  /** Zero-based. */
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  stats: { total: number; today: number; failedToday: number };
+  modules: string[];
 }
