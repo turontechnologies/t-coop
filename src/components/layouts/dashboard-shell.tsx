@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
+import { ConsolePageBanner } from "@/components/layouts/console-page-banner";
 import { ConsoleSidebar } from "@/components/layouts/console-sidebar";
 import { DashboardSidebar } from "@/components/layouts/dashboard-sidebar";
 import { DashboardTopbar } from "@/components/layouts/dashboard-topbar";
@@ -125,6 +126,7 @@ export function DashboardShell({
           </div>
         ) : null}
         <main className="w-full flex-1 animate-fade-in px-4 pb-12 sm:px-6 lg:px-8">
+          {isConsole ? <ConsolePageBanner /> : null}
           {children}
         </main>
       </div>

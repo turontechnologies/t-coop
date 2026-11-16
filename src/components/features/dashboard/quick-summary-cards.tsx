@@ -22,18 +22,32 @@ const TONE_CLASSES: Record<SummaryCard["tone"], string> = {
   amber: "bg-amber-500/10 text-amber-600 dark:text-amber-300",
 };
 
+/** The super admin's platform console: green-and-gold medallions, matching the command centre. */
+const CONSOLE_MEDALLIONS = [
+  "bg-gradient-to-br from-emerald-500 to-emerald-700 text-white",
+  "bg-gradient-to-br from-[#f6dc9a] to-[#c9932c] text-[#1b1404]",
+  "bg-gradient-to-br from-teal-500 to-emerald-800 text-white",
+  "bg-gradient-to-br from-amber-300 to-amber-600 text-[#1b1404]",
+];
+
 interface QuickSummaryCardsProps {
   cards: SummaryCard[];
+  /** "console" is the super admin's look; everyone else gets the default. */
+  variant?: "default" | "console";
 }
 
-export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
+export function QuickSummaryCards({
+  cards,
+  variant = "default",
+}: QuickSummaryCardsProps) {
   const router = useRouter();
   const times = useTimesLabel();
   const [selectedLoanTypeId, setSelectedLoanTypeId] = useState("");
+  const isConsole = variant === "console";
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((card) => {
+      {cards.map((card, index) => {
         const selectedEligibility =
           card.loanEligibilityByType?.find(
             (eligibility) => eligibility.loanTypeId === selectedLoanTypeId,
@@ -42,14 +56,29 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
         return (
           <Card
             key={card.label}
-            className="transition-shadow duration-300 hover:shadow-raised"
+            className={cn(
+              "transition-all duration-300 hover:shadow-raised",
+              isConsole &&
+                "group relative overflow-hidden rounded-3xl hover:-translate-y-0.5",
+            )}
           >
-            <CardContent className="flex h-full flex-col gap-4">
+            {isConsole ? (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-14 -right-14 size-36 rounded-full bg-[#e2b65a] opacity-[0.07] blur-2xl transition-opacity duration-300 group-hover:opacity-20"
+              />
+            ) : null}
+            <CardContent className="relative flex h-full flex-col gap-4">
               <div className="flex items-center justify-between gap-3">
                 <span
                   className={cn(
                     "flex size-11 shrink-0 items-center justify-center rounded-xl",
-                    TONE_CLASSES[card.tone],
+                    isConsole
+                      ? cn(
+                          "rounded-2xl shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6",
+                          CONSOLE_MEDALLIONS[index % CONSOLE_MEDALLIONS.length],
+                        )
+                      : TONE_CLASSES[card.tone],
                   )}
                 >
                   <card.icon className="size-5" aria-hidden="true" />
@@ -113,7 +142,12 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                     )}
                   </div>
                 ) : (
-                  <p className="truncate text-2xl font-semibold tracking-tight text-foreground tabular-nums sm:text-[1.7rem]">
+                  <p
+                    className={cn(
+                      "truncate text-2xl tracking-tight text-foreground tabular-nums sm:text-[1.7rem]",
+                      isConsole ? "font-bold" : "font-semibold",
+                    )}
+                  >
                     {card.value}
                   </p>
                 )}
@@ -129,7 +163,11 @@ export function QuickSummaryCards({ cards }: QuickSummaryCardsProps) {
                   onClick={() =>
                     card.actionHref ? router.push(card.actionHref) : undefined
                   }
-                  className="group/action inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80 dark:text-emerald-400"
+                  className={cn(
+                    "group/action inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80",
+                    // The console's dark theme makes primary gold, so it needs no green override.
+                    !isConsole && "dark:text-emerald-400",
+                  )}
                 >
                   {card.action}
                   <ArrowRight

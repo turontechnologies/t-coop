@@ -2,6 +2,7 @@
 
 import { QuickSummaryCards } from "@/components/features/dashboard/quick-summary-cards";
 import { SuperAdminCommandCentre } from "@/components/features/dashboard/super-admin-dashboard";
+import { ConsoleRecentActivity } from "@/components/features/dashboard/console-recent-activity";
 import { ActivityChart } from "@/components/features/dashboard/activity-chart";
 import { RecentActivities } from "@/components/features/dashboard/recent-activities";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -71,15 +72,19 @@ export default function DashboardPage() {
     );
   }
 
+  // Same components for everyone; the super admin gets their console variant.
+  const variant = member.role === "super_admin" ? "console" : "default";
+
   return (
     <div className="space-y-6 pt-8">
       {header}
-      {member.role === "super_admin" ? (
-        <h3 className="pt-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+      {variant === "console" ? (
+        <h3 className="flex items-center gap-2 pt-2 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+          <span className="h-px w-4 bg-[#c99a2e]/60" aria-hidden="true" />
           Across the platform
         </h3>
       ) : null}
-      <QuickSummaryCards cards={data.cards} />
+      <QuickSummaryCards cards={data.cards} variant={variant} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -88,9 +93,14 @@ export default function DashboardPage() {
             series={data.chartSeries}
             activityRate={data.activityRate}
             activityLabel={data.activityLabel}
+            variant={variant}
           />
         </div>
-        <RecentActivities activities={data.recentActivity} />
+        {variant === "console" ? (
+          <ConsoleRecentActivity activities={data.recentActivity} />
+        ) : (
+          <RecentActivities activities={data.recentActivity} />
+        )}
       </div>
     </div>
   );
