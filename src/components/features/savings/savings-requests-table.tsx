@@ -216,6 +216,14 @@ export function SavingsRequestsTable({
                           {request.feePercent}% fee)
                         </span>
                       ) : null}
+                      {request.balanceBefore != null &&
+                      request.balanceAfter != null &&
+                      request.status !== "Declined" ? (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          Savings {formatMoney(request.balanceBefore, currency)}{" "}
+                          → {formatMoney(request.balanceAfter, currency)}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {formatTimeAgo(request.requestedAt)}

@@ -76,6 +76,9 @@ export interface SavingsRequest {
   payoutMethod?: "Online" | "Transfer" | "Cheque" | "Cash";
   payoutReference?: string;
   payoutReceiptUrl?: string;
+  /** Savings before and after (waiting: now, and once approved). */
+  balanceBefore?: number;
+  balanceAfter?: number;
   /**
    * Withdrawal-only: the combined co-op + platform fee percentage, locked
    * in at request time (a later settings change shouldn't retroactively

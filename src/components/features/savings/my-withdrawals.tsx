@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckCircle2, Clock, Receipt, XCircle } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Receipt,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
@@ -22,6 +28,8 @@ const EXPORT_COLUMNS: ExportColumn<SavingsRequest>[] = [
   { header: "Savings Type", accessor: (r) => r.savingsType },
   { header: "Amount", accessor: (r) => r.amount },
   { header: "You Receive", accessor: (r) => r.netAmount ?? r.amount },
+  { header: "Savings Before", accessor: (r) => r.balanceBefore ?? "" },
+  { header: "Savings After", accessor: (r) => r.balanceAfter ?? "" },
   { header: "Status", accessor: (r) => r.status },
   {
     header: "How It Was Paid",
@@ -132,6 +140,32 @@ export function MyWithdrawalsCard({
                         ? ` · you receive ${formatMoney(request.netAmount, currency)} after the fee`
                         : ""}
                     </p>
+                    {request.balanceBefore != null &&
+                    request.balanceAfter != null &&
+                    request.status !== "Declined" ? (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-xs">
+                        <span className="text-muted-foreground">
+                          {request.status === "Pending"
+                            ? "You have now"
+                            : "Before"}
+                        </span>
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {formatMoney(request.balanceBefore, currency)}
+                        </span>
+                        <ArrowRight
+                          className="size-3.5 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                        <span className="text-muted-foreground">
+                          {request.status === "Pending"
+                            ? "After it is approved"
+                            : "After"}
+                        </span>
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {formatMoney(request.balanceAfter, currency)}
+                        </span>
+                      </div>
+                    ) : null}
                     {request.status === "Approved" ? (
                       <p className="text-xs text-success">
                         {request.payoutMethod

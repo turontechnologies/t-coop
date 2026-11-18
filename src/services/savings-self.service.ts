@@ -87,6 +87,8 @@ interface SavingsRequestDto {
   payoutMethod?: "Online" | "Transfer" | "Cheque" | "Cash" | null;
   payoutReference?: string | null;
   payoutReceiptUrl?: string | null;
+  balanceBefore?: number | null;
+  balanceAfter?: number | null;
 }
 
 function fromRequestDto(dto: SavingsRequestDto): SavingsRequest {
@@ -105,6 +107,8 @@ function fromRequestDto(dto: SavingsRequestDto): SavingsRequest {
     payoutMethod: dto.payoutMethod ?? undefined,
     payoutReference: dto.payoutReference ?? undefined,
     payoutReceiptUrl: dto.payoutReceiptUrl ?? undefined,
+    balanceBefore: dto.balanceBefore ?? undefined,
+    balanceAfter: dto.balanceAfter ?? undefined,
     feePercent: dto.feePercent ?? undefined,
     feeAmount: dto.feeAmount ?? undefined,
     netAmount: dto.netAmount ?? undefined,
