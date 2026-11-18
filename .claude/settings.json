@@ -118,7 +118,8 @@
       "Bash(curl -s -o /dev/null -w \"backend %{http_code}\\\\n\" http://localhost:8080/actuator/health)",
       "Bash(node \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/fee-flow-test.mjs\")",
       "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_fee_type.py\")",
-      "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_settings_fee.py\")"
+      "Bash(python \"C:/Users/HomePC/AppData/Local/Temp/claude/8c3ca7cc6e7e5c0e/5aaae479-72c4-4c92-8ddf-86f56ea680cc/scratchpad/p_settings_fee.py\")",
+      "PowerShell($pw = \\(docker exec t-coop-backend printenv DB_PASSWORD\\); $u = \\(docker exec t-coop-backend printenv DB_USERNAME\\); docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U $u -P $pw -d tcoopdb -W -Q \"SELECT OBJECT_NAME\\(parent_object_id\\) t, name, definition FROM sys.check_constraints WHERE OBJECT_NAME\\(parent_object_id\\) IN \\('loan_repayments','savings_records','loan_records','savings_requests'\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"

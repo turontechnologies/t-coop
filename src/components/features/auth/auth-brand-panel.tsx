@@ -51,8 +51,8 @@ export function AuthBrandPanel() {
             <span className="whitespace-nowrap">co-operative</span> society
           </h1>
           <p className="text-base leading-relaxed text-white/70">
-            Savings, contributions, loans and dividends, managed with the
-            precision to meet your members&apos; expectations.
+            Savings, contributions, loans, and dividends managed with precision
+            to meet and exceed your members&rsquo; expectations.
           </p>
         </div>
 
