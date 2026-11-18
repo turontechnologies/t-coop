@@ -4,7 +4,72 @@ import type { CoopLoanRecord } from "@/lib/coop-data";
 
 export interface NextInstallment {
   installmentNumber: number;
+  /** For `count` installments (1 unless more were asked for). */
   amount: number;
+  count: number;
+  remainingInstallments: number;
+  installmentAmount: number;
+  /** A bank-transfer repayment is waiting for the co-op to confirm. */
+  pendingClaim: boolean;
+}
+
+/** A repayment the borrower made by bank transfer, waiting for (or past) the co-op's check. */
+export interface TransferClaim {
+  id: string;
+  loanId: string;
+  memberId: string;
+  memberName: string;
+  loanTypeName: string;
+  installments: number;
+  amount: number;
+  receiptUrl: string;
+  transferReference: string | null;
+  paidOn: string;
+  note: string | null;
+  status: "Pending" | "Confirmed" | "Rejected";
+  submittedAt: string;
+  decidedAt: string | null;
+  decidedByName: string | null;
+  rejectionReason: string | null;
+}
+
+export interface TransferClaimPayload {
+  installments: number;
+  receiptUrl: string;
+  transferReference?: string;
+  paidOn?: string;
+  note?: string;
+}
+
+export interface BulkRepaymentRow {
+  row: number;
+  memberId: string;
+  loanType?: string;
+  loanId?: string;
+  amount: number;
+  date?: string;
+}
+
+export interface BulkRepaymentLine {
+  row: number;
+  memberId: string;
+  memberName: string;
+  loanType: string;
+  loanId: string;
+  amount: number;
+  installments: number;
+  fromInstallment: number;
+  totalInstallments: number;
+  date: string;
+  completesLoan: boolean;
+}
+
+export interface BulkResult<TLine> {
+  dryRun: boolean;
+  imported: number;
+  totalAmount: number;
+  lines: TLine[];
+  errors: { row: number; message: string }[];
 }
 
 export interface InitializeRepaymentResult {
@@ -20,7 +85,8 @@ export interface LoanRepaymentRecord {
   loanId: string;
   installmentNumber: number;
   amount: number;
-  method: CoopPaymentGateway | "Manual Upload";
+  method:
+    CoopPaymentGateway | "Manual Upload" | "Bank Transfer" | "Bulk Upload";
   transactionId: string;
   date: string;
   status: "Success";
@@ -45,9 +111,71 @@ export const loanRepaymentService = {
   async getNextInstallment(
     coopId: string,
     loanId: string,
+    count = 1,
   ): Promise<NextInstallment> {
     const { data } = await apiClient.get<NextInstallment>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/next`,
+      { params: count > 1 ? { count } : undefined },
+    );
+    return data;
+  },
+
+  async submitTransferClaim(
+    coopId: string,
+    loanId: string,
+    payload: TransferClaimPayload,
+  ): Promise<TransferClaim> {
+    const { data } = await apiClient.post<TransferClaim>(
+      `/cooperatives/${coopId}/loans/${loanId}/repayments/transfer-claims`,
+      payload,
+    );
+    return data;
+  },
+
+  async loanTransferClaims(
+    coopId: string,
+    loanId: string,
+  ): Promise<TransferClaim[]> {
+    const { data } = await apiClient.get<TransferClaim[]>(
+      `/cooperatives/${coopId}/loans/${loanId}/repayments/transfer-claims`,
+    );
+    return data;
+  },
+
+  async coopTransferClaims(
+    coopId: string,
+    status?: TransferClaim["status"],
+  ): Promise<TransferClaim[]> {
+    const { data } = await apiClient.get<TransferClaim[]>(
+      `/cooperatives/${coopId}/loans/repayment-claims`,
+      { params: status ? { status } : undefined },
+    );
+    return data;
+  },
+
+  async decideTransferClaim(
+    coopId: string,
+    claimId: string,
+    decision: "Confirmed" | "Rejected",
+    reason?: string,
+  ): Promise<TransferClaim> {
+    const { data } = await apiClient.patch<TransferClaim>(
+      `/cooperatives/${coopId}/loans/repayment-claims/${claimId}`,
+      { decision, reason: reason?.trim() || undefined },
+    );
+    return data;
+  },
+
+  /** Every row is checked first; with `dryRun` nothing is saved (the preview). */
+  async bulk(
+    coopId: string,
+    rows: BulkRepaymentRow[],
+    dryRun: boolean,
+  ): Promise<BulkResult<BulkRepaymentLine>> {
+    const { data } = await apiClient.post<BulkResult<BulkRepaymentLine>>(
+      `/cooperatives/${coopId}/loans/repayments/bulk`,
+      { rows, dryRun },
+      { validateStatus: (status) => status === 200 || status === 422 },
     );
     return data;
   },
