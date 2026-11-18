@@ -48,11 +48,19 @@ interface BulkUploadDialogProps<TRow, TLine extends { row: number }> {
   downloadTemplate: () => void;
   parseFile: (
     file: File,
-  ) => Promise<{ rows: TRow[]; errors: ImportRowError[]; skipped: number }>;
-  /** Runs the server's check (dryRun) or the real upload. */
+  ) => Promise<{ rows: TRow[]; errors: ImportRowError[]; skipped?: number }>;
+  /** Runs the check (dryRun, nothing saved) or the real upload. */
   submit: (rows: TRow[], dryRun: boolean) => Promise<BulkCheckResult<TLine>>;
   columns: BulkColumn<TLine>[];
-  formatTotal: (amount: number) => string;
+  /** Money imports show a total; leave out for imports that aren't money. */
+  formatTotal?: (amount: number) => string;
+  /** What step 1 says about the template. */
+  templateHint?: string;
+  /**
+   * true (money): any wrong row blocks the whole upload. false (members, attendance…): wrong rows
+   * are skipped and listed, the rest are imported.
+   */
+  allOrNothing?: boolean;
 }
 
 type Step =
@@ -65,7 +73,12 @@ type Step =
       skipped: number;
       result: BulkCheckResult<{ row: number }>;
     }
-  | { kind: "done"; imported: number; total: number };
+  | {
+      kind: "done";
+      imported: number;
+      total: number;
+      skipped: ImportRowError[];
+    };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TRowAny = any;
@@ -86,6 +99,8 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
   submit,
   columns,
   formatTotal,
+  templateHint = "It's already filled in. Just type the amounts; rows left empty are skipped.",
+  allOrNothing = true,
 }: BulkUploadDialogProps<TRow, TLine>) {
   const [step, setStep] = useState<Step>({ kind: "pick" });
   const [problem, setProblem] = useState<string | null>(null);
@@ -114,7 +129,7 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
       if (parsed.rows.length === 0 && parsed.errors.length === 0) {
         setStep({ kind: "pick" });
         setProblem(
-          parsed.skipped > 0
+          (parsed.skipped ?? 0) > 0
             ? "No row has an amount yet. Fill in the Amount column and upload it again."
             : "That file has no rows.",
         );
@@ -128,7 +143,7 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
         kind: "review",
         fileName: file.name,
         rows: parsed.rows,
-        skipped: parsed.skipped,
+        skipped: parsed.skipped ?? 0,
         result: {
           ...result,
           errors: [...parsed.errors, ...result.errors].sort(
@@ -150,7 +165,7 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
     setProblem(null);
     try {
       const result = await submit(step.rows as TRow[], false);
-      if (result.errors.length > 0) {
+      if (result.errors.length > 0 && (allOrNothing || result.imported === 0)) {
         setStep({
           ...step,
           result: result as BulkCheckResult<{ row: number }>,
@@ -161,9 +176,15 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
         kind: "done",
         imported: result.imported,
         total: result.totalAmount,
+        skipped: [
+          ...(allOrNothing ? [] : step.result.errors),
+          ...result.errors,
+        ],
       });
-      toast.success(`${result.imported} ${noun} rows uploaded`, {
-        description: `${formatTotal(result.totalAmount)} recorded.`,
+      toast.success(`${result.imported} ${noun} imported`, {
+        description: formatTotal
+          ? `${formatTotal(result.totalAmount)} recorded.`
+          : undefined,
       });
     } catch (error) {
       setProblem(
@@ -209,8 +230,7 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
                     Download the template
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    It&apos;s already filled in. Just type the amounts; rows
-                    left empty are skipped.
+                    {templateHint}
                   </p>
                   <Button
                     type="button"
@@ -317,17 +337,20 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
                     {review.skipped} without an amount, skipped
                   </Badge>
                 ) : null}
-                <span className="ml-auto font-semibold text-foreground tabular-nums">
-                  {formatTotal(review.result.totalAmount)}
-                </span>
+                {formatTotal ? (
+                  <span className="ml-auto font-semibold text-foreground tabular-nums">
+                    {formatTotal(review.result.totalAmount)}
+                  </span>
+                ) : null}
               </div>
 
               {errors.length > 0 ? (
                 <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3">
                   <p className="flex items-center gap-2 text-sm font-semibold text-destructive">
                     <AlertCircle className="size-4" aria-hidden="true" />
-                    Fix these rows in the file and upload it again. Nothing is
-                    saved until every row is right.
+                    {allOrNothing
+                      ? "Fix these rows in the file and upload it again. Nothing is saved until every row is right."
+                      : "These rows will be skipped. Fix them and import again, or import the rest now."}
                   </p>
                   <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-sm">
                     {errors.map((error, index) => (
@@ -401,12 +424,32 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
                 <CheckCircle2 className="size-7" aria-hidden="true" />
               </span>
               <p className="text-lg font-semibold text-foreground">
-                {step.imported} {noun} rows uploaded
+                {step.imported} {noun} imported
               </p>
-              <p className="text-sm text-muted-foreground">
-                {formatTotal(step.total)} recorded. Members can see it straight
-                away.
-              </p>
+              {formatTotal ? (
+                <p className="text-sm text-muted-foreground">
+                  {formatTotal(step.total)} recorded. Members can see it
+                  straight away.
+                </p>
+              ) : null}
+              {step.skipped.length > 0 ? (
+                <div className="mt-2 w-full rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-left">
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                    {step.skipped.length} row
+                    {step.skipped.length === 1 ? " was" : "s were"} skipped
+                  </p>
+                  <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto text-sm">
+                    {step.skipped.map((error, index) => (
+                      <li key={`${error.row}-${index}`} className="flex gap-2">
+                        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                          Row {error.row}
+                        </span>
+                        <span className="text-foreground">{error.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -443,7 +486,9 @@ export function BulkUploadDialog<TRow, TLine extends { row: number }>({
               {review ? (
                 <Button
                   disabled={
-                    uploading || errors.length > 0 || lines.length === 0
+                    uploading ||
+                    (allOrNothing && errors.length > 0) ||
+                    lines.length === 0
                   }
                   onClick={upload}
                 >

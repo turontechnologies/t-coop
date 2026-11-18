@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   ChevronDown,
   Download,
@@ -27,17 +27,41 @@ import {
   type ExportColumn,
 } from "@/lib/table-export";
 import type { ImportRowError } from "@/lib/table-import";
+import {
+  BulkUploadDialog,
+  type BulkCheckResult,
+  type BulkColumn,
+} from "@/components/features/shared/bulk-upload-dialog";
 
+/**
+ * One import flow for the whole app: Export / Import → Import opens the same dialog everywhere —
+ * download the template, upload it, see every row before anything is saved, then import.
+ */
 export interface ImportConfig<TImportRow> {
-  /** sessionStorage key remembering "template downloaded" — keep unique per feature. */
-  templateStorageKey: string;
+  /** Kept for older callers; the dialog shows the template step itself now. */
+  templateStorageKey?: string;
   downloadTemplate: () => void;
-  parseFile: (
-    file: File,
-  ) => Promise<{ rows: TImportRow[]; errors: ImportRowError[] }>;
-  onImport: (
+  parseFile: (file: File) => Promise<{
+    rows: TImportRow[];
+    errors: ImportRowError[];
+    skipped?: number;
+  }>;
+  /** Row-by-row importers: wrong rows are skipped and listed. */
+  onImport?: (
     rows: TImportRow[],
   ) => void | ImportResult | Promise<void | ImportResult>;
+  /** Server-checked imports (money): checked first, and any wrong row blocks the upload. */
+  submit?: (
+    rows: TImportRow[],
+    dryRun: boolean,
+  ) => Promise<BulkCheckResult<{ row: number }>>;
+  /** How each row looks in the preview (server lines for `submit`, parsed rows otherwise). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  columns?: BulkColumn<any>[];
+  title?: string;
+  description?: string;
+  templateHint?: string;
+  formatTotal?: (amount: number) => string;
 }
 
 export interface ImportResult {
@@ -63,26 +87,10 @@ export function ExportImportMenu<T, TImportRow = never>({
   entityLabel = "record",
   importConfig,
 }: ExportImportMenuProps<T, TImportRow>) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [templateDownloaded, setTemplateDownloaded] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
-  useEffect(() => {
-    if (!importConfig) return;
-    setTemplateDownloaded(
-      sessionStorage.getItem(importConfig.templateStorageKey) === "true",
-    );
-  }, [importConfig]);
+  const [importOpen, setImportOpen] = useState(false);
 
   const plural = (count: number) =>
     count === 1 ? entityLabel : `${entityLabel}s`;
-
-  const handleDownloadTemplate = () => {
-    if (!importConfig) return;
-    importConfig.downloadTemplate();
-    sessionStorage.setItem(importConfig.templateStorageKey, "true");
-    setTemplateDownloaded(true);
-  };
 
   const handleExport = (format: "csv" | "excel" | "pdf") => {
     if (rows.length === 0) {
@@ -103,75 +111,66 @@ export function ExportImportMenu<T, TImportRow = never>({
     });
   };
 
-  const handleFileSelected = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !importConfig) return;
-
-    let parsedRows: TImportRow[];
-    let errors: ImportRowError[];
-    try {
-      ({ rows: parsedRows, errors } = await importConfig.parseFile(file));
-    } catch {
-      toast.error("Couldn't read that file", {
-        description:
-          "Make sure it's the downloaded template (.xlsx) or a .csv exported from it.",
-      });
-      return;
-    }
-
-    if (parsedRows.length === 0) {
-      toast.error("Nothing imported", {
-        description:
-          errors[0]?.message ??
-          "The file didn't match the template — download it again and fill it in without changing the headers.",
-      });
-      return;
-    }
-
-    setIsImporting(true);
-    try {
-      const result = await importConfig.onImport(parsedRows);
-      const imported = result?.imported ?? parsedRows.length;
-      const importErrors = [...errors, ...(result?.errors ?? [])];
-
-      if (importErrors.length === 0) {
-        toast.success("Import complete", {
-          description: `${imported} ${plural(imported)} imported.`,
-        });
-      } else if (imported > 0) {
-        toast.warning("Import finished with some rows skipped", {
-          description: `${imported} imported, ${importErrors.length} skipped — row ${importErrors[0].row}: ${importErrors[0].message}${importErrors.length > 1 ? `, +${importErrors.length - 1} more` : ""}`,
-        });
-      } else {
-        toast.error("Nothing imported", {
-          description: `${importErrors.length} row${importErrors.length === 1 ? "" : "s"} skipped — row ${importErrors[0].row}: ${importErrors[0].message}`,
-        });
-      }
-    } catch (error) {
-      toast.error("Import failed", {
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setIsImporting(false);
-    }
+  /** The preview row number of a parsed row (the importers call it rowNumber or row). */
+  const rowOf = (row: TImportRow, index: number) => {
+    const record = row as unknown as { row?: number; rowNumber?: number };
+    return record.rowNumber ?? record.row ?? index + 2;
   };
+
+  const submit = async (
+    importRows: TImportRow[],
+    dryRun: boolean,
+  ): Promise<BulkCheckResult<{ row: number }>> => {
+    if (!importConfig)
+      return { totalAmount: 0, imported: 0, lines: [], errors: [] };
+    if (importConfig.submit) return importConfig.submit(importRows, dryRun);
+    if (dryRun) {
+      return {
+        totalAmount: 0,
+        imported: 0,
+        lines: importRows.map((data, index) => ({
+          row: rowOf(data, index),
+          data,
+        })),
+        errors: [],
+      };
+    }
+    const result = await importConfig.onImport?.(importRows);
+    return {
+      totalAmount: 0,
+      imported: result?.imported ?? importRows.length,
+      lines: [],
+      errors: result?.errors ?? [],
+    };
+  };
+
+  // Row-by-row importers preview the parsed rows: their own columns, or the first few fields.
+  const previewColumns: BulkColumn<{
+    row: number;
+    data?: Record<string, unknown>;
+  }>[] = importConfig?.columns ?? [
+    {
+      header: "Details",
+      cell: (line) =>
+        Object.entries(line.data ?? {})
+          .filter(
+            ([key, value]) =>
+              key !== "rowNumber" &&
+              key !== "row" &&
+              (typeof value === "string" || typeof value === "number") &&
+              String(value).length > 0,
+          )
+          .slice(0, 4)
+          .map(([, value]) => String(value))
+          .join(" · "),
+    },
+  ];
 
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              disabled={isImporting}
-            />
-          }
+          render={<Button variant="outline" size="sm" className="gap-1.5" />}
         >
           {importConfig ? (
             <Upload className="size-3.5" aria-hidden="true" />
@@ -203,18 +202,15 @@ export function ExportImportMenu<T, TImportRow = never>({
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Import</DropdownMenuLabel>
-                <DropdownMenuItem onClick={handleDownloadTemplate}>
-                  <Download className="size-4" aria-hidden="true" />
-                  Download import template
+                <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                  <Upload className="size-4" aria-hidden="true" />
+                  Import from a file…
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  disabled={!templateDownloaded}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => importConfig.downloadTemplate()}
                 >
-                  <Upload className="size-4" aria-hidden="true" />
-                  {templateDownloaded
-                    ? "Import from template"
-                    : "Import (download the template first)"}
+                  <Download className="size-4" aria-hidden="true" />
+                  Download the template
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </>
@@ -223,12 +219,25 @@ export function ExportImportMenu<T, TImportRow = never>({
       </DropdownMenu>
 
       {importConfig ? (
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls,.csv"
-          className="hidden"
-          onChange={handleFileSelected}
+        <BulkUploadDialog<TImportRow, { row: number }>
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          title={importConfig.title ?? `Import ${entityLabel}s`}
+          description={
+            importConfig.description ??
+            `Add ${entityLabel}s from a spreadsheet. You'll see every row before anything is saved.`
+          }
+          noun={plural(2)}
+          downloadTemplate={importConfig.downloadTemplate}
+          parseFile={importConfig.parseFile}
+          submit={submit}
+          columns={previewColumns}
+          formatTotal={importConfig.formatTotal}
+          templateHint={
+            importConfig.templateHint ??
+            "Fill it in without changing the column headings. Excel or CSV both work."
+          }
+          allOrNothing={Boolean(importConfig.submit)}
         />
       ) : null}
     </>
