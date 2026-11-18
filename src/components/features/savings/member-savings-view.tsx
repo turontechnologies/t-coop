@@ -13,6 +13,7 @@ import {
   type WithdrawalPayload,
 } from "@/components/features/savings/request-withdrawal-modal";
 import { SavingsRecordsTable } from "@/components/features/savings/savings-records-table";
+import { MyWithdrawalsCard } from "@/components/features/savings/my-withdrawals";
 import { useGatewayCheckout } from "@/components/features/payments/use-gateway-checkout";
 import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -187,6 +188,12 @@ export function MemberSavingsView({
           <SavingsRecordsTable records={memberRecords} />
         </CardContent>
       </Card>
+
+      <MyWithdrawalsCard
+        coopId={coopId}
+        memberId={memberId}
+        currency={currency}
+      />
 
       <AddSavingsModal
         open={addOpen}
