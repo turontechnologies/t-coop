@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileSpreadsheet, PiggyBank } from "lucide-react";
+import { PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +19,10 @@ import {
   type UploadTellerPayload,
 } from "@/components/features/savings/upload-teller-modal";
 import { SavingsRequestsTable } from "@/components/features/savings/savings-requests-table";
-import { BulkSavingsUploadDialog } from "@/components/features/savings/bulk-savings-upload";
+import { useBulkSavingsImport } from "@/components/features/savings/bulk-savings-upload";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import type { ExportColumn } from "@/lib/table-export";
+import type { CoopSavingsRecord } from "@/lib/coop-data";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import {
@@ -38,6 +41,16 @@ import type { AuthenticatedMember } from "@/types/auth";
 import { totalSaved } from "@/lib/coop-data";
 
 type AdminSavingsTab = "members" | "my" | "request";
+
+const SAVINGS_EXPORT_COLUMNS: ExportColumn<CoopSavingsRecord>[] = [
+  { header: "Membership ID", accessor: (record) => record.memberId },
+  { header: "Member", accessor: (record) => record.memberName },
+  { header: "Savings Type", accessor: (record) => record.savingsType },
+  { header: "Amount", accessor: (record) => record.amount },
+  { header: "Method", accessor: (record) => record.method },
+  { header: "Date", accessor: (record) => record.date },
+  { header: "Status", accessor: (record) => record.status },
+];
 
 const MODULE = "Savings & Contributions";
 
@@ -71,7 +84,8 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   const [tellerBusy, setTellerBusy] = useState(false);
   const [myAddOpen, setMyAddOpen] = useState(false);
   const [myWithdrawOpen, setMyWithdrawOpen] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
+  const { data: allRecords = [] } = useCoopSavingsRecords(coopId, {});
+  const savingsImport = useBulkSavingsImport(coopId, coop?.currency ?? "NGN");
 
   if (!coop) {
     return (
@@ -190,10 +204,14 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
           </div>
         ) : activeTab === "members" && membersAccess === "write" ? (
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setBulkOpen(true)}>
-              <FileSpreadsheet className="size-4" aria-hidden="true" />
-              Bulk upload
-            </Button>
+            <ExportImportMenu
+              rows={allRecords}
+              columns={SAVINGS_EXPORT_COLUMNS}
+              filenamePrefix="savings"
+              exportTitle="Members' savings"
+              entityLabel="savings record"
+              importConfig={savingsImport}
+            />
             <Button onClick={handlePrimaryAction}>+ New Savings</Button>
           </div>
         ) : null}
@@ -278,15 +296,6 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
           </Tabs>
         </CardContent>
       </Card>
-
-      {membersAccess === "write" ? (
-        <BulkSavingsUploadDialog
-          coopId={coopId}
-          currency={coop.currency}
-          open={bulkOpen}
-          onOpenChange={setBulkOpen}
-        />
-      ) : null}
 
       <UploadTellerModal
         open={tellerOpen}

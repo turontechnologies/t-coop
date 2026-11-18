@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FileSpreadsheet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Tabs,
@@ -14,7 +13,10 @@ import { Button } from "@/components/ui/button";
 import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-summary-table";
 import { LoanRequestsTable } from "@/components/features/loans/loan-requests-table";
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
-import { BulkRepaymentUploadDialog } from "@/components/features/loans/bulk-repayment-upload";
+import { useBulkRepaymentImport } from "@/components/features/loans/bulk-repayment-upload";
+import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import type { ExportColumn } from "@/lib/table-export";
+import type { CoopLoanRecord } from "@/lib/coop-data";
 import { TransferClaimsQueue } from "@/components/features/loans/transfer-repayment";
 import { useCoopTransferClaims } from "@/hooks/use-loan-repayments";
 import { LoanRecordsTable } from "@/components/features/loans/loan-records-table";
@@ -33,6 +35,21 @@ import type { AuthenticatedMember } from "@/types/auth";
 type AdminLoansTab = "requests" | "members" | "transfers" | "my";
 
 const MODULE = "Loans";
+
+const LOAN_EXPORT_COLUMNS: ExportColumn<CoopLoanRecord>[] = [
+  { header: "Membership ID", accessor: (loan) => loan.memberId },
+  { header: "Member", accessor: (loan) => loan.memberName },
+  { header: "Loan Type", accessor: (loan) => loan.loanType },
+  { header: "Amount", accessor: (loan) => loan.amount },
+  { header: "Total Repayment", accessor: (loan) => loan.totalRepayment },
+  { header: "Repaid", accessor: (loan) => loan.amountRepaid ?? 0 },
+  { header: "Left to Pay", accessor: (loan) => loan.outstandingBalance ?? 0 },
+  {
+    header: "Months Paid",
+    accessor: (loan) => loan.monthsPaid ?? loan.repaymentsMade,
+  },
+  { header: "Status", accessor: (loan) => loan.status },
+];
 
 interface AdminLoansViewProps {
   member: AuthenticatedMember;
@@ -59,7 +76,10 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
 
   const [activeTab, setActiveTab] = useState<AdminLoansTab>(firstVisibleTab);
   const [myTakeOpen, setMyTakeOpen] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
+  const repaymentImport = useBulkRepaymentImport(
+    coopId,
+    coop?.currency ?? "NGN",
+  );
   const { data: transferClaims = [] } = useCoopTransferClaims(
     coopId,
     membersAccess !== null,
@@ -108,10 +128,14 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
           <Button onClick={() => setMyTakeOpen(true)}>+ New Loan</Button>
         ) : (activeTab === "members" || activeTab === "transfers") &&
           membersAccess === "write" ? (
-          <Button variant="outline" onClick={() => setBulkOpen(true)}>
-            <FileSpreadsheet className="size-4" aria-hidden="true" />
-            Bulk upload repayments
-          </Button>
+          <ExportImportMenu
+            rows={allLoans}
+            columns={LOAN_EXPORT_COLUMNS}
+            filenamePrefix="loans"
+            exportTitle="Members' loans"
+            entityLabel="repayment"
+            importConfig={repaymentImport}
+          />
         ) : null}
       </div>
 
@@ -219,15 +243,6 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
           </Tabs>
         </CardContent>
       </Card>
-
-      {membersAccess === "write" ? (
-        <BulkRepaymentUploadDialog
-          coopId={coopId}
-          currency={coop.currency}
-          open={bulkOpen}
-          onOpenChange={setBulkOpen}
-        />
-      ) : null}
     </div>
   );
 }
