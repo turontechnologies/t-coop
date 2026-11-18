@@ -130,7 +130,9 @@ export function ApprovedTermsCard({
                 ? [
                     record.disbursementMethod === "Cheque"
                       ? `Cheque${record.chequeNumber ? ` No. ${record.chequeNumber}` : ""}`
-                      : "Online transfer",
+                      : record.disbursementMethod === "Transfer"
+                        ? "Bank transfer"
+                        : "Online transfer",
                     record.disbursedAt
                       ? formatDateLong(new Date(record.disbursedAt))
                       : null,

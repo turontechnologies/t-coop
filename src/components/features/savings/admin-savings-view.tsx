@@ -129,6 +129,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   const handleResolveRequest = async (
     requestId: string,
     status: "Approved" | "Declined",
+    reason?: string,
   ) => {
     const request = allRequests.find((r) => r.id === requestId);
     if (!request) return;
@@ -136,14 +137,14 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     // Approving pays the member out server-side (the co-op's own Paystack, else the
     // platform's) — the request only becomes Approved if Paystack accepts the transfer.
     try {
-      await decideWithdrawal.mutateAsync({ requestId, status });
+      await decideWithdrawal.mutateAsync({ requestId, status, reason });
       toast.success(
         status === "Approved" ? "Withdrawal paid out" : "Request declined",
         {
           description:
             status === "Approved"
               ? `${formatMoney(request.netAmount ?? request.amount, coop.currency)} sent to ${request.memberName}'s bank account.`
-              : `${request.memberName}'s request was declined.`,
+              : `${request.memberName}'s request was declined. They've been notified.`,
         },
       );
     } catch (error) {

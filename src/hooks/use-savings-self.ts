@@ -3,6 +3,7 @@ import {
   savingsSelfService,
   type InitializeDepositPayload,
   type ManualDepositPayload,
+  type BulkSavingsRow,
   type WithdrawalRequestPayload,
 } from "@/services/savings-self.service";
 
@@ -70,10 +71,29 @@ export function useDecideWithdrawal(coopId: string) {
     mutationFn: ({
       requestId,
       status,
+      reason,
     }: {
       requestId: string;
       status: "Approved" | "Declined";
-    }) => savingsSelfService.decideWithdrawal(coopId, requestId, status),
+      reason?: string;
+    }) =>
+      savingsSelfService.decideWithdrawal(coopId, requestId, status, reason),
     onSuccess: () => invalidateSavings(queryClient, coopId),
+  });
+}
+
+export function useBulkSavingsUpload(coopId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      rows,
+      dryRun,
+    }: {
+      rows: BulkSavingsRow[];
+      dryRun: boolean;
+    }) => savingsSelfService.bulkUpload(coopId, rows, dryRun),
+    onSuccess: (result) => {
+      if (!result.dryRun) invalidateSavings(queryClient, coopId);
+    },
   });
 }

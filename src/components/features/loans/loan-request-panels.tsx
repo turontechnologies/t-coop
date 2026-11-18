@@ -241,10 +241,10 @@ export function ApprovalSteps({
         : "future",
     lines: [
       record.disbursedAt
-        ? `Paid out${record.disbursedByName ? ` by ${record.disbursedByName}` : ""} · ${record.disbursementMethod === "Cheque" ? "Cheque" : "Online transfer"} · ${formatDateLong(new Date(record.disbursedAt))}`
+        ? `Paid out${record.disbursedByName ? ` by ${record.disbursedByName}` : ""} · ${record.disbursementMethod === "Cheque" ? "Cheque" : record.disbursementMethod === "Transfer" ? "Bank transfer (outside the platform)" : "Online transfer"} · ${formatDateLong(new Date(record.disbursedAt))}`
         : approvals.stage === "Disbursement"
           ? `Ready to pay out ${formatMoney(record.amount, currency)} over ${plural(record.durationMonths, "month")}`
-          : "An officer pays the loan out online or by cheque",
+          : "An officer pays the loan out online, by cheque or by bank transfer",
       record.disbursedAt && record.disbursedAmount != null
         ? `${formatMoney(record.disbursedAmount, currency)}${record.disbursementReference ? ` · Ref ${record.disbursementReference}` : ""}`
         : null,
@@ -933,7 +933,9 @@ export function DisburseLoanDialog({
 }) {
   const disburse = useDisburseLoan(coopId);
   const formatId = useFormatMemberId(coopId);
-  const [method, setMethod] = useState<"" | "Online" | "Cheque">("");
+  const [method, setMethod] = useState<"" | "Online" | "Cheque" | "Transfer">(
+    "",
+  );
   const [cheque, setCheque] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [chequeNumber, setChequeNumber] = useState("");
@@ -956,7 +958,9 @@ export function DisburseLoanDialog({
     setProblem(null);
     if (!file) return;
     if (!/^image\//.test(file.type) && !/\.pdf$/i.test(file.name)) {
-      setProblem("Upload a photo (JPG or PNG) or a PDF scan of the cheque.");
+      setProblem(
+        `Upload a photo (JPG or PNG) or a PDF of the ${method === "Transfer" ? "transfer receipt" : "cheque"}.`,
+      );
       return;
     }
     if (file.size > MAX_CHEQUE_BYTES) {
@@ -981,24 +985,34 @@ export function DisburseLoanDialog({
       return;
     }
     try {
-      let chequeUrl: string | undefined;
-      if (method === "Cheque") {
+      let proofUrl: string | undefined;
+      if (method !== "Online") {
         if (!cheque) {
-          setProblem("Upload the cheque before disbursing.");
+          setProblem(
+            method === "Transfer"
+              ? "Upload the transfer receipt before marking the loan as paid."
+              : "Upload the cheque before disbursing.",
+          );
           return;
         }
         setUploading(true);
-        chequeUrl = await uploadService.uploadAttachment(cheque);
+        proofUrl = await uploadService.uploadAttachment(cheque);
       }
+      const reference = chequeNumber.trim() || undefined;
       await disburse.mutateAsync({
         loanId: record.id,
         method,
-        chequeUrl,
-        chequeNumber: chequeNumber.trim() || undefined,
+        ...(method === "Cheque"
+          ? { chequeUrl: proofUrl, chequeNumber: reference }
+          : method === "Transfer"
+            ? { receiptUrl: proofUrl, transferReference: reference }
+            : {}),
       });
       onOpenChange(false);
       toast.success(
-        `${formatMoney(net, currency)} disbursed to ${record.memberName}${method === "Cheque" ? " by cheque" : ""}`,
+        method === "Transfer"
+          ? `${record.memberName}'s loan is marked as paid by bank transfer`
+          : `${formatMoney(net, currency)} disbursed to ${record.memberName}${method === "Cheque" ? " by cheque" : ""}`,
         { description: "Repayments start next month." },
       );
     } catch (error) {
@@ -1059,11 +1073,16 @@ export function DisburseLoanDialog({
             items={[
               { value: "Online", label: "Online transfer" },
               { value: "Cheque", label: "Cheque" },
+              { value: "Transfer", label: "Already paid by bank transfer" },
             ]}
             value={method || null}
-            onValueChange={(value) =>
-              setMethod((value as "Online" | "Cheque") ?? "")
-            }
+            onValueChange={(value) => {
+              setMethod((value as "Online" | "Cheque" | "Transfer") ?? "");
+              setCheque(null);
+              setPreview(null);
+              setChequeNumber("");
+              setProblem(null);
+            }}
           >
             <SelectTrigger id={methodId} className="w-full">
               <SelectValue placeholder="Select a method" />
@@ -1071,6 +1090,9 @@ export function DisburseLoanDialog({
             <SelectContent>
               <SelectItem value="Online">Online transfer</SelectItem>
               <SelectItem value="Cheque">Cheque</SelectItem>
+              <SelectItem value="Transfer">
+                Already paid by bank transfer
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1103,7 +1125,22 @@ export function DisburseLoanDialog({
           )
         ) : null}
 
-        {method === "Cheque" ? (
+        {method === "Transfer" ? (
+          <p className="flex items-start gap-2.5 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3 text-sm text-foreground">
+            <Landmark
+              className="mt-0.5 size-4 shrink-0 text-primary dark:text-emerald-300"
+              aria-hidden="true"
+            />
+            <span>
+              Use this when the co-operative has already sent{" "}
+              <b>{formatMoney(net, currency)}</b> to {record.memberName} from
+              its own bank. Nothing is sent through the platform; the loan is
+              recorded as paid out and repayments start next month.
+            </span>
+          </p>
+        ) : null}
+
+        {method === "Cheque" || method === "Transfer" ? (
           <div className="space-y-3">
             {cheque ? (
               <div className="space-y-2.5">
@@ -1121,7 +1158,9 @@ export function DisburseLoanDialog({
                   <button
                     type="button"
                     className="grid size-6 place-items-center rounded-full hover:bg-primary/15"
-                    aria-label="Remove cheque"
+                    aria-label={
+                      method === "Transfer" ? "Remove receipt" : "Remove cheque"
+                    }
                     onClick={() => {
                       setCheque(null);
                       setPreview(null);
@@ -1151,7 +1190,8 @@ export function DisburseLoanDialog({
                   <Upload className="size-5" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-semibold text-foreground">
-                  Drop a photo or scan of the cheque, or{" "}
+                  Drop a photo or scan of the{" "}
+                  {method === "Transfer" ? "transfer receipt" : "cheque"}, or{" "}
                   <span className="text-primary dark:text-emerald-300">
                     browse
                   </span>
@@ -1163,15 +1203,17 @@ export function DisburseLoanDialog({
             )}
             <div className="space-y-2">
               <Label>
-                Cheque number{" "}
+                {method === "Transfer" ? "Transfer reference" : "Cheque number"}{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
                 </span>
               </Label>
               <Input
-                inputMode="numeric"
-                maxLength={12}
-                placeholder="e.g. 00004521"
+                inputMode={method === "Transfer" ? "text" : "numeric"}
+                maxLength={method === "Transfer" ? 30 : 12}
+                placeholder={
+                  method === "Transfer" ? "e.g. FBN2611180042" : "e.g. 00004521"
+                }
                 value={chequeNumber}
                 onChange={(e) => setChequeNumber(e.target.value)}
               />
@@ -1201,14 +1243,16 @@ export function DisburseLoanDialog({
           >
             {busy ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : method === "Cheque" ? (
+            ) : method === "Cheque" || method === "Transfer" ? (
               <FileText className="size-4" aria-hidden="true" />
             ) : (
               <Banknote className="size-4" aria-hidden="true" />
             )}
-            {method
-              ? `Disburse ${formatMoney(net, currency)}${method === "Cheque" ? " by cheque" : ""}`
-              : "Disburse"}
+            {method === "Transfer"
+              ? "Mark as paid"
+              : method
+                ? `Disburse ${formatMoney(net, currency)}${method === "Cheque" ? " by cheque" : ""}`
+                : "Disburse"}
           </Button>
         </DialogFooter>
       </DialogContent>

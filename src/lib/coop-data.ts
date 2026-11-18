@@ -70,6 +70,8 @@ export interface SavingsRequest {
   status: SavingsRequestStatus;
   requestedAt: string;
   resolvedAt?: string;
+  /** Why a declined request was declined, when the admin said. */
+  declineReason?: string;
   /**
    * Withdrawal-only: the combined co-op + platform fee percentage, locked
    * in at request time (a later settings change shouldn't retroactively
@@ -172,7 +174,7 @@ export interface CoopLoanRecord {
   payoutAccountName?: string | null;
   /** False when the bank couldn't be asked to confirm the account name. */
   payoutNameVerified?: boolean | null;
-  disbursementMethod?: "Online" | "Cheque" | "Import" | null;
+  disbursementMethod?: "Online" | "Cheque" | "Transfer" | "Import" | null;
   chequeUrl?: string | null;
   chequeNumber?: string | null;
   disbursedByName?: string | null;

@@ -139,9 +139,12 @@ export interface OfferResponsePayload {
 }
 
 export interface DisbursePayload {
-  method: "Online" | "Cheque";
+  /** "Transfer": the co-op already paid by bank transfer outside the platform. */
+  method: "Online" | "Cheque" | "Transfer";
   chequeUrl?: string;
   chequeNumber?: string;
+  receiptUrl?: string;
+  transferReference?: string;
 }
 
 /** What the signed-in member can borrow right now — the same numbers the dashboard shows and

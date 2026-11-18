@@ -433,7 +433,9 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                       <span className="block text-xs font-medium text-muted-foreground">
                         {record.disbursementMethod === "Cheque"
                           ? `Cheque${record.chequeNumber ? ` No. ${record.chequeNumber}` : ""}`
-                          : "Online transfer"}
+                          : record.disbursementMethod === "Transfer"
+                            ? `Bank transfer${record.chequeNumber ? ` · Ref ${record.chequeNumber}` : ""}`
+                            : "Online transfer"}
                         {record.disbursedAt
                           ? ` · ${formatDateLong(new Date(record.disbursedAt))}`
                           : ""}
@@ -445,7 +447,9 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                           rel="noreferrer"
                           className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
                         >
-                          View cheque
+                          {record.disbursementMethod === "Transfer"
+                            ? "View transfer receipt"
+                            : "View cheque"}
                         </a>
                       ) : null}
                     </>

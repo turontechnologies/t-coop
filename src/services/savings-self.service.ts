@@ -29,6 +29,33 @@ export interface ManualDepositPayload {
   receiptUrl?: string;
 }
 
+export interface BulkSavingsRow {
+  row: number;
+  memberId: string;
+  savingsType?: string;
+  amount: number;
+  date?: string;
+}
+
+export interface BulkSavingsLine {
+  row: number;
+  memberId: string;
+  memberName: string;
+  savingsType: string;
+  amount: number;
+  charge: number;
+  net: number;
+  date: string;
+}
+
+export interface BulkSavingsResult {
+  dryRun: boolean;
+  imported: number;
+  totalAmount: number;
+  lines: BulkSavingsLine[];
+  errors: { row: number; message: string }[];
+}
+
 export interface WithdrawalRequestPayload {
   savingsTypeId?: string;
   amount: number;
@@ -49,6 +76,7 @@ interface SavingsRequestDto {
   netAmount: number | null;
   requestedAt: string;
   resolvedAt: string | null;
+  declineReason?: string | null;
 }
 
 function fromRequestDto(dto: SavingsRequestDto): SavingsRequest {
@@ -63,6 +91,7 @@ function fromRequestDto(dto: SavingsRequestDto): SavingsRequest {
     status: dto.status,
     requestedAt: dto.requestedAt,
     resolvedAt: dto.resolvedAt ?? undefined,
+    declineReason: dto.declineReason ?? undefined,
     feePercent: dto.feePercent ?? undefined,
     feeAmount: dto.feeAmount ?? undefined,
     netAmount: dto.netAmount ?? undefined,
@@ -132,15 +161,31 @@ export const savingsSelfService = {
     return data.map(fromRequestDto);
   },
 
+  /** Savings for many members at once. Every row is checked first; with `dryRun` nothing is
+   * saved (the preview), and if any row is wrong nothing is saved either. */
+  async bulkUpload(
+    coopId: string,
+    rows: BulkSavingsRow[],
+    dryRun: boolean,
+  ): Promise<BulkSavingsResult> {
+    const { data } = await apiClient.post<BulkSavingsResult>(
+      `/cooperatives/${coopId}/savings/bulk`,
+      { rows, dryRun },
+      { validateStatus: (status) => status === 200 || status === 422 },
+    );
+    return data;
+  },
+
   async decideWithdrawal(
     coopId: string,
     requestId: string,
     status: "Approved" | "Declined",
+    reason?: string,
   ): Promise<SavingsRequest> {
     // Approving pays the member out server-side — see SavingsSelfServiceController.
     const { data } = await apiClient.patch<SavingsRequestDto>(
       `/cooperatives/${coopId}/savings/withdrawals/${requestId}`,
-      { status },
+      { status, reason: reason?.trim() || undefined },
     );
     return fromRequestDto(data);
   },

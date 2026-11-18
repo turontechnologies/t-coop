@@ -30,6 +30,8 @@ import type { SavingsRequest } from "@/lib/coop-data";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatMoney, formatTimeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface SavingsRequestsTableProps {
   requests: SavingsRequest[];
@@ -39,6 +41,7 @@ interface SavingsRequestsTableProps {
   onResolve: (
     requestId: string,
     status: "Approved" | "Declined",
+    reason?: string,
   ) => Promise<void> | void;
 }
 
@@ -70,9 +73,10 @@ export function SavingsRequestsTable({
   const handleResolve = async (
     requestId: string,
     status: "Approved" | "Declined",
+    reason?: string,
   ) => {
     setBusyId(requestId);
-    await onResolve(requestId, status);
+    await onResolve(requestId, status, reason);
     setBusyId(null);
   };
 
@@ -216,16 +220,21 @@ export function SavingsRequestsTable({
                             request={request}
                             status="Declined"
                             busy={busy}
-                            onConfirm={() =>
-                              handleResolve(request.id, "Declined")
+                            onConfirm={(reason) =>
+                              handleResolve(request.id, "Declined", reason)
                             }
                           />
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="block max-w-56 text-xs text-muted-foreground">
                           {request.resolvedAt
                             ? formatTimeAgo(request.resolvedAt)
                             : "—"}
+                          {request.declineReason ? (
+                            <span className="mt-0.5 block text-destructive/90">
+                              {request.declineReason}
+                            </span>
+                          ) : null}
                         </span>
                       )}
                     </td>
@@ -318,7 +327,9 @@ export function SavingsRequestsTable({
                       request={request}
                       status="Declined"
                       busy={busy}
-                      onConfirm={() => handleResolve(request.id, "Declined")}
+                      onConfirm={(reason) =>
+                        handleResolve(request.id, "Declined", reason)
+                      }
                     />
                   </>
                 ) : (
@@ -326,6 +337,7 @@ export function SavingsRequestsTable({
                     {request.resolvedAt
                       ? `Resolved ${formatTimeAgo(request.resolvedAt)}`
                       : "—"}
+                    {request.declineReason ? ` · ${request.declineReason}` : ""}
                   </span>
                 )
               }
@@ -346,15 +358,17 @@ function ConfirmResolveDialog({
   request: SavingsRequest;
   status: "Approved" | "Declined";
   busy: boolean;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: (reason?: string) => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
   const isApprove = status === "Approved";
   const currency = useCurrency();
 
   const handleConfirm = async () => {
-    await onConfirm();
+    await onConfirm(isApprove ? undefined : reason);
     setOpen(false);
+    setReason("");
   };
 
   return (
@@ -405,11 +419,30 @@ function ConfirmResolveDialog({
               <>
                 {request.memberName}&apos;s {request.type.toLowerCase()} request
                 for {formatMoney(request.amount, currency)} will be marked
-                declined. No savings record is created.
+                declined. No savings record is created, and {request.memberName}{" "}
+                is notified.
               </>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {isApprove ? null : (
+          <div className="space-y-1.5">
+            <Label htmlFor={`decline-reason-${request.id}`}>
+              Reason (optional)
+            </Label>
+            <Textarea
+              id={`decline-reason-${request.id}`}
+              value={reason}
+              maxLength={500}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="e.g. Your savings are committed to an active loan"
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              {request.memberName} sees this in their notification.
+            </p>
+          </div>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
           <AlertDialogAction
