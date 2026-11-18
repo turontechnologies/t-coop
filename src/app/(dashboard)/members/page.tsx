@@ -4,7 +4,11 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ExportImportMenu } from "@/components/features/shared/export-import-menu";
+import {
+  ExportImportMenu,
+  type ImportResult,
+} from "@/components/features/shared/export-import-menu";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
 import { MembersDirectoryTable } from "@/components/features/members-directory/members-directory-table";
 import { useAddCoopMember, useCoopMembers } from "@/hooks/use-coop-members";
@@ -39,6 +43,7 @@ export default function MembersDirectoryPage() {
     isRefetching,
   } = useCoopMembers(coopId);
   const addMember = useAddCoopMember(coopId as string);
+  const altIdLabel = useAlternativeIdLabel(coopId);
 
   if (!authMember) return null;
   if (access === null) {

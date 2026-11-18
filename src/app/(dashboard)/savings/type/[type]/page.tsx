@@ -12,6 +12,9 @@ import {
   type ImportResult,
 } from "@/components/features/shared/export-import-menu";
 import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
+import { memberLookup } from "@/lib/import-template";
 import {
   useCoopSavingsRecords,
   useCoopSavingsTypes,
@@ -51,6 +54,9 @@ export default function AdminSavingsTypePage({
     authMember?.cooperativeId ??
     (authMember?.role === "admin" ? authMember.id : undefined);
   const { data: coop } = useCooperative(coopId);
+  const { data: lookupMembers = [] } = useCoopMembers(coopId);
+  const altIdLabel = useAlternativeIdLabel(coopId);
+  const lookup = memberLookup(lookupMembers, altIdLabel);
   const { data: records = [] } = useCoopSavingsRecords(coopId, {
     type: savingsType,
   });
@@ -107,8 +113,9 @@ export default function AdminSavingsTypePage({
       ? {
           templateStorageKey: `members-savings-${coopId}-${savingsTypeSummary.id}-template-downloaded`,
           downloadTemplate: () =>
-            downloadSavingsImportTemplate(savingsTypeSummary),
-          parseFile: (file) => parseSavingsImportFile(file, savingsTypeSummary),
+            downloadSavingsImportTemplate(savingsTypeSummary, lookup),
+          parseFile: (file) =>
+            parseSavingsImportFile(file, savingsTypeSummary, lookup),
           onImport: handleImport,
         }
       : undefined;

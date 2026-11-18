@@ -12,6 +12,9 @@ import {
   type ImportResult,
 } from "@/components/features/shared/export-import-menu";
 import { useCooperative } from "@/hooks/use-cooperative";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
+import { memberLookup } from "@/lib/import-template";
 import {
   useCoopLoanRecords,
   useCoopLoanTypes,
@@ -49,6 +52,9 @@ export default function AdminLoanTypePage({ params }: AdminLoanTypePageProps) {
     authMember?.cooperativeId ??
     (authMember?.role === "admin" ? authMember.id : undefined);
   const { data: coop } = useCooperative(coopId);
+  const { data: lookupMembers = [] } = useCoopMembers(coopId);
+  const altIdLabel = useAlternativeIdLabel(coopId);
+  const lookup = memberLookup(lookupMembers, altIdLabel);
   const { data: records = [] } = useCoopLoanRecords(coopId, {
     type: loanType,
   });
@@ -103,8 +109,10 @@ export default function AdminLoanTypePage({ params }: AdminLoanTypePageProps) {
     canImport && loanTypeSummary
       ? {
           templateStorageKey: `members-loans-${coopId}-${loanTypeSummary.id}-template-downloaded`,
-          downloadTemplate: () => downloadLoanImportTemplate(loanTypeSummary),
-          parseFile: (file) => parseLoanImportFile(file, loanTypeSummary),
+          downloadTemplate: () =>
+            downloadLoanImportTemplate(loanTypeSummary, lookup),
+          parseFile: (file) =>
+            parseLoanImportFile(file, loanTypeSummary, lookup),
           onImport: handleImport,
         }
       : undefined;

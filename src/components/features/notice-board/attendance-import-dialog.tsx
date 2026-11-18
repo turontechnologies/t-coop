@@ -30,6 +30,11 @@ import { useImportAttendance, useMeetingRegister } from "@/hooks/use-notices";
 import { formatDateLong } from "@/lib/format";
 import { meetingDay } from "@/lib/meeting";
 import { cn } from "@/lib/utils";
+import {
+  useAlternativeIdLabel,
+  useAlternativeIds,
+} from "@/components/features/shared/member-id";
+import { memberLookup } from "@/lib/import-template";
 
 export interface ImportableMeeting {
   noticeId: string;
@@ -59,6 +64,12 @@ export function AttendanceImportDialog({
   const [picked, setPicked] = useState<string | null>(null);
   const noticeId = fixedNoticeId ?? picked ?? meetings?.[0]?.noticeId;
   const { data: register, isLoading } = useMeetingRegister(noticeId, open);
+  const altIds = useAlternativeIds();
+  const altLabel = useAlternativeIdLabel();
+  const lookup = memberLookup(
+    [...altIds].map(([id, alternativeId]) => ({ id, alternativeId })),
+    altLabel,
+  );
   const importAttendance = useImportAttendance();
   const inputRef = useRef<HTMLInputElement>(null);
   const meetingFieldId = useId();
@@ -93,7 +104,7 @@ export function AttendanceImportDialog({
       return;
     }
     try {
-      const parsed = await parseAttendanceFile(next, register);
+      const parsed = await parseAttendanceFile(next, register, lookup);
       setRows(parsed.rows);
       setIssues(parsed.errors);
       if (parsed.rows.length === 0)
@@ -253,7 +264,9 @@ export function AttendanceImportDialog({
             <button
               type="button"
               disabled={!register}
-              onClick={() => register && downloadAttendanceTemplate(register)}
+              onClick={() =>
+                register && downloadAttendanceTemplate(register, lookup)
+              }
               className="font-semibold text-primary underline underline-offset-2 disabled:opacity-50 dark:text-emerald-300"
             >
               Download here
