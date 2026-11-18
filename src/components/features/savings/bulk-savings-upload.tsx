@@ -1,6 +1,8 @@
 "use client";
 
 import type { ImportConfig } from "@/components/features/shared/export-import-menu";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
+import { memberLookup } from "@/lib/import-template";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import { useCoopSavingsTypes } from "@/hooks/use-coop-savings";
 import { useBulkSavingsUpload } from "@/hooks/use-savings-self";
@@ -25,6 +27,7 @@ export function useBulkSavingsImport(
   const { data: members = [] } = useCoopMembers(coopId);
   const { data: types = [] } = useCoopSavingsTypes(coopId);
   const bulk = useBulkSavingsUpload(coopId);
+  const lookup = memberLookup(members, useAlternativeIdLabel(coopId));
   const activeTypes = types
     .filter((type) => type.status === "Active")
     .map((type) => type.name);
@@ -34,9 +37,10 @@ export function useBulkSavingsImport(
     description:
       "Record savings for many members at once. Savings charges apply to each row as for a teller upload.",
     templateHint:
-      "It's already filled in with every active member. Just type the amounts; rows left empty are skipped.",
-    downloadTemplate: () => downloadBulkSavingsTemplate(members, activeTypes),
-    parseFile: parseBulkSavingsFile,
+      "Every active member is already listed. Just type how much each person saved. Empty rows are left out.",
+    downloadTemplate: () =>
+      downloadBulkSavingsTemplate(members, activeTypes, lookup),
+    parseFile: (file) => parseBulkSavingsFile(file, lookup),
     submit: (rows, dryRun) => bulk.mutateAsync({ rows, dryRun }),
     formatTotal: (amount) => formatMoney(amount, currency),
     columns: [

@@ -1,56 +1,39 @@
-import * as XLSX from "xlsx";
-import { triggerDownload } from "@/lib/table-export";
 import type { ImportRowError } from "@/lib/table-import";
 import type { CoopLoanRecord, CoopMember } from "@/lib/coop-data";
+import {
+  alternativeIdColumn,
+  amountOf,
+  cell,
+  dateOf,
+  downloadTemplate,
+  findMember,
+  readFilledRows,
+  text,
+  today,
+  type MemberLookup,
+} from "@/lib/import-template";
 import type { BulkSavingsRow } from "@/services/savings-self.service";
 import type { BulkRepaymentRow } from "@/services/loan-repayment.service";
 
 /**
- * Bulk uploads of savings and loan repayments. The templates come pre-filled — every active
- * member (savings) or every active loan (repayments) — so the admin only types the amounts.
- * Rows left without an amount are skipped. Excel (.xlsx) and CSV files are both read.
+ * Bulk uploads of savings and loan repayments. The templates come filled in — every active
+ * member (savings) or every active loan (repayments) — so you only type the amounts. Rows with
+ * no amount are left out. Excel (.xlsx) and CSV files both work.
  */
 
 export interface ParsedBulkFile<TRow> {
   rows: TRow[];
   errors: ImportRowError[];
-  /** Rows skipped because they had no amount (the pre-filled template's untouched rows). */
+  /** Rows left out because they had no amount. */
   skipped: number;
-}
-
-const today = () => new Date().toISOString().slice(0, 10);
-
-function save(workbook: XLSX.WorkBook, filename: string) {
-  const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
-  triggerDownload(
-    new Blob([buffer], { type: "application/octet-stream" }),
-    filename,
-  );
-}
-
-function referenceSheet(rows: string[][]) {
-  const sheet = XLSX.utils.aoa_to_sheet([
-    ["Column", "What to put in it"],
-    ...rows,
-  ]);
-  sheet["!cols"] = [{ wch: 18 }, { wch: 100 }];
-  return sheet;
 }
 
 /* ───────────────────────────── Savings ───────────────────────────── */
 
-const SAVINGS_HEADERS = [
-  "Membership ID",
-  "Member Name",
-  "Savings Type",
-  "Amount",
-  "Date",
-];
-
 export function downloadBulkSavingsTemplate(
   members: CoopMember[],
   savingsTypes: string[],
-  formatId: (id: string) => string = (id) => id,
+  lookup: MemberLookup,
 ) {
   const defaultType = savingsTypes.length === 1 ? savingsTypes[0] : "";
   const active = members
@@ -60,190 +43,160 @@ export function downloadBulkSavingsTemplate(
         `${b.firstName} ${b.lastName}`,
       ),
     );
-  const sheet = XLSX.utils.aoa_to_sheet([
-    SAVINGS_HEADERS,
-    ...active.map((member) => [
-      formatId(member.id),
+  downloadTemplate({
+    filename: `savings-upload-${today()}.xlsx`,
+    title: "Uploading members' savings",
+    steps: [
+      "Every active member is already listed for you.",
+      "Type how much each person saved in the Amount column.",
+      "Leave the Amount empty for anyone who didn't save. They will be left out.",
+      "Save the file, then upload it. You will see every row before anything is saved.",
+      "If any row has a problem, nothing is saved. Fix it and upload again.",
+    ],
+    columns: [
+      {
+        name: "Membership ID",
+        required: "Yes",
+        help: "Already filled in. Don't change it.",
+        width: 16,
+      },
+      alternativeIdColumn(lookup),
+      {
+        name: "Member Name",
+        required: "No",
+        help: "Just to help you see who is who. It is not read.",
+        width: 28,
+      },
+      {
+        name: "Savings Type",
+        required: savingsTypes.length === 1 ? "No" : "Yes",
+        help:
+          savingsTypes.length === 1
+            ? `Already filled in with "${savingsTypes[0]}".`
+            : `Type one of these exactly: ${savingsTypes.join(", ") || "(no savings types yet)"}.`,
+        width: 22,
+      },
+      {
+        name: "Amount",
+        required: "Yes",
+        help: "How much the member saved. Numbers only, e.g. 5000.",
+        width: 14,
+      },
+      {
+        name: "Date",
+        required: "No",
+        help: `The day the money was saved, e.g. ${today()}. Leave empty to use today.`,
+        width: 14,
+      },
+    ],
+    rows: active.map((member) => [
+      member.id,
+      lookup.alternativeIdOf.get(member.id) ?? "",
       `${member.firstName} ${member.lastName}`.trim(),
       defaultType,
       "",
       "",
     ]),
-  ]);
-  sheet["!cols"] = [
-    { wch: 16 },
-    { wch: 28 },
-    { wch: 22 },
-    { wch: 14 },
-    { wch: 14 },
-  ];
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Savings");
-  XLSX.utils.book_append_sheet(
-    workbook,
-    referenceSheet([
-      [
-        "Membership ID",
-        "Already filled in for every active member. Add rows for anyone missing.",
-      ],
-      ["Member Name", "For your reference only; it isn't read."],
-      [
-        "Savings Type",
-        `One of: ${savingsTypes.join(", ") || "(no active savings types yet)"}. Can be left empty when the co-operative has only one.`,
-      ],
-      ["Amount", "How much the member saved. Rows with no amount are skipped."],
-      [
-        "Date",
-        `The day it was saved, as YYYY-MM-DD (e.g. ${today()}). Leave empty for today.`,
-      ],
-      [
-        "Charges",
-        "Savings charges are taken from each row exactly as for a teller upload. You see every row before anything is saved, and if any row is wrong nothing is saved.",
-      ],
-    ]),
-    "How to fill it",
-  );
-  save(workbook, `bulk-savings-${today()}.xlsx`);
+  });
 }
 
 /* ───────────────────────────── Loan repayments ───────────────────────────── */
 
-const REPAYMENT_HEADERS = [
-  "Membership ID",
-  "Member Name",
-  "Loan Type",
-  "Loan ID",
-  "Installment",
-  "Installments Left",
-  "Amount",
-  "Date",
-];
-
 export function downloadBulkRepaymentTemplate(
   loans: CoopLoanRecord[],
-  formatId: (id: string) => string = (id) => id,
+  lookup: MemberLookup,
 ) {
   const active = loans
     .filter((loan) => loan.status === "Active")
     .sort((a, b) => a.memberName.localeCompare(b.memberName));
-  const sheet = XLSX.utils.aoa_to_sheet([
-    REPAYMENT_HEADERS,
-    ...active.map((loan) => [
-      formatId(loan.memberId),
+  downloadTemplate({
+    filename: `loan-repayments-upload-${today()}.xlsx`,
+    title: "Uploading loan repayments",
+    steps: [
+      "Every loan that is still being repaid is already listed for you.",
+      "Type how much each person paid in the Amount Paid column.",
+      "Any amount is fine: half a month, one month, two months, or the whole loan.",
+      "You can't pay more than what is Left to Pay.",
+      "Leave Amount Paid empty for anyone who didn't pay. They will be left out.",
+      "Save the file, then upload it. You will see every row before anything is saved.",
+      "If any row has a problem, nothing is saved. Fix it and upload again.",
+    ],
+    columns: [
+      {
+        name: "Membership ID",
+        required: "Yes",
+        help: "Already filled in. Don't change it.",
+        width: 16,
+      },
+      alternativeIdColumn(lookup),
+      {
+        name: "Member Name",
+        required: "No",
+        help: "Just to help you see who is who. It is not read.",
+        width: 26,
+      },
+      {
+        name: "Loan Type",
+        required: "No",
+        help: "Already filled in. Don't change it.",
+        width: 18,
+      },
+      {
+        name: "Loan ID",
+        required: "Yes",
+        help: "Already filled in. Don't change it. It makes sure the right loan is paid.",
+        width: 38,
+      },
+      {
+        name: "Monthly Payment",
+        required: "No",
+        help: "What the member pays each month. Just for your information.",
+        width: 16,
+      },
+      {
+        name: "Left to Pay",
+        required: "No",
+        help: "What the member still owes. Just for your information.",
+        width: 14,
+      },
+      {
+        name: "Amount Paid",
+        required: "Yes",
+        help: "How much the member paid this time. Numbers only, e.g. 4788.",
+        width: 14,
+      },
+      {
+        name: "Date",
+        required: "No",
+        help: `The day they paid, e.g. ${today()}. Leave empty to use today.`,
+        width: 14,
+      },
+    ],
+    rows: active.map((loan) => [
+      loan.memberId,
+      lookup.alternativeIdOf.get(loan.memberId) ?? "",
       loan.memberName,
       loan.loanType,
       loan.id,
       loan.monthlyRepayment,
-      Math.max(loan.numberOfRepayments - loan.repaymentsMade, 0),
+      loan.outstandingBalance ?? loan.totalRepayment,
       "",
       "",
     ]),
-  ]);
-  sheet["!cols"] = [
-    { wch: 16 },
-    { wch: 28 },
-    { wch: 20 },
-    { wch: 38 },
-    { wch: 13 },
-    { wch: 17 },
-    { wch: 14 },
-    { wch: 14 },
-  ];
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, sheet, "Repayments");
-  XLSX.utils.book_append_sheet(
-    workbook,
-    referenceSheet([
-      ["Membership ID", "Already filled in: one row for every active loan."],
-      ["Member Name", "For your reference only; it isn't read."],
-      ["Loan Type", "Needed only when a member has more than one active loan."],
-      ["Loan ID", "Already filled in. Keep it so the right loan is credited."],
-      ["Installment", "The member's monthly installment, for reference."],
-      [
-        "Amount",
-        "What the member paid: any amount up to what they still owe (half a month, one and a half months, the whole loan…). Rows with no amount are skipped.",
-      ],
-      [
-        "Date",
-        `The day they paid, as YYYY-MM-DD (e.g. ${today()}). Leave empty for today.`,
-      ],
-      [
-        "Checking",
-        "You see every row before anything is saved, and if any row is wrong nothing is saved.",
-      ],
-    ]),
-    "How to fill it",
-  );
-  save(workbook, `bulk-loan-repayments-${today()}.xlsx`);
+  });
 }
 
 /* ───────────────────────────── Reading a file ───────────────────────────── */
 
-async function readFirstSheet(file: File) {
-  const workbook = XLSX.read(await file.arrayBuffer(), {
-    type: "array",
-    cellDates: true,
-  });
-  const name =
-    workbook.SheetNames.find((sheet) => !/how to fill/i.test(sheet)) ??
-    workbook.SheetNames[0];
-  const sheet = name ? workbook.Sheets[name] : undefined;
-  return sheet
-    ? XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" })
-    : null;
-}
-
-/** Column lookup that forgives case and spacing ("membership id", "MembershipID"). */
-function cell(raw: Record<string, unknown>, ...names: string[]): unknown {
-  const wanted = names.map((name) => name.replace(/\s+/g, "").toLowerCase());
-  for (const key of Object.keys(raw)) {
-    if (wanted.includes(key.replace(/\s+/g, "").toLowerCase())) return raw[key];
-  }
-  return "";
-}
-
-function text(value: unknown) {
-  return String(value ?? "").trim();
-}
-
-/** "₦12,500.00" / 12500 / "12500" → 12500. */
-function amountOf(value: unknown): number | null {
-  if (value === "" || value == null) return null;
-  if (typeof value === "number") return value;
-  const cleaned = String(value).replace(/[^\d.-]/g, "");
-  if (!cleaned) return null;
-  const number = Number(cleaned);
-  return Number.isFinite(number) ? number : NaN;
-}
-
-/** Excel dates arrive as Date objects; typed ones as text. Both become YYYY-MM-DD. */
-function dateOf(value: unknown): string | undefined | null {
-  if (value === "" || value == null) return undefined;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const local = new Date(
-      value.getTime() - value.getTimezoneOffset() * 60_000,
-    );
-    return local.toISOString().slice(0, 10);
-  }
-  const typed = String(value).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(typed)) return typed;
-  const dmy = typed.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/);
-  if (dmy) {
-    return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
-  }
-  return null;
-}
-
 export async function parseBulkSavingsFile(
   file: File,
+  lookup: MemberLookup,
 ): Promise<ParsedBulkFile<BulkSavingsRow>> {
-  const raws = await readFirstSheet(file);
+  const raws = await readFilledRows(file);
   if (!raws)
     return {
       rows: [],
-      errors: [{ row: 1, message: "The file has no sheet" }],
+      errors: [{ row: 1, message: "The file is empty" }],
       skipped: 0,
     };
   const rows: BulkSavingsRow[] = [];
@@ -251,25 +204,32 @@ export async function parseBulkSavingsFile(
   let skipped = 0;
   raws.forEach((raw, index) => {
     const row = index + 2;
-    const memberId = text(cell(raw, "Membership ID", "Member ID", "ID"));
+    const who = findMember(raw, lookup);
     const amount = amountOf(cell(raw, "Amount"));
     if (amount == null) {
-      if (memberId) skipped += 1;
+      if (!who.empty) skipped += 1;
       return;
     }
-    if (!memberId)
-      return errors.push({ row, message: "Membership ID is missing" });
+    if (who.empty)
+      return errors.push({
+        row,
+        message: `Type the Membership ID or ${lookup.label}`,
+      });
+    if (who.error) return errors.push({ row, message: who.error });
     if (Number.isNaN(amount) || amount <= 0)
       return errors.push({
         row,
-        message: "Amount must be a number more than zero",
+        message: "The Amount must be a number bigger than 0",
       });
     const date = dateOf(cell(raw, "Date"));
     if (date === null)
-      return errors.push({ row, message: "Write the date as YYYY-MM-DD" });
+      return errors.push({
+        row,
+        message: "Write the date like this: 2026-11-18",
+      });
     rows.push({
       row,
-      memberId,
+      memberId: who.memberId!,
       savingsType: text(cell(raw, "Savings Type", "Type")) || undefined,
       amount,
       date,
@@ -280,12 +240,13 @@ export async function parseBulkSavingsFile(
 
 export async function parseBulkRepaymentFile(
   file: File,
+  lookup: MemberLookup,
 ): Promise<ParsedBulkFile<BulkRepaymentRow>> {
-  const raws = await readFirstSheet(file);
+  const raws = await readFilledRows(file);
   if (!raws)
     return {
       rows: [],
-      errors: [{ row: 1, message: "The file has no sheet" }],
+      errors: [{ row: 1, message: "The file is empty" }],
       skipped: 0,
     };
   const rows: BulkRepaymentRow[] = [];
@@ -293,25 +254,32 @@ export async function parseBulkRepaymentFile(
   let skipped = 0;
   raws.forEach((raw, index) => {
     const row = index + 2;
-    const memberId = text(cell(raw, "Membership ID", "Member ID"));
-    const amount = amountOf(cell(raw, "Amount", "Amount Paid"));
+    const who = findMember(raw, lookup);
+    const amount = amountOf(cell(raw, "Amount Paid", "Amount"));
     if (amount == null) {
-      if (memberId) skipped += 1;
+      if (!who.empty) skipped += 1;
       return;
     }
-    if (!memberId)
-      return errors.push({ row, message: "Membership ID is missing" });
+    if (who.empty)
+      return errors.push({
+        row,
+        message: `Type the Membership ID or ${lookup.label}`,
+      });
+    if (who.error) return errors.push({ row, message: who.error });
     if (Number.isNaN(amount) || amount <= 0)
       return errors.push({
         row,
-        message: "Amount must be a number more than zero",
+        message: "The Amount Paid must be a number bigger than 0",
       });
     const date = dateOf(cell(raw, "Date", "Date Paid"));
     if (date === null)
-      return errors.push({ row, message: "Write the date as YYYY-MM-DD" });
+      return errors.push({
+        row,
+        message: "Write the date like this: 2026-11-18",
+      });
     rows.push({
       row,
-      memberId,
+      memberId: who.memberId!,
       loanType: text(cell(raw, "Loan Type")) || undefined,
       loanId: text(cell(raw, "Loan ID")) || undefined,
       amount,

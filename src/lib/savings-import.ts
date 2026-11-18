@@ -1,14 +1,19 @@
-import * as XLSX from "xlsx";
 import type { CoopSavingsTypeSummary } from "@/types/coop-savings";
-import { triggerDownload } from "@/lib/table-export";
 import type { ImportRowError, ParsedImportResult } from "@/lib/table-import";
+import {
+  alternativeIdColumn,
+  amountOf,
+  cell,
+  downloadTemplate,
+  findMember,
+  readFilledRows,
+  type MemberLookup,
+} from "@/lib/import-template";
 
 /**
- * Admin import of members' savings (Savings → Members Savings → a savings type → Import). Each row
- * is recorded for the member it names through the admin manual-deposit endpoint.
+ * Savings for one savings type (Savings → a savings type → Export / Import). Each row is saved
+ * for the member it names, like a teller upload.
  */
-const HEADERS = ["Membership ID", "Amount"];
-
 export interface ImportedSavingsRow {
   rowNumber: number;
   memberId: string;
@@ -18,77 +23,71 @@ export interface ImportedSavingsRow {
 
 export function downloadSavingsImportTemplate(
   savingsType: CoopSavingsTypeSummary,
+  lookup: MemberLookup,
 ) {
-  const templateSheet = XLSX.utils.aoa_to_sheet([HEADERS, ["MB-0001", 5000]]);
-  templateSheet["!cols"] = [{ wch: 18 }, { wch: 16 }];
-
-  const referenceSheet = XLSX.utils.aoa_to_sheet([
-    ["Field", "Notes"],
-    ["Savings Type", `Every row is saved into "${savingsType.name}".`],
-    [
-      "Membership ID",
-      "Required — the member's membership ID in this co-operative.",
+  downloadTemplate({
+    filename: `${savingsType.name.replace(/[^\w-]+/g, "-").toLowerCase()}-savings-template.xlsx`,
+    title: `Uploading "${savingsType.name}" savings`,
+    steps: [
+      `Every row you add is saved into "${savingsType.name}".`,
+      "Write one member on each row.",
+      "Delete the example row before you upload.",
+      "Savings charges are taken from each amount, the same as a teller upload.",
+      "Don't upload the same file twice, or the savings will be added twice.",
     ],
-    ["Amount", "Required — a positive amount in the co-operative's currency."],
-    [
-      "Processing",
-      "Each row is recorded as a manual deposit for that member; configured savings charges are deducted as for any teller upload. Delete the example row before uploading, and don't upload the same file twice.",
+    columns: [
+      {
+        name: "Membership ID",
+        required: "Yes, or the other ID",
+        help: "The member's membership ID, e.g. MB-0001.",
+        width: 16,
+      },
+      alternativeIdColumn(lookup),
+      {
+        name: "Amount",
+        required: "Yes",
+        help: "How much the member saved. Numbers only, e.g. 5000.",
+        width: 14,
+      },
     ],
-  ]);
-  referenceSheet["!cols"] = [{ wch: 20 }, { wch: 100 }];
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, templateSheet, "Template");
-  XLSX.utils.book_append_sheet(workbook, referenceSheet, "Field Reference");
-
-  const buffer = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
-  triggerDownload(
-    new Blob([buffer], { type: "application/octet-stream" }),
-    `${savingsType.name.replace(/[^\w-]+/g, "-").toLowerCase()}-savings-import-template.xlsx`,
-  );
+    rows: [["MB-0001", "", 5000]],
+  });
 }
 
 export async function parseSavingsImportFile(
   file: File,
   savingsType: CoopSavingsTypeSummary,
+  lookup: MemberLookup,
 ): Promise<ParsedImportResult<ImportedSavingsRow>> {
-  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-  const sheetName =
-    workbook.SheetNames.find((name) => name.toLowerCase() === "template") ??
-    workbook.SheetNames[0];
-  const sheet = sheetName ? workbook.Sheets[sheetName] : undefined;
-  if (!sheet)
-    return {
-      rows: [],
-      errors: [{ row: 1, message: "The file has no worksheet" }],
-    };
-
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    defval: "",
-  });
+  const raws = await readFilledRows(file);
+  if (!raws)
+    return { rows: [], errors: [{ row: 1, message: "The file is empty" }] };
   const rows: ImportedSavingsRow[] = [];
   const errors: ImportRowError[] = [];
 
-  rawRows.forEach((raw, index) => {
+  raws.forEach((raw, index) => {
     const rowNumber = index + 2;
-    const memberId = String(raw["Membership ID"] ?? "").trim();
-    const amountRaw = raw["Amount"];
-    if (!memberId && (amountRaw === "" || amountRaw == null)) return;
-
-    if (!memberId) {
-      errors.push({ row: rowNumber, message: "Membership ID is required" });
-      return;
-    }
-    const amount = Number(amountRaw);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      errors.push({
+    const who = findMember(raw, lookup);
+    const amount = amountOf(cell(raw, "Amount"));
+    if (who.empty && amount == null) return;
+    if (who.empty)
+      return void errors.push({
         row: rowNumber,
-        message: "Amount must be a number greater than zero",
+        message: `Type the Membership ID or ${lookup.label}`,
       });
-      return;
-    }
-
-    rows.push({ rowNumber, memberId, savingsTypeId: savingsType.id, amount });
+    if (who.error)
+      return void errors.push({ row: rowNumber, message: who.error });
+    if (amount == null || Number.isNaN(amount) || amount <= 0)
+      return void errors.push({
+        row: rowNumber,
+        message: "The Amount must be a number bigger than 0",
+      });
+    rows.push({
+      rowNumber,
+      memberId: who.memberId!,
+      savingsTypeId: savingsType.id,
+      amount,
+    });
   });
 
   return { rows, errors };

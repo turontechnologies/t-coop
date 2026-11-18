@@ -2,6 +2,9 @@
 
 import { Badge } from "@/components/ui/badge";
 import type { ImportConfig } from "@/components/features/shared/export-import-menu";
+import { useAlternativeIdLabel } from "@/components/features/shared/member-id";
+import { useCoopMembers } from "@/hooks/use-coop-members";
+import { memberLookup } from "@/lib/import-template";
 import { useCoopLoanRecords } from "@/hooks/use-coop-loans";
 import { useBulkRepayments } from "@/hooks/use-loan-repayments";
 import {
@@ -25,15 +28,17 @@ export function useBulkRepaymentImport(
 ): ImportConfig<BulkRepaymentRow> {
   const { data: loans = [] } = useCoopLoanRecords(coopId);
   const bulk = useBulkRepayments(coopId);
+  const { data: members = [] } = useCoopMembers(coopId);
+  const lookup = memberLookup(members, useAlternativeIdLabel(coopId));
 
   return {
     title: "Import loan repayments",
     description:
       "Record repayments for many loans at once, e.g. payroll deductions or transfers received. Any amount works: half a month, a month and a half, or the whole loan.",
     templateHint:
-      "It's already filled in with every active loan. Just type what each member paid; rows left empty are skipped.",
-    downloadTemplate: () => downloadBulkRepaymentTemplate(loans),
-    parseFile: parseBulkRepaymentFile,
+      "Every loan still being repaid is already listed. Just type how much each person paid. Empty rows are left out.",
+    downloadTemplate: () => downloadBulkRepaymentTemplate(loans, lookup),
+    parseFile: (file) => parseBulkRepaymentFile(file, lookup),
     submit: (rows, dryRun) => bulk.mutateAsync({ rows, dryRun }),
     formatTotal: (amount) => formatMoney(amount, currency),
     columns: [
