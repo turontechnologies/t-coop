@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FileSpreadsheet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Tabs,
@@ -13,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import { CoopLoansSummaryTable } from "@/components/features/coop/coop-loans-summary-table";
 import { LoanRequestsTable } from "@/components/features/loans/loan-requests-table";
 import { MemberLoansView } from "@/components/features/loans/member-loans-view";
+import { BulkRepaymentUploadDialog } from "@/components/features/loans/bulk-repayment-upload";
+import { TransferClaimsQueue } from "@/components/features/loans/transfer-repayment";
+import { useCoopTransferClaims } from "@/hooks/use-loan-repayments";
 import { LoanRecordsTable } from "@/components/features/loans/loan-records-table";
 import {
   LOAN_SLICE_LABELS,
@@ -26,7 +30,7 @@ import { useCoopLoanRecords, useCoopLoanTypes } from "@/hooks/use-coop-loans";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
 
-type AdminLoansTab = "requests" | "members" | "my";
+type AdminLoansTab = "requests" | "members" | "transfers" | "my";
 
 const MODULE = "Loans";
 
@@ -55,6 +59,14 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
 
   const [activeTab, setActiveTab] = useState<AdminLoansTab>(firstVisibleTab);
   const [myTakeOpen, setMyTakeOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const { data: transferClaims = [] } = useCoopTransferClaims(
+    coopId,
+    membersAccess !== null,
+  );
+  const pendingTransfers = transferClaims.filter(
+    (claim) => claim.status === "Pending",
+  ).length;
 
   if (!coop) {
     return (
@@ -94,6 +106,12 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
         <h2 className="text-sm font-semibold text-foreground">Quick Summary</h2>
         {activeTab === "my" && myAccess === "write" ? (
           <Button onClick={() => setMyTakeOpen(true)}>+ New Loan</Button>
+        ) : (activeTab === "members" || activeTab === "transfers") &&
+          membersAccess === "write" ? (
+          <Button variant="outline" onClick={() => setBulkOpen(true)}>
+            <FileSpreadsheet className="size-4" aria-hidden="true" />
+            Bulk upload repayments
+          </Button>
         ) : null}
       </div>
 
@@ -140,6 +158,16 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
                 {membersAccess !== null ? (
                   <TabsTab value="members">Members Loans</TabsTab>
                 ) : null}
+                {membersAccess !== null ? (
+                  <TabsTab value="transfers">
+                    Bank transfers
+                    {pendingTransfers > 0 ? (
+                      <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-semibold text-white">
+                        {pendingTransfers}
+                      </span>
+                    ) : null}
+                  </TabsTab>
+                ) : null}
                 {myAccess !== null ? (
                   <TabsTab value="my">My Loans</TabsTab>
                 ) : null}
@@ -164,6 +192,17 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
               </TabsPanel>
             ) : null}
 
+            {membersAccess !== null ? (
+              <TabsPanel value="transfers">
+                <TransferClaimsQueue
+                  coopId={coopId}
+                  claims={transferClaims}
+                  currency={coop.currency}
+                  canDecide={membersAccess === "write"}
+                />
+              </TabsPanel>
+            ) : null}
+
             {myAccess !== null ? (
               <TabsPanel value="my">
                 <MemberLoansView
@@ -180,6 +219,15 @@ export function AdminLoansView({ member }: AdminLoansViewProps) {
           </Tabs>
         </CardContent>
       </Card>
+
+      {membersAccess === "write" ? (
+        <BulkRepaymentUploadDialog
+          coopId={coopId}
+          currency={coop.currency}
+          open={bulkOpen}
+          onOpenChange={setBulkOpen}
+        />
+      ) : null}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useCooperativeBranding } from "@/hooks/use-cooperative";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   FileText,
+  Landmark,
   Loader2,
   Receipt,
   TriangleAlert,
@@ -43,6 +44,7 @@ import {
   useConfirmRepayment,
   useInitializeRepayment,
   useLoanRepayments,
+  useLoanTransferClaims,
   useManualRepayment,
   useNextInstallment,
 } from "@/hooks/use-loan-repayments";
@@ -52,6 +54,10 @@ import {
 } from "@/lib/loans-data";
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import {
+  LoanTransferClaims,
+  TransferRepaymentDialog,
+} from "@/components/features/loans/transfer-repayment";
 
 function repaymentBadgeVariant(status: RepaymentStatus) {
   if (status === "Paid") return "secondary";
@@ -89,6 +95,14 @@ export function LoanRepaymentPanel({
   const showManualButton = isActive && !canPay && canRecordManually;
 
   const [payBusy, setPayBusy] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const { data: transferClaims = [] } = useLoanTransferClaims(
+    coopId,
+    record.id,
+  );
+  const hasPendingTransfer = transferClaims.some(
+    (claim) => claim.status === "Pending",
+  );
   const initializeRepayment = useInitializeRepayment(coopId, record.id);
   const confirmRepayment = useConfirmRepayment(coopId, record.id);
   const manualRepayment = useManualRepayment(coopId, record.id);
@@ -148,21 +162,38 @@ export function LoanRepaymentPanel({
               <TabsIndicator />
             </TabsList>
             {showPayButton ? (
-              <Button
-                type="button"
-                size="sm"
-                disabled={payBusy}
-                onClick={handlePay}
-              >
-                {payBusy ? (
-                  <Loader2
-                    className="size-3.5 animate-spin"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  "Make a Repayment"
-                )}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={hasPendingTransfer}
+                  title={
+                    hasPendingTransfer
+                      ? "Your last transfer is still waiting to be confirmed"
+                      : undefined
+                  }
+                  onClick={() => setTransferOpen(true)}
+                >
+                  <Landmark className="size-3.5" aria-hidden="true" />I paid by
+                  bank transfer
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={payBusy}
+                  onClick={handlePay}
+                >
+                  {payBusy ? (
+                    <Loader2
+                      className="size-3.5 animate-spin"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    "Make a Repayment"
+                  )}
+                </Button>
+              </div>
             ) : showManualButton ? (
               <RecordRepaymentDialog
                 coopId={coopId}
@@ -173,6 +204,17 @@ export function LoanRepaymentPanel({
               />
             ) : null}
           </div>
+
+          {transferClaims.length > 0 ? (
+            <div className="mt-4">
+              <LoanTransferClaims
+                coopId={coopId}
+                claims={transferClaims}
+                currency={currency}
+                canDecide={canRecordManually && !canPay}
+              />
+            </div>
+          ) : null}
 
           <TabsPanel value="schedule">
             <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
@@ -390,6 +432,15 @@ export function LoanRepaymentPanel({
         </Tabs>
       </CardContent>
       {checkout.dialog}
+      {showPayButton ? (
+        <TransferRepaymentDialog
+          coopId={coopId}
+          loanId={record.id}
+          currency={currency}
+          open={transferOpen}
+          onOpenChange={setTransferOpen}
+        />
+      ) : null}
     </Card>
   );
 }

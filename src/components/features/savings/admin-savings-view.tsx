@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PiggyBank } from "lucide-react";
+import { FileSpreadsheet, PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import {
   type UploadTellerPayload,
 } from "@/components/features/savings/upload-teller-modal";
 import { SavingsRequestsTable } from "@/components/features/savings/savings-requests-table";
+import { BulkSavingsUploadDialog } from "@/components/features/savings/bulk-savings-upload";
 import { useCooperative } from "@/hooks/use-cooperative";
 import { useCoopMembers } from "@/hooks/use-coop-members";
 import {
@@ -69,6 +70,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
   const [tellerBusy, setTellerBusy] = useState(false);
   const [myAddOpen, setMyAddOpen] = useState(false);
   const [myWithdrawOpen, setMyWithdrawOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   if (!coop) {
     return (
@@ -174,7 +176,13 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
             <Button onClick={handlePrimaryAction}>+ New Savings</Button>
           </div>
         ) : activeTab === "members" && membersAccess === "write" ? (
-          <Button onClick={handlePrimaryAction}>+ New Savings</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setBulkOpen(true)}>
+              <FileSpreadsheet className="size-4" aria-hidden="true" />
+              Bulk upload
+            </Button>
+            <Button onClick={handlePrimaryAction}>+ New Savings</Button>
+          </div>
         ) : null}
       </div>
 
@@ -257,6 +265,15 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
           </Tabs>
         </CardContent>
       </Card>
+
+      {membersAccess === "write" ? (
+        <BulkSavingsUploadDialog
+          coopId={coopId}
+          currency={coop.currency}
+          open={bulkOpen}
+          onOpenChange={setBulkOpen}
+        />
+      ) : null}
 
       <UploadTellerModal
         open={tellerOpen}
