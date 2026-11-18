@@ -9,8 +9,6 @@ import {
   FileText,
   Landmark,
   Loader2,
-  Minus,
-  Plus,
   Receipt,
   Upload,
   X,
@@ -38,6 +36,10 @@ import { formatDateLong, formatMoney, formatTimeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TransferClaim } from "@/services/loan-repayment.service";
 import { uploadService } from "@/services/upload.service";
+import {
+  parseAmount,
+  RepayAmountField,
+} from "@/components/features/loans/repay-amount";
 
 const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -59,13 +61,8 @@ export function TransferRepaymentDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [count, setCount] = useState(1);
-  const { data: next, isFetching } = useNextInstallment(
-    coopId,
-    loanId,
-    open,
-    count,
-  );
+  const [amount, setAmount] = useState("");
+  const { data: next } = useNextInstallment(coopId, loanId, open);
   const submitClaim = useSubmitTransferClaim(coopId, loanId);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -81,7 +78,7 @@ export function TransferRepaymentDialog({
 
   useEffect(() => {
     if (!open) {
-      setCount(1);
+      setAmount("");
       setReceipt(null);
       setPreview(null);
       setPaidOn(todayIso());
@@ -91,7 +88,8 @@ export function TransferRepaymentDialog({
     }
   }, [open]);
 
-  const remaining = next?.remainingInstallments ?? 1;
+  const amountNumber = parseAmount(amount);
+  const tooMuch = next ? amountNumber > next.outstanding + 0.005 : false;
   const working = uploading || submitClaim.isPending;
 
   const takeReceipt = (file: File | undefined) => {
@@ -113,6 +111,14 @@ export function TransferRepaymentDialog({
 
   const submit = async () => {
     setProblem(null);
+    if (amountNumber <= 0) {
+      setProblem("Enter how much you transferred.");
+      return;
+    }
+    if (tooMuch) {
+      setProblem("That's more than what's left to pay on this loan.");
+      return;
+    }
     if (!receipt) {
       setProblem(
         "Upload the transfer receipt so the co-operative can check it.",
@@ -124,7 +130,7 @@ export function TransferRepaymentDialog({
       const receiptUrl = await uploadService.uploadAttachment(receipt);
       setUploading(false);
       const claim = await submitClaim.mutateAsync({
-        installments: count,
+        amount: amountNumber,
         receiptUrl,
         paidOn,
         transferReference: reference.trim() || undefined,
@@ -167,57 +173,19 @@ export function TransferRepaymentDialog({
         ) : null}
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border bg-muted/40 p-4">
-            <p className="text-xs font-semibold text-muted-foreground">
-              Installments this transfer covers
-            </p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label="Fewer installments"
-                  disabled={count <= 1 || working}
-                  onClick={() => setCount((value) => Math.max(1, value - 1))}
-                >
-                  <Minus className="size-4" aria-hidden="true" />
-                </Button>
-                <span className="w-8 text-center text-lg font-semibold tabular-nums">
-                  {count}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label="More installments"
-                  disabled={count >= remaining || working}
-                  onClick={() =>
-                    setCount((value) => Math.min(remaining, value + 1))
-                  }
-                >
-                  <Plus className="size-4" aria-hidden="true" />
-                </Button>
-              </div>
-              <div className="text-right">
-                <p
-                  className={cn(
-                    "text-xl font-semibold text-foreground tabular-nums transition-opacity",
-                    isFetching && "opacity-50",
-                  )}
-                >
-                  {next ? formatMoney(next.amount, currency) : "…"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {next
-                    ? count === remaining
-                      ? "Clears the loan"
-                      : `${remaining - count} installment${remaining - count === 1 ? "" : "s"} left after this`
-                    : " "}
-                </p>
-              </div>
-            </div>
-          </div>
+          {next ? (
+            <RepayAmountField
+              terms={next}
+              repaid={next.amountRepaid}
+              value={amount}
+              onChange={setAmount}
+              currency={currency}
+              disabled={working}
+              label="How much did you transfer?"
+            />
+          ) : (
+            <div className="h-24 animate-pulse rounded-2xl bg-muted" />
+          )}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -360,7 +328,13 @@ export function TransferRepaymentDialog({
           </Button>
           <Button
             type="button"
-            disabled={working || !next || next.pendingClaim}
+            disabled={
+              working ||
+              !next ||
+              next.pendingClaim ||
+              amountNumber <= 0 ||
+              tooMuch
+            }
             onClick={submit}
           >
             {working ? (
@@ -524,7 +498,6 @@ function ClaimDetails({
       </div>
       <p className="text-xs text-muted-foreground">
         {showMember ? `${claim.loanTypeName} · ` : ""}
-        {claim.installments} installment{claim.installments === 1 ? "" : "s"} ·
         paid {formatDateLong(new Date(claim.paidOn))}
         {claim.transferReference ? ` · Ref ${claim.transferReference}` : ""} ·
         sent {formatTimeAgo(claim.submittedAt)}

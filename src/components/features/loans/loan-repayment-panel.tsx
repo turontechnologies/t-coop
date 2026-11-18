@@ -55,12 +55,17 @@ import {
 import { formatDateLong, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
+  parseAmount,
+  RepayAmountField,
+} from "@/components/features/loans/repay-amount";
+import {
   LoanTransferClaims,
   TransferRepaymentDialog,
 } from "@/components/features/loans/transfer-repayment";
 
 function repaymentBadgeVariant(status: RepaymentStatus) {
   if (status === "Paid") return "secondary";
+  if (status === "Part paid") return "outline";
   if (status === "Upcoming" || status === "Pending") return "outline";
   return "destructive";
 }
@@ -109,32 +114,32 @@ export function LoanRepaymentPanel({
 
   const checkout = useGatewayCheckout();
   const { data: branding } = useCooperativeBranding(coopId);
-  const nextDue =
-    schedule.find((item) => item.status !== "Paid")?.totalAmount ??
-    record.monthlyRepayment;
 
-  const handlePay = () => {
-    if (!memberEmail) return;
-    let installment = record.repaymentsMade + 1;
-    let paid = 0;
+  const [payOpen, setPayOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const { data: payQuote } = useNextInstallment(coopId, record.id, payOpen);
+  const payNumber = parseAmount(payAmount);
+  const payTooMuch = payQuote
+    ? payNumber > payQuote.outstanding + 0.005
+    : false;
+
+  const handlePay = (amount: number) => {
+    if (!memberEmail || amount <= 0) return;
+    setPayOpen(false);
     setPayBusy(true);
     checkout.start({
       merchant: branding?.name ?? "Your co-operative",
       label: "Loan repayment",
       email: memberEmail,
-      amount: nextDue,
+      amount,
       currency,
-      initialize: async () => {
-        const intent = await initializeRepayment.mutateAsync();
-        installment = intent.installmentNumber;
-        paid = intent.amount;
-        return intent;
-      },
+      initialize: () => initializeRepayment.mutateAsync(amount),
       confirm: (reference) => confirmRepayment.mutateAsync(reference),
       onComplete: () => {
         setPayBusy(false);
+        setPayAmount("");
         toast.success("Repayment recorded", {
-          description: `Installment ${installment} of ${record.numberOfRepayments} — ${formatMoney(paid, currency)}.`,
+          description: `${formatMoney(amount, currency)} paid towards your loan.`,
         });
       },
       onCancel: () => setPayBusy(false),
@@ -144,10 +149,11 @@ export function LoanRepaymentPanel({
   const handleRecordManually = async (proof: {
     receiptUrl: string;
     note?: string;
+    amount?: number;
   }) => {
     const result = await manualRepayment.mutateAsync(proof);
     toast.success("Repayment recorded", {
-      description: `Installment ${result.repayment.installmentNumber} of ${record.numberOfRepayments} — ${formatMoney(result.repayment.amount, currency)}. Receipt attached.`,
+      description: `${formatMoney(result.repayment.amount, currency)} counted towards ${record.memberName}'s loan. Receipt attached.`,
     });
   };
 
@@ -182,7 +188,7 @@ export function LoanRepaymentPanel({
                   type="button"
                   size="sm"
                   disabled={payBusy}
-                  onClick={handlePay}
+                  onClick={() => setPayOpen(true)}
                 >
                   {payBusy ? (
                     <Loader2
@@ -266,6 +272,11 @@ export function LoanRepaymentPanel({
                         >
                           {item.status}
                         </Badge>
+                        {item.status === "Part paid" ? (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {formatMoney(item.paid, currency)} paid
+                          </span>
+                        ) : null}
                       </td>
                     </tr>
                   ))}
@@ -432,6 +443,39 @@ export function LoanRepaymentPanel({
         </Tabs>
       </CardContent>
       {checkout.dialog}
+      <Dialog open={payOpen} onOpenChange={setPayOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Make a repayment</DialogTitle>
+            <DialogDescription>
+              Pay any amount, a month&apos;s installment, part of one, or the
+              whole loan. We&apos;ll show what it covers.
+            </DialogDescription>
+          </DialogHeader>
+          {payQuote ? (
+            <RepayAmountField
+              terms={payQuote}
+              repaid={payQuote.amountRepaid}
+              value={payAmount}
+              onChange={setPayAmount}
+              currency={currency}
+            />
+          ) : (
+            <div className="h-24 animate-pulse rounded-2xl bg-muted" />
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPayOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={payNumber <= 0 || payTooMuch || !payQuote}
+              onClick={() => handlePay(Math.round(payNumber * 100) / 100)}
+            >
+              Pay {payNumber > 0 ? formatMoney(payNumber, currency) : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {showPayButton ? (
         <TransferRepaymentDialog
           coopId={coopId}
@@ -478,10 +522,17 @@ function RecordRepaymentDialog({
   loanId: string;
   currency: string;
   busy: boolean;
-  onConfirm: (proof: { receiptUrl: string; note?: string }) => Promise<void>;
+  onConfirm: (proof: {
+    receiptUrl: string;
+    note?: string;
+    amount?: number;
+  }) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const { data: next } = useNextInstallment(coopId, loanId, open);
+  const [amount, setAmount] = useState("");
+  const amountNumber = parseAmount(amount);
+  const tooMuch = next ? amountNumber > next.outstanding + 0.005 : false;
   const [receipt, setReceipt] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -495,6 +546,7 @@ function RecordRepaymentDialog({
       setReceipt(null);
       setPreview(null);
       setNote("");
+      setAmount("");
       setProblem(null);
     }
   }, [open]);
@@ -524,6 +576,14 @@ function RecordRepaymentDialog({
 
   const submit = async () => {
     setProblem(null);
+    if (amountNumber <= 0 || tooMuch) {
+      setProblem(
+        tooMuch
+          ? "That's more than what's left to pay on this loan."
+          : "Enter the amount the member paid.",
+      );
+      return;
+    }
     if (!receipt) {
       setProblem("Upload the receipt for this payment before recording it.");
       return;
@@ -532,7 +592,11 @@ function RecordRepaymentDialog({
       setUploading(true);
       const receiptUrl = await uploadService.uploadAttachment(receipt);
       setUploading(false);
-      await onConfirm({ receiptUrl, note: note.trim() || undefined });
+      await onConfirm({
+        receiptUrl,
+        note: note.trim() || undefined,
+        amount: Math.round(amountNumber * 100) / 100,
+      });
       setOpen(false);
     } catch (error) {
       setProblem(
@@ -555,28 +619,25 @@ function RecordRepaymentDialog({
           <DialogHeader>
             <DialogTitle>Record a repayment</DialogTitle>
             <DialogDescription>
-              For a payment received offline (cash or bank transfer). Attach the
-              receipt as proof.
+              For a payment received offline (cash or bank transfer). Any amount
+              up to what&apos;s left; attach the receipt as proof.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-4 py-3">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  {next
-                    ? `Installment ${next.installmentNumber}`
-                    : "Next installment"}
-                </p>
-                <p className="text-lg font-semibold text-foreground">
-                  {next ? formatMoney(next.amount, currency) : "…"}
-                </p>
-              </div>
-              <Receipt
-                className="size-6 text-muted-foreground"
-                aria-hidden="true"
+            {next ? (
+              <RepayAmountField
+                terms={next}
+                repaid={next.amountRepaid}
+                value={amount}
+                onChange={setAmount}
+                currency={currency}
+                disabled={working}
+                label="Amount the member paid"
               />
-            </div>
+            ) : (
+              <div className="h-24 animate-pulse rounded-2xl bg-muted" />
+            )}
 
             <div className="space-y-2">
               <Label>Receipt</Label>
