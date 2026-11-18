@@ -435,7 +435,9 @@ export default function LoanRequestPage({ params }: LoanRequestPageProps) {
                           ? `Cheque${record.chequeNumber ? ` No. ${record.chequeNumber}` : ""}`
                           : record.disbursementMethod === "Transfer"
                             ? `Bank transfer${record.chequeNumber ? ` · Ref ${record.chequeNumber}` : ""}`
-                            : "Online transfer"}
+                            : record.disbursementMethod === "Cash"
+                              ? "Cash"
+                              : "Online transfer"}
                         {record.disbursedAt
                           ? ` · ${formatDateLong(new Date(record.disbursedAt))}`
                           : ""}
