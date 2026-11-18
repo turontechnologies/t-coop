@@ -29,6 +29,13 @@ export interface ManualDepositPayload {
   receiptUrl?: string;
 }
 
+/** How an approved withdrawal is paid: online now, or how the co-op already paid it. */
+export interface WithdrawalPayout {
+  method: "Online" | "Transfer" | "Cheque" | "Cash";
+  receiptUrl?: string;
+  reference?: string;
+}
+
 export interface BulkSavingsRow {
   row: number;
   memberId: string;
@@ -77,6 +84,9 @@ interface SavingsRequestDto {
   requestedAt: string;
   resolvedAt: string | null;
   declineReason?: string | null;
+  payoutMethod?: "Online" | "Transfer" | "Cheque" | "Cash" | null;
+  payoutReference?: string | null;
+  payoutReceiptUrl?: string | null;
 }
 
 function fromRequestDto(dto: SavingsRequestDto): SavingsRequest {
@@ -92,6 +102,9 @@ function fromRequestDto(dto: SavingsRequestDto): SavingsRequest {
     requestedAt: dto.requestedAt,
     resolvedAt: dto.resolvedAt ?? undefined,
     declineReason: dto.declineReason ?? undefined,
+    payoutMethod: dto.payoutMethod ?? undefined,
+    payoutReference: dto.payoutReference ?? undefined,
+    payoutReceiptUrl: dto.payoutReceiptUrl ?? undefined,
     feePercent: dto.feePercent ?? undefined,
     feeAmount: dto.feeAmount ?? undefined,
     netAmount: dto.netAmount ?? undefined,
@@ -181,11 +194,12 @@ export const savingsSelfService = {
     requestId: string,
     status: "Approved" | "Declined",
     reason?: string,
+    payout?: WithdrawalPayout,
   ): Promise<SavingsRequest> {
     // Approving pays the member out server-side — see SavingsSelfServiceController.
     const { data } = await apiClient.patch<SavingsRequestDto>(
       `/cooperatives/${coopId}/savings/withdrawals/${requestId}`,
-      { status, reason: reason?.trim() || undefined },
+      { status, reason: reason?.trim() || undefined, ...payout },
     );
     return fromRequestDto(data);
   },

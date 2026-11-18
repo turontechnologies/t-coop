@@ -140,7 +140,7 @@ export interface OfferResponsePayload {
 
 export interface DisbursePayload {
   /** "Transfer": the co-op already paid by bank transfer outside the platform. */
-  method: "Online" | "Cheque" | "Transfer";
+  method: "Online" | "Cheque" | "Transfer" | "Cash";
   chequeUrl?: string;
   chequeNumber?: string;
   receiptUrl?: string;

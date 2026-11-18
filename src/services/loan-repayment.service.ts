@@ -11,6 +11,11 @@ export interface NextInstallment {
   installmentAmount: number;
   /** A bank-transfer repayment is waiting for the co-op to confirm. */
   pendingClaim: boolean;
+  monthlyRepayment: number;
+  amountRepaid: number;
+  outstanding: number;
+  totalRepayment: number;
+  numberOfRepayments: number;
 }
 
 /** A repayment the borrower made by bank transfer, waiting for (or past) the co-op's check. */
@@ -34,7 +39,8 @@ export interface TransferClaim {
 }
 
 export interface TransferClaimPayload {
-  installments: number;
+  /** Any amount up to what's still owed. */
+  amount: number;
   receiptUrl: string;
   transferReference?: string;
   paidOn?: string;
@@ -57,9 +63,9 @@ export interface BulkRepaymentLine {
   loanType: string;
   loanId: string;
   amount: number;
-  installments: number;
-  fromInstallment: number;
-  totalInstallments: number;
+  /** How much of the schedule the row pays, e.g. 1.5. */
+  monthsCovered: number;
+  outstandingAfter: number;
   date: string;
   completesLoan: boolean;
 }
@@ -180,12 +186,15 @@ export const loanRepaymentService = {
     return data;
   },
 
+  /** `amount`: any amount up to what's owed; left out, it finishes the current installment. */
   async initialize(
     coopId: string,
     loanId: string,
+    amount?: number,
   ): Promise<InitializeRepaymentResult> {
     const { data } = await apiClient.post<InitializeRepaymentResult>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/initialize`,
+      amount ? { amount } : undefined,
     );
     return data;
   },
@@ -205,7 +214,7 @@ export const loanRepaymentService = {
   async manual(
     coopId: string,
     loanId: string,
-    proof: { receiptUrl: string; note?: string },
+    proof: { receiptUrl: string; note?: string; amount?: number },
   ): Promise<RepaymentResult> {
     const { data } = await apiClient.post<RepaymentResult>(
       `/cooperatives/${coopId}/loans/${loanId}/repayments/manual`,

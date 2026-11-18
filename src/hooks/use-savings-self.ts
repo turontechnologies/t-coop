@@ -4,6 +4,7 @@ import {
   type InitializeDepositPayload,
   type ManualDepositPayload,
   type BulkSavingsRow,
+  type WithdrawalPayout,
   type WithdrawalRequestPayload,
 } from "@/services/savings-self.service";
 
@@ -72,12 +73,20 @@ export function useDecideWithdrawal(coopId: string) {
       requestId,
       status,
       reason,
+      payout,
     }: {
       requestId: string;
       status: "Approved" | "Declined";
       reason?: string;
+      payout?: WithdrawalPayout;
     }) =>
-      savingsSelfService.decideWithdrawal(coopId, requestId, status, reason),
+      savingsSelfService.decideWithdrawal(
+        coopId,
+        requestId,
+        status,
+        reason,
+        payout,
+      ),
     onSuccess: () => invalidateSavings(queryClient, coopId),
   });
 }

@@ -54,7 +54,8 @@ export function useLoanRepayments(
 
 export function useInitializeRepayment(coopId: string, loanId: string) {
   return useMutation({
-    mutationFn: () => loanRepaymentService.initialize(coopId, loanId),
+    mutationFn: (amount?: number) =>
+      loanRepaymentService.initialize(coopId, loanId, amount),
   });
 }
 
@@ -70,8 +71,11 @@ export function useConfirmRepayment(coopId: string, loanId: string) {
 export function useManualRepayment(coopId: string, loanId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (proof: { receiptUrl: string; note?: string }) =>
-      loanRepaymentService.manual(coopId, loanId, proof),
+    mutationFn: (proof: {
+      receiptUrl: string;
+      note?: string;
+      amount?: number;
+    }) => loanRepaymentService.manual(coopId, loanId, proof),
     onSuccess: () => invalidateLoan(queryClient, coopId, loanId),
   });
 }

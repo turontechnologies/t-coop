@@ -163,7 +163,7 @@ export function downloadBulkRepaymentTemplate(
       ["Installment", "The member's monthly installment, for reference."],
       [
         "Amount",
-        "What the member paid. It must be a whole number of installments (one, two, …). The last installment can be slightly different, to clear the loan exactly. Rows with no amount are skipped.",
+        "What the member paid: any amount up to what they still owe (half a month, one and a half months, the whole loan…). Rows with no amount are skipped.",
       ],
       [
         "Date",

@@ -130,7 +130,8 @@ export function computeLoanTerms(
   };
 }
 
-export type RepaymentStatus = "Paid" | "Upcoming" | "Overdue" | "Pending";
+export type RepaymentStatus =
+  "Paid" | "Part paid" | "Upcoming" | "Overdue" | "Pending";
 
 export interface RepaymentScheduleItem {
   installment: number;
@@ -139,10 +140,14 @@ export interface RepaymentScheduleItem {
   totalAmount: number;
   dueDate: string;
   status: RepaymentStatus;
+  /** What's been paid towards this installment (part payments count). */
+  paid: number;
 }
 
 /** Shared shape between the personal LoanRecord and the coop-scoped CoopLoanRecord. */
 interface RepaymentSourceLoan {
+  monthlyRepayment?: number;
+  amountRepaid?: number | null;
   amount: number;
   numberOfRepayments: number;
   totalRepayment: number;
@@ -159,19 +164,34 @@ export function generateRepaymentSchedule(
     (loan.totalRepayment - loan.amount) / loan.numberOfRepayments;
   const startDate = new Date(loan.date);
   const now = Date.now();
+  const monthly =
+    loan.monthlyRepayment ?? loan.totalRepayment / loan.numberOfRepayments;
+  const cumulative = (k: number) =>
+    k >= loan.numberOfRepayments
+      ? loan.totalRepayment
+      : Math.min(monthly * k, loan.totalRepayment);
+  const repaid =
+    loan.status === "Completed"
+      ? loan.totalRepayment
+      : (loan.amountRepaid ?? cumulative(loan.repaymentsMade));
 
   return Array.from({ length: loan.numberOfRepayments }, (_, index) => {
     const installment = index + 1;
     const dueDate = new Date(startDate);
     dueDate.setMonth(dueDate.getMonth() + installment);
 
+    const start = cumulative(installment - 1);
+    const end = cumulative(installment);
+    const paid = Math.max(0, Math.min(repaid, end) - start);
     let status: RepaymentStatus;
     if (loan.status.startsWith("Awaiting") || loan.status === "Rejected") {
       status = "Pending";
-    } else if (installment <= loan.repaymentsMade) {
+    } else if (paid >= end - start - 0.005) {
       status = "Paid";
+    } else if (dueDate.getTime() < now) {
+      status = "Overdue";
     } else {
-      status = dueDate.getTime() < now ? "Overdue" : "Upcoming";
+      status = paid > 0 ? "Part paid" : "Upcoming";
     }
 
     return {
@@ -181,6 +201,7 @@ export function generateRepaymentSchedule(
       totalAmount: principalPerInstallment + interestPerInstallment,
       dueDate: dueDate.toISOString().slice(0, 10),
       status,
+      paid,
     };
   });
 }

@@ -9,6 +9,7 @@ import {
   parseBulkRepaymentFile,
 } from "@/lib/bulk-upload";
 import { formatDateLong, formatMoney } from "@/lib/format";
+import { formatMonths } from "@/lib/loan-progress";
 import type {
   BulkRepaymentLine,
   BulkRepaymentRow,
@@ -34,7 +35,7 @@ export function BulkRepaymentUploadDialog({
       open={open}
       onOpenChange={onOpenChange}
       title="Bulk upload loan repayments"
-      description="Record repayments for many loans at once, e.g. payroll deductions or transfers received. Each amount must be a whole number of installments."
+      description="Record repayments for many loans at once, e.g. payroll deductions or transfers received. Any amount works: half a month, a month and a half, or the whole loan."
       noun="repayment"
       downloadTemplate={() => downloadBulkRepaymentTemplate(loans)}
       parseFile={parseBulkRepaymentFile}
@@ -53,15 +54,10 @@ export function BulkRepaymentUploadDialog({
           ),
         },
         {
-          header: "Installments",
+          header: "Covers",
           cell: (line) => (
             <span className="inline-flex flex-wrap items-center gap-1.5">
-              {line.installments === 1
-                ? `No. ${line.fromInstallment}`
-                : `No. ${line.fromInstallment}–${line.fromInstallment + line.installments - 1}`}{" "}
-              <span className="text-xs text-muted-foreground">
-                of {line.totalInstallments}
-              </span>
+              {formatMonths(line.monthsCovered)}
               {line.completesLoan ? (
                 <Badge
                   variant="secondary"
@@ -69,7 +65,11 @@ export function BulkRepaymentUploadDialog({
                 >
                   Clears loan
                 </Badge>
-              ) : null}
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {formatMoney(line.outstandingAfter, currency)} left
+                </span>
+              )}
             </span>
           ),
         },

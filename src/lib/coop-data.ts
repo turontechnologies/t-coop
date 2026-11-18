@@ -72,6 +72,10 @@ export interface SavingsRequest {
   resolvedAt?: string;
   /** Why a declined request was declined, when the admin said. */
   declineReason?: string;
+  /** How an approved withdrawal was paid. */
+  payoutMethod?: "Online" | "Transfer" | "Cheque" | "Cash";
+  payoutReference?: string;
+  payoutReceiptUrl?: string;
   /**
    * Withdrawal-only: the combined co-op + platform fee percentage, locked
    * in at request time (a later settings change shouldn't retroactively
@@ -174,13 +178,16 @@ export interface CoopLoanRecord {
   payoutAccountName?: string | null;
   /** False when the bank couldn't be asked to confirm the account name. */
   payoutNameVerified?: boolean | null;
-  disbursementMethod?: "Online" | "Cheque" | "Transfer" | "Import" | null;
+  disbursementMethod?:
+    "Online" | "Cheque" | "Transfer" | "Cash" | "Import" | null;
   chequeUrl?: string | null;
   chequeNumber?: string | null;
   disbursedByName?: string | null;
   /** Repaid so far and still owed (principal + interest), from the backend — the same figures
    * the dashboard uses. */
   amountRepaid?: number;
+  /** How much of the schedule is paid, in months (part payments count, e.g. 1.5). */
+  monthsPaid?: number;
   outstandingBalance?: number;
   /** Repayments past their due date and unpaid, what they come to, and the next due date. */
   overdueInstallments?: number;
