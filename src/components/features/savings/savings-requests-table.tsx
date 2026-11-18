@@ -32,6 +32,36 @@ import { formatMoney, formatTimeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { uploadService } from "@/services/upload.service";
+import type { WithdrawalPayout } from "@/services/savings-self.service";
+
+const PAYOUT_MODES: {
+  value: WithdrawalPayout["method"];
+  title: string;
+  body: string;
+}[] = [
+  {
+    value: "Online",
+    title: "Pay online now",
+    body: "The platform sends it to the member's bank account.",
+  },
+  {
+    value: "Transfer",
+    title: "Already paid by bank transfer",
+    body: "You sent it from the co-op's bank. Attach the receipt.",
+  },
+  {
+    value: "Cheque",
+    title: "Paid by cheque",
+    body: "Attach a photo of the cheque.",
+  },
+  {
+    value: "Cash",
+    title: "Paid in cash",
+    body: "Handed over at the office. A receipt is optional.",
+  },
+];
 
 interface SavingsRequestsTableProps {
   requests: SavingsRequest[];
@@ -42,6 +72,7 @@ interface SavingsRequestsTableProps {
     requestId: string,
     status: "Approved" | "Declined",
     reason?: string,
+    payout?: WithdrawalPayout,
   ) => Promise<void> | void;
 }
 
@@ -74,9 +105,10 @@ export function SavingsRequestsTable({
     requestId: string,
     status: "Approved" | "Declined",
     reason?: string,
+    payout?: WithdrawalPayout,
   ) => {
     setBusyId(requestId);
-    await onResolve(requestId, status, reason);
+    await onResolve(requestId, status, reason, payout);
     setBusyId(null);
   };
 
@@ -212,8 +244,13 @@ export function SavingsRequestsTable({
                             request={request}
                             status="Approved"
                             busy={busy}
-                            onConfirm={() =>
-                              handleResolve(request.id, "Approved")
+                            onConfirm={(_reason, payout) =>
+                              handleResolve(
+                                request.id,
+                                "Approved",
+                                undefined,
+                                payout,
+                              )
                             }
                           />
                           <ConfirmResolveDialog
@@ -321,7 +358,9 @@ export function SavingsRequestsTable({
                       request={request}
                       status="Approved"
                       busy={busy}
-                      onConfirm={() => handleResolve(request.id, "Approved")}
+                      onConfirm={(_reason, payout) =>
+                        handleResolve(request.id, "Approved", undefined, payout)
+                      }
                     />
                     <ConfirmResolveDialog
                       request={request}
@@ -358,17 +397,59 @@ function ConfirmResolveDialog({
   request: SavingsRequest;
   status: "Approved" | "Declined";
   busy: boolean;
-  onConfirm: (reason?: string) => Promise<void> | void;
+  onConfirm: (
+    reason?: string,
+    payout?: WithdrawalPayout,
+  ) => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [mode, setMode] = useState<WithdrawalPayout["method"]>("Online");
+  const [proof, setProof] = useState<File | null>(null);
+  const [reference, setReference] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const isApprove = status === "Approved";
   const currency = useCurrency();
 
   const handleConfirm = async () => {
-    await onConfirm(isApprove ? undefined : reason);
+    setProblem(null);
+    let payout: WithdrawalPayout | undefined;
+    if (isApprove) {
+      if ((mode === "Transfer" || mode === "Cheque") && !proof) {
+        setProblem(
+          mode === "Cheque"
+            ? "Attach a photo of the cheque first."
+            : "Attach the transfer receipt first.",
+        );
+        return;
+      }
+      let receiptUrl: string | undefined;
+      if (proof && mode !== "Online") {
+        try {
+          setUploading(true);
+          receiptUrl = await uploadService.uploadAttachment(proof);
+        } catch (error) {
+          setProblem(
+            error instanceof Error ? error.message : "The upload didn't work.",
+          );
+          return;
+        } finally {
+          setUploading(false);
+        }
+      }
+      payout = {
+        method: mode,
+        receiptUrl,
+        reference: reference.trim() || undefined,
+      };
+    }
+    await onConfirm(isApprove ? undefined : reason, payout);
     setOpen(false);
     setReason("");
+    setMode("Online");
+    setProof(null);
+    setReference("");
   };
 
   return (
@@ -425,6 +506,73 @@ function ConfirmResolveDialog({
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {isApprove && request.type === "Withdrawal" ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-foreground">
+              How is the money paid?
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup">
+              {PAYOUT_MODES.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={mode === option.value}
+                  onClick={() => {
+                    setMode(option.value);
+                    setProblem(null);
+                  }}
+                  className={cn(
+                    "rounded-xl border p-3 text-left transition-colors",
+                    mode === option.value
+                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                      : "border-border hover:bg-muted/50",
+                  )}
+                >
+                  <span className="block text-sm font-semibold text-foreground">
+                    {option.title}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {option.body}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {mode !== "Online" ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`proof-${request.id}`}>
+                    {mode === "Cheque" ? "Cheque photo" : "Receipt"}
+                    {mode === "Cash" ? " (optional)" : ""}
+                  </Label>
+                  <Input
+                    id={`proof-${request.id}`}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={(event) =>
+                      setProof(event.target.files?.[0] ?? null)
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`ref-${request.id}`}>
+                    {mode === "Cheque" ? "Cheque number" : "Reference"}{" "}
+                    (optional)
+                  </Label>
+                  <Input
+                    id={`ref-${request.id}`}
+                    maxLength={100}
+                    value={reference}
+                    onChange={(event) => setReference(event.target.value)}
+                  />
+                </div>
+              </div>
+            ) : null}
+            {problem ? (
+              <p className="text-sm text-destructive">{problem}</p>
+            ) : null}
+          </div>
+        ) : null}
         {isApprove ? null : (
           <div className="space-y-1.5">
             <Label htmlFor={`decline-reason-${request.id}`}>
@@ -447,7 +595,7 @@ function ConfirmResolveDialog({
           <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             variant={isApprove ? "default" : "destructive"}
-            disabled={busy}
+            disabled={busy || uploading}
             onClick={handleConfirm}
           >
             {isApprove ? "Approve" : "Decline"}

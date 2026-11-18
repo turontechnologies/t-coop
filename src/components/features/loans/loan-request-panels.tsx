@@ -241,7 +241,7 @@ export function ApprovalSteps({
         : "future",
     lines: [
       record.disbursedAt
-        ? `Paid out${record.disbursedByName ? ` by ${record.disbursedByName}` : ""} · ${record.disbursementMethod === "Cheque" ? "Cheque" : record.disbursementMethod === "Transfer" ? "Bank transfer (outside the platform)" : "Online transfer"} · ${formatDateLong(new Date(record.disbursedAt))}`
+        ? `Paid out${record.disbursedByName ? ` by ${record.disbursedByName}` : ""} · ${record.disbursementMethod === "Cheque" ? "Cheque" : record.disbursementMethod === "Transfer" ? "Bank transfer (outside the platform)" : record.disbursementMethod === "Cash" ? "Cash" : "Online transfer"} · ${formatDateLong(new Date(record.disbursedAt))}`
         : approvals.stage === "Disbursement"
           ? `Ready to pay out ${formatMoney(record.amount, currency)} over ${plural(record.durationMonths, "month")}`
           : "An officer pays the loan out online, by cheque or by bank transfer",
@@ -933,9 +933,9 @@ export function DisburseLoanDialog({
 }) {
   const disburse = useDisburseLoan(coopId);
   const formatId = useFormatMemberId(coopId);
-  const [method, setMethod] = useState<"" | "Online" | "Cheque" | "Transfer">(
-    "",
-  );
+  const [method, setMethod] = useState<
+    "" | "Online" | "Cheque" | "Transfer" | "Cash"
+  >("");
   const [cheque, setCheque] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [chequeNumber, setChequeNumber] = useState("");
@@ -959,7 +959,7 @@ export function DisburseLoanDialog({
     if (!file) return;
     if (!/^image\//.test(file.type) && !/\.pdf$/i.test(file.name)) {
       setProblem(
-        `Upload a photo (JPG or PNG) or a PDF of the ${method === "Transfer" ? "transfer receipt" : "cheque"}.`,
+        `Upload a photo (JPG or PNG) or a PDF of the ${method === "Cheque" ? "cheque" : method === "Cash" ? "cash receipt" : "transfer receipt"}.`,
       );
       return;
     }
@@ -986,7 +986,10 @@ export function DisburseLoanDialog({
     }
     try {
       let proofUrl: string | undefined;
-      if (method !== "Online") {
+      if (method === "Cash" && cheque) {
+        setUploading(true);
+        proofUrl = await uploadService.uploadAttachment(cheque);
+      } else if (method !== "Online" && method !== "Cash") {
         if (!cheque) {
           setProblem(
             method === "Transfer"
@@ -1004,14 +1007,14 @@ export function DisburseLoanDialog({
         method,
         ...(method === "Cheque"
           ? { chequeUrl: proofUrl, chequeNumber: reference }
-          : method === "Transfer"
+          : method === "Transfer" || method === "Cash"
             ? { receiptUrl: proofUrl, transferReference: reference }
             : {}),
       });
       onOpenChange(false);
       toast.success(
-        method === "Transfer"
-          ? `${record.memberName}'s loan is marked as paid by bank transfer`
+        method === "Transfer" || method === "Cash"
+          ? `${record.memberName}'s loan is marked as paid ${method === "Cash" ? "in cash" : "by bank transfer"}`
           : `${formatMoney(net, currency)} disbursed to ${record.memberName}${method === "Cheque" ? " by cheque" : ""}`,
         { description: "Repayments start next month." },
       );
@@ -1074,10 +1077,13 @@ export function DisburseLoanDialog({
               { value: "Online", label: "Online transfer" },
               { value: "Cheque", label: "Cheque" },
               { value: "Transfer", label: "Already paid by bank transfer" },
+              { value: "Cash", label: "Paid in cash" },
             ]}
             value={method || null}
             onValueChange={(value) => {
-              setMethod((value as "Online" | "Cheque" | "Transfer") ?? "");
+              setMethod(
+                (value as "Online" | "Cheque" | "Transfer" | "Cash") ?? "",
+              );
               setCheque(null);
               setPreview(null);
               setChequeNumber("");
@@ -1093,6 +1099,7 @@ export function DisburseLoanDialog({
               <SelectItem value="Transfer">
                 Already paid by bank transfer
               </SelectItem>
+              <SelectItem value="Cash">Paid in cash</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1140,7 +1147,14 @@ export function DisburseLoanDialog({
           </p>
         ) : null}
 
-        {method === "Cheque" || method === "Transfer" ? (
+        {method === "Cash" ? (
+          <p className="rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3 text-sm text-foreground">
+            Record a loan handed over in cash. A signed receipt is optional but
+            recommended.
+          </p>
+        ) : null}
+
+        {method === "Cheque" || method === "Transfer" || method === "Cash" ? (
           <div className="space-y-3">
             {cheque ? (
               <div className="space-y-2.5">
@@ -1191,7 +1205,12 @@ export function DisburseLoanDialog({
                 </span>
                 <span className="text-sm font-semibold text-foreground">
                   Drop a photo or scan of the{" "}
-                  {method === "Transfer" ? "transfer receipt" : "cheque"}, or{" "}
+                  {method === "Cheque"
+                    ? "cheque"
+                    : method === "Cash"
+                      ? "cash receipt"
+                      : "transfer receipt"}
+                  , or{" "}
                   <span className="text-primary dark:text-emerald-300">
                     browse
                   </span>
@@ -1203,14 +1222,14 @@ export function DisburseLoanDialog({
             )}
             <div className="space-y-2">
               <Label>
-                {method === "Transfer" ? "Transfer reference" : "Cheque number"}{" "}
+                {method === "Cheque" ? "Cheque number" : "Reference"}{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
                 </span>
               </Label>
               <Input
-                inputMode={method === "Transfer" ? "text" : "numeric"}
-                maxLength={method === "Transfer" ? 30 : 12}
+                inputMode={method === "Cheque" ? "numeric" : "text"}
+                maxLength={method === "Cheque" ? 12 : 30}
                 placeholder={
                   method === "Transfer" ? "e.g. FBN2611180042" : "e.g. 00004521"
                 }
@@ -1248,7 +1267,7 @@ export function DisburseLoanDialog({
             ) : (
               <Banknote className="size-4" aria-hidden="true" />
             )}
-            {method === "Transfer"
+            {method === "Transfer" || method === "Cash"
               ? "Mark as paid"
               : method
                 ? `Disburse ${formatMoney(net, currency)}${method === "Cheque" ? " by cheque" : ""}`

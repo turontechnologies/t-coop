@@ -32,6 +32,7 @@ import {
   useWithdrawalRequests,
 } from "@/hooks/use-savings-self";
 import { formatMoney } from "@/lib/format";
+import type { WithdrawalPayout } from "@/services/savings-self.service";
 import { useTabAccess } from "@/hooks/use-permission";
 import type { AuthenticatedMember } from "@/types/auth";
 import { totalSaved } from "@/lib/coop-data";
@@ -132,6 +133,7 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     requestId: string,
     status: "Approved" | "Declined",
     reason?: string,
+    payout?: WithdrawalPayout,
   ) => {
     const request = allRequests.find((r) => r.id === requestId);
     if (!request) return;
@@ -139,13 +141,24 @@ export function AdminSavingsView({ member }: AdminSavingsViewProps) {
     // Approving pays the member out server-side (the co-op's own Paystack, else the
     // platform's) — the request only becomes Approved if Paystack accepts the transfer.
     try {
-      await decideWithdrawal.mutateAsync({ requestId, status, reason });
+      await decideWithdrawal.mutateAsync({
+        requestId,
+        status,
+        reason,
+        payout,
+      });
       toast.success(
-        status === "Approved" ? "Withdrawal paid out" : "Request declined",
+        status === "Approved"
+          ? payout && payout.method !== "Online"
+            ? "Withdrawal approved"
+            : "Withdrawal paid out"
+          : "Request declined",
         {
           description:
             status === "Approved"
-              ? `${formatMoney(request.netAmount ?? request.amount, coop.currency)} sent to ${request.memberName}'s bank account.`
+              ? payout && payout.method !== "Online"
+                ? `Recorded as paid ${payout.method === "Transfer" ? "by bank transfer" : payout.method === "Cheque" ? "by cheque" : "in cash"}. ${request.memberName} has been notified.`
+                : `${formatMoney(request.netAmount ?? request.amount, coop.currency)} sent to ${request.memberName}'s bank account.`
               : `${request.memberName}'s request was declined. They've been notified.`,
         },
       );
