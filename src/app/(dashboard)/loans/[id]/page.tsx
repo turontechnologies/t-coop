@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoanRepaymentPanel } from "@/components/features/loans/loan-repayment-panel";
+import { LoanProgressCard } from "@/components/features/loans/repay-amount";
 import {
   loanGuarantorsOf,
   PENDING_LOAN_STATUSES,
@@ -131,6 +132,10 @@ export default function LoanDetailsPage({ params }: LoanDetailsPageProps) {
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back
       </Button>
+
+      {record.status === "Active" || record.status === "Completed" ? (
+        <LoanProgressCard record={record} currency={currency} />
+      ) : null}
 
       <Card>
         <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0">
