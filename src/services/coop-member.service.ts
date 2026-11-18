@@ -92,12 +92,11 @@ export const coopMemberService = {
   async addMember(
     coopId: string,
     values: WithGuarantors<AddMemberFormValues>,
-  ): Promise<CoopMember> {
-    const { data } = await apiClient.post<CoopMemberDto>(
-      `/cooperatives/${coopId}/members`,
-      values,
-    );
-    return fromDto(data);
+  ): Promise<CoopMember & { welcomeEmailSent?: boolean }> {
+    const { data } = await apiClient.post<
+      CoopMemberDto & { welcomeEmailSent?: boolean }
+    >(`/cooperatives/${coopId}/members`, values);
+    return { ...fromDto(data), welcomeEmailSent: data.welcomeEmailSent };
   },
 
   async updateMember(

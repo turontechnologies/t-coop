@@ -49,13 +49,19 @@ export default function MembersDirectoryPage() {
     );
   }
 
-  const handleImport = async (importedRows: ImportedMemberRow[]) => {
-    let succeeded = 0;
-    let failed = 0;
+  /** Adds each row; every new member is emailed their login details. Rows that fail are
+   * listed with the reason, and members whose email didn't send are named. */
+  const handleImport = async (
+    importedRows: ImportedMemberRow[],
+  ): Promise<ImportResult> => {
+    let imported = 0;
+    const errors: ImportResult["errors"] = [];
+    const notEmailed: string[] = [];
     for (const row of importedRows) {
       try {
-        await addMember.mutateAsync({
+        const created = await addMember.mutateAsync({
           membershipId: row.membershipId,
+          alternativeId: row.alternativeId || undefined,
           firstName: row.firstName,
           lastName: row.lastName,
           email: row.email,
@@ -63,26 +69,42 @@ export default function MembersDirectoryPage() {
           role: row.role,
           country: row.country,
           state: row.state,
-          // Bulk import doesn't capture bank details or city — the admin adds these later via
-          // Edit, same as any other field the template omits.
+          // Bank details and city aren't in the template; the admin adds them later via Edit.
           city: "",
           bankCode: "",
           accountNumber: "",
           accountName: "",
         });
-        succeeded += 1;
-      } catch {
-        failed += 1;
+        imported += 1;
+        if (created.welcomeEmailSent === false) {
+          notEmailed.push(`${row.firstName} ${row.lastName} (${row.email})`);
+        }
+      } catch (error) {
+        errors.push({
+          row: row.rowNumber,
+          message:
+            error instanceof Error
+              ? error.message
+              : "This member couldn't be added",
+        });
       }
     }
-    if (succeeded > 0) {
-      toast.success(`${succeeded} member${succeeded === 1 ? "" : "s"} added`);
+    if (imported > 0) {
+      if (notEmailed.length === 0) {
+        toast.success("Login details emailed", {
+          description: `Each of the ${imported} new member${imported === 1 ? "" : "s"} was sent an email with their Membership ID and password.`,
+        });
+      } else {
+        toast.warning(
+          `${notEmailed.length} welcome email${notEmailed.length === 1 ? "" : "s"} didn't send`,
+          {
+            description: `Give these members their login details yourself: ${notEmailed.slice(0, 3).join(", ")}${notEmailed.length > 3 ? ` and ${notEmailed.length - 3} more` : ""}.`,
+            duration: 12_000,
+          },
+        );
+      }
     }
-    if (failed > 0) {
-      toast.error(
-        `${failed} row${failed === 1 ? "" : "s"} couldn't be added — check for duplicate IDs/emails and try again.`,
-      );
-    }
+    return { imported, errors };
   };
 
   return (
@@ -103,12 +125,13 @@ export default function MembersDirectoryPage() {
                 access === "write"
                   ? {
                       templateStorageKey: "members-template-downloaded",
-                      downloadTemplate: downloadMemberImportTemplate,
+                      title: "Import members",
+                      description:
+                        "Add many members at once. Each new member gets an email with their Membership ID and password.",
+                      downloadTemplate: () =>
+                        downloadMemberImportTemplate(altIdLabel),
                       parseFile: (file) =>
-                        parseMemberImportFile(
-                          file,
-                          members.map((member) => member.id),
-                        ),
+                        parseMemberImportFile(file, members, altIdLabel),
                       onImport: handleImport,
                     }
                   : undefined
