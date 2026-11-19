@@ -10,6 +10,7 @@ import {
 import { CooperativeDetailsForm } from "@/components/features/admin-settings/cooperative-details-form";
 import { CoopBankAccountForm } from "@/components/features/admin-settings/coop-bank-account-form";
 import { CoopCurrencyForm } from "@/components/features/admin-settings/coop-currency-form";
+import { DefaultPasswordForm } from "@/components/features/admin-settings/default-password-form";
 import { TransferAdminForm } from "@/components/features/admin-settings/transfer-admin-form";
 
 export function AdminCooperativeSettingsTab() {
@@ -25,6 +26,7 @@ export function AdminCooperativeSettingsTab() {
       <TabsPanel value="coop" className="space-y-6">
         <CoopCurrencyForm />
         <CooperativeDetailsForm />
+        <DefaultPasswordForm />
       </TabsPanel>
       <TabsPanel value="bank">
         <CoopBankAccountForm />
