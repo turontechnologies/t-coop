@@ -90,8 +90,9 @@ export function TransferAdminForm() {
         <ul className="mt-1 list-disc space-y-0.5 pl-4">
           <li>The new person becomes the admin straight away.</li>
           <li>
-            You become a regular member with a new Membership ID. Your savings,
-            loans and other records go with you.
+            You become a regular member again. If you were a member before you
+            became admin, you go back to your old Membership ID; if not, you get
+            a new one. Your savings, loans and other records go with you.
           </li>
           <li>
             You both get an email with your login details and the starting
