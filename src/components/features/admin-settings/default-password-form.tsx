@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -49,10 +49,10 @@ export function DefaultPasswordForm({
     onSuccess: (result) =>
       queryClient.setQueryData(["default-password", coopId], result),
   });
-  const [value, setValue] = useState("");
-  useEffect(() => {
-    if (data) setValue(data.password);
-  }, [data]);
+  // What the admin is typing; until they type, the saved password.
+  const [draft, setDraft] = useState<string | null>(null);
+  const value = draft ?? data?.password ?? "";
+  const setValue = setDraft;
 
   const problem =
     value && value.includes(" ")
