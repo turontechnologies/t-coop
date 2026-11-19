@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, UserPlus } from "lucide-react";
+import { membershipAdminService } from "@/services/membership.service";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +46,11 @@ export default function MembersDirectoryPage() {
   } = useCoopMembers(coopId);
   const addMember = useAddCoopMember(coopId as string);
   const altIdLabel = useAlternativeIdLabel(coopId);
+  const { data: waitingApplications = [] } = useQuery({
+    queryKey: ["membership-applications", coopId, "Submitted"],
+    queryFn: () => membershipAdminService.list(coopId as string, "Submitted"),
+    enabled: Boolean(coopId) && access !== null,
+  });
 
   if (!authMember) return null;
   if (access === null) {
@@ -142,6 +149,19 @@ export default function MembersDirectoryPage() {
                   : undefined
               }
             />
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/members/applications" />}
+            >
+              <UserPlus className="size-4" aria-hidden="true" />
+              Applications
+              {waitingApplications.length > 0 ? (
+                <span className="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+                  {waitingApplications.length}
+                </span>
+              ) : null}
+            </Button>
             {access === "write" ? (
               <Button
                 nativeButton={false}

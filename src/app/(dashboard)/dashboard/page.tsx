@@ -5,6 +5,7 @@ import { SuperAdminCommandCentre } from "@/components/features/dashboard/super-a
 import { ConsoleRecentActivity } from "@/components/features/dashboard/console-recent-activity";
 import { ActivityChart } from "@/components/features/dashboard/activity-chart";
 import { RecentActivities } from "@/components/features/dashboard/recent-activities";
+import { VouchRequestsCard } from "@/components/features/dashboard/vouch-requests-card";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import { useAuthStore } from "@/store/auth.store";
@@ -78,6 +79,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 pt-8">
       {header}
+      {member.role !== "super_admin" && member.role !== "support" ? (
+        <VouchRequestsCard />
+      ) : null}
       {variant === "console" ? (
         <h3 className="flex items-center gap-2 pt-2 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           <span className="h-px w-4 bg-[#c99a2e]/60" aria-hidden="true" />

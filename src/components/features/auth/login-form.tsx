@@ -209,6 +209,15 @@ export function LoginForm() {
             "Login"
           )}
         </Button>
+        <p className="mt-5 text-center text-sm text-muted-foreground">
+          Not a member yet?{" "}
+          <Link
+            href="/join"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Apply to join a co-operative
+          </Link>
+        </p>
       </motion.div>
     </form>
   );

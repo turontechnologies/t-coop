@@ -11,6 +11,7 @@ import { CooperativeDetailsForm } from "@/components/features/admin-settings/coo
 import { CoopBankAccountForm } from "@/components/features/admin-settings/coop-bank-account-form";
 import { CoopCurrencyForm } from "@/components/features/admin-settings/coop-currency-form";
 import { DefaultPasswordForm } from "@/components/features/admin-settings/default-password-form";
+import { RegistrationSettingsForm } from "@/components/features/admin-settings/registration-settings-form";
 import { TransferAdminForm } from "@/components/features/admin-settings/transfer-admin-form";
 
 export function AdminCooperativeSettingsTab() {
@@ -18,6 +19,7 @@ export function AdminCooperativeSettingsTab() {
     <Tabs defaultValue="coop">
       <TabsList>
         <TabsTab value="coop">Co-operative</TabsTab>
+        <TabsTab value="joining">New Members</TabsTab>
         <TabsTab value="bank">Bank Accounts</TabsTab>
         <TabsTab value="transfer">Transfer Admin</TabsTab>
         <TabsIndicator />
@@ -27,6 +29,9 @@ export function AdminCooperativeSettingsTab() {
         <CoopCurrencyForm />
         <CooperativeDetailsForm />
         <DefaultPasswordForm />
+      </TabsPanel>
+      <TabsPanel value="joining">
+        <RegistrationSettingsForm />
       </TabsPanel>
       <TabsPanel value="bank">
         <CoopBankAccountForm />
