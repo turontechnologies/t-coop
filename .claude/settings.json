@@ -130,7 +130,10 @@
       "PowerShell(cd c:\\\\Users\\\\HomePC\\\\Documents\\\\work\\\\t-coop-backend; docker cp target\\\\t-coop-backend.jar t-coop-backend:/app/app.jar; docker restart t-coop-backend | Out-Null; Start-Sleep 60; docker logs --since 3m t-coop-backend 2>&1 | Select-String -Pattern \"Successfully applied|Started TCoop|APPLICATION FAILED|FlywayException\" | Select-Object -Last 3; $pw = \\(docker exec t-coop-backend printenv DB_PASSWORD\\); $u = \\(docker exec t-coop-backend printenv DB_USERNAME\\); docker exec t-coop-local-db /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U $u -P $pw -d tcoopdb -W -s \"|\" -Q \"SET NOCOUNT ON; SELECT id, admin_previous_member_id FROM cooperatives WHERE admin_previous_member_id IS NOT NULL\")",
       "PowerShell(docker logs --tail 40 t-coop-backend 2>&1 | Select-String -Pattern \"Started|ERROR|Exception|Tomcat started\" | Select-Object -Last 4; try { \\(Invoke-WebRequest -UseBasicParsing http://localhost:8080/api/v1/auth/login -Method Post -ContentType \"application/json\" -Body '{}' -TimeoutSec 10\\).StatusCode } catch { \"HTTP \" + $_.Exception.Response.StatusCode.value__ })",
       "Bash(curl -s \"http://localhost:8080/api/v1/apply/cooperatives\")",
-      "Bash(curl -s \"http://localhost:8080/api/v1/apply/cooperatives/coop-0002\")"
+      "Bash(curl -s \"http://localhost:8080/api/v1/apply/cooperatives/coop-0002\")",
+      "Bash(grep -o \"auth/login[^\\\\\"]\\\\{0,200\\\\}\" \"C:/Users/HomePC/.claude/projects/c--Users-HomePC-Documents-work-t-coop/5aaae479-72c4-4c92-8ddf-86f56ea680cc.jsonl\")",
+      "Bash(grep -o \"smoke[^\\\\\"]\\\\{0,300\\\\}\" \"C:/Users/HomePC/.claude/projects/c--Users-HomePC-Documents-work-t-coop/5aaae479-72c4-4c92-8ddf-86f56ea680cc.jsonl\")",
+      "Bash(grep -o \"JWT_SECRET[^\\\\\"]\\\\{0,200\\\\}\\\\|mint[^\\\\\"]\\\\{0,120\\\\}token\\\\|Jwts.builder[^\\\\\"]\\\\{0,100\\\\}\\\\|jwt\\\\.io[^\\\\\"]\\\\{0,60\\\\}\\\\|sign.*HS256[^\\\\\"]\\\\{0,100\\\\}\" \"C:/Users/HomePC/.claude/projects/c--Users-HomePC-Documents-work-t-coop/5aaae479-72c4-4c92-8ddf-86f56ea680cc.jsonl\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"

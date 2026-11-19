@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  CalendarIcon,
   Camera,
   CheckCircle2,
   FileUp,
@@ -18,6 +19,13 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { formatDateLong } from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -77,6 +85,62 @@ export function Field({
         <p className="text-xs text-muted-foreground">{hint}</p>
       ) : null}
     </div>
+  );
+}
+
+const toDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const fromDay = (value: string) => {
+  const [y, m, d] = value.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+};
+
+/** The app's own calendar (same as everywhere else), with month and year lists to jump to a birth year. */
+function DateOfBirthPicker({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const today = new Date();
+  const selected = value ? fromDay(value) : undefined;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            className="w-full justify-start font-normal text-muted-foreground data-[has-value=true]:text-foreground"
+            data-has-value={!!value}
+          />
+        }
+      >
+        <CalendarIcon className="size-4" aria-hidden="true" />
+        {selected ? formatDateLong(selected) : "Pick your date of birth"}
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          captionLayout="dropdown"
+          selected={selected}
+          defaultMonth={selected ?? new Date(today.getFullYear() - 30, 0, 1)}
+          startMonth={new Date(today.getFullYear() - 100, 0)}
+          endMonth={today}
+          disabled={{ after: today }}
+          onSelect={(date) => {
+            onChange(date ? toDay(date) : "");
+            if (date) setOpen(false);
+          }}
+          autoFocus
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -159,12 +223,10 @@ export function AboutYouStep({
         error={errors.dateOfBirth}
         hint={`You must be ${minAge} or older.`}
       >
-        <Input
+        <DateOfBirthPicker
           id={`${id}-dob`}
-          type="date"
           value={form.dateOfBirth ?? ""}
-          max={new Date().toISOString().slice(0, 10)}
-          onChange={(e) => set("dateOfBirth", e.target.value)}
+          onChange={(value) => set("dateOfBirth", value)}
         />
       </Field>
       <Field label="Phone number" htmlFor={`${id}-phone`} error={errors.phone}>
