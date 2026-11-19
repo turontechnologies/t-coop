@@ -86,9 +86,19 @@ export function TransferAdminForm() {
   return (
     <div className="max-w-xl space-y-4">
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
-        This hands over full admin access to a new person immediately —
-        you&apos;ll become a regular member of this co-operative and be signed
-        out. This can&apos;t be undone from here.
+        <p className="font-semibold">What happens when you hand over</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          <li>The new person becomes the admin straight away.</li>
+          <li>
+            You become a regular member with a new Membership ID. Your savings,
+            loans and other records go with you.
+          </li>
+          <li>
+            You both get an email with your login details and the starting
+            password. Change it after you log in.
+          </li>
+          <li>You will be logged out. This can&apos;t be undone from here.</li>
+        </ul>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
