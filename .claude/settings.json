@@ -133,7 +133,10 @@
       "Bash(curl -s \"http://localhost:8080/api/v1/apply/cooperatives/coop-0002\")",
       "Bash(grep -o \"auth/login[^\\\\\"]\\\\{0,200\\\\}\" \"C:/Users/HomePC/.claude/projects/c--Users-HomePC-Documents-work-t-coop/5aaae479-72c4-4c92-8ddf-86f56ea680cc.jsonl\")",
       "Bash(grep -o \"smoke[^\\\\\"]\\\\{0,300\\\\}\" \"C:/Users/HomePC/.claude/projects/c--Users-HomePC-Documents-work-t-coop/5aaae479-72c4-4c92-8ddf-86f56ea680cc.jsonl\")",
-      "Bash(grep -o \"JWT_SECRET[^\\\\\"]\\\\{0,200\\\\}\\\\|mint[^\\\\\"]\\\\{0,120\\\\}token\\\\|Jwts.builder[^\\\\\"]\\\\{0,100\\\\}\\\\|jwt\\\\.io[^\\\\\"]\\\\{0,60\\\\}\\\\|sign.*HS256[^\\\\\"]\\\\{0,100\\\\}\" \"C:/Users/HomePC/.claude/projects/c--Users-HomePC-Documents-work-t-coop/5aaae479-72c4-4c92-8ddf-86f56ea680cc.jsonl\")"
+      "Bash(grep -o \"JWT_SECRET[^\\\\\"]\\\\{0,200\\\\}\\\\|mint[^\\\\\"]\\\\{0,120\\\\}token\\\\|Jwts.builder[^\\\\\"]\\\\{0,100\\\\}\\\\|jwt\\\\.io[^\\\\\"]\\\\{0,60\\\\}\\\\|sign.*HS256[^\\\\\"]\\\\{0,100\\\\}\" \"C:/Users/HomePC/.claude/projects/c--Users-HomePC-Documents-work-t-coop/5aaae479-72c4-4c92-8ddf-86f56ea680cc.jsonl\")",
+      "PowerShell(Get-Process -Id 18260,16276 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -State Listen -OwningProcess 60204,67920 -ErrorAction SilentlyContinue | Format-Table LocalAddress,LocalPort,OwningProcess -AutoSize | Out-String; Get-CimInstance Win32_Process -Filter \"ProcessId=60204 or ProcessId=67920\" | Select-Object ProcessId,CommandLine | Format-List | Out-String; Get-NetFirewallRule -Enabled True -Direction Inbound -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'node' } | Format-Table DisplayName,Profile,Action -AutoSize | Out-String)",
+      "PowerShell(try { \\(Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 http://172.23.8.161:8082/status\\).Content } catch { $_.Exception.Message })"
     ],
     "additionalDirectories": [
       "c:\\Users\\HomePC\\Documents\\work\\t-coop-mobile\\src\\app"

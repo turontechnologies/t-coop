@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { SelfieCamera } from "./selfie-camera";
 import {
   joinService,
   type Application,
@@ -403,6 +404,7 @@ export function DocumentsStep({
   onUploaded: (kind: "photo" | "id", url: string) => void;
 }) {
   const [busy, setBusy] = useState<"photo" | "id" | null>(null);
+  const [selfieOpen, setSelfieOpen] = useState(false);
   const upload = async (kind: "photo" | "id", file: File) => {
     if (file.size > 5 * 1024 * 1024) {
       toast.error("That file is too big", {
@@ -430,17 +432,38 @@ export function DocumentsStep({
   };
   return (
     <div className="grid gap-6 sm:grid-cols-2">
-      <UploadBox
-        title="Passport photograph"
-        hint="A clear photo of your face, looking straight ahead. JPG or PNG, up to 5 MB."
-        url={app.photoUrl}
-        accept="image/png,image/jpeg,image/webp"
-        capture="user"
-        isImage
-        busy={busy === "photo"}
-        error={errors.photo}
-        onFile={(file) => upload("photo", file)}
-      />
+      <div className="space-y-2">
+        <UploadBox
+          title="Passport photograph"
+          hint="A clear photo of your face, looking straight ahead. JPG or PNG, up to 5 MB."
+          url={app.photoUrl}
+          accept="image/png,image/jpeg,image/webp"
+          isImage
+          busy={busy === "photo"}
+          error={errors.photo}
+          onFile={(file) => upload("photo", file)}
+        />
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-muted/50 px-3 py-2">
+          <span className="text-xs text-muted-foreground">
+            No passport photo?
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy === "photo"}
+            onClick={() => setSelfieOpen(true)}
+          >
+            <Camera className="size-4" aria-hidden="true" />
+            Take a selfie now
+          </Button>
+        </div>
+        <SelfieCamera
+          open={selfieOpen}
+          onOpenChange={setSelfieOpen}
+          onCapture={(file) => void upload("photo", file)}
+        />
+      </div>
       <div className="space-y-3">
         <Field
           label={
