@@ -1,74 +1,61 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
-import Link from "next/link";
-import { FileSpreadsheet, FileText, Loader2 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useMemo, useState } from "react";
+import { Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Tabs,
+  TabsIndicator,
+  TabsList,
+  TabsPanel,
+  TabsTab,
+} from "@/components/ui/tabs";
 import { QueryBoundary } from "@/components/features/shared/query-boundary";
+import { MemberStatementDialog } from "@/components/features/reports/member-statement-dialog";
+import { ReportFilters } from "@/components/features/reports/report-filters";
+import { ReportKpis } from "@/components/features/reports/report-kpis";
+import {
+  LoansTab,
+  MembersTab,
+} from "@/components/features/reports/report-loans";
+import {
+  IncomeTab,
+  OverviewTab,
+  REPORT_COLORS,
+  SavingsTab,
+  type ReportTab,
+} from "@/components/features/reports/report-overview";
 import { useFinancialReport } from "@/hooks/use-financial-report";
 import { useModuleAccess } from "@/hooks/use-permission";
 import {
   exportFinancialReportExcel,
   exportFinancialReportPdf,
 } from "@/lib/financial-report-export";
-import { formatDateLong, formatMoney } from "@/lib/format";
+import {
+  period,
+  periodLabel,
+  previousPeriod,
+  type ReportRange,
+} from "@/lib/report-periods";
 import type { FinancialReport } from "@/services/report.service";
 import { useAuthStore } from "@/store/auth.store";
-import { cn } from "@/lib/utils";
 
-const CHART_COLOR_VARS: CSSProperties = {
-  "--chart-deposits": "light-dark(#1baf7a, #199e70)",
-  "--chart-withdrawals": "light-dark(#eb6834, #d95926)",
-  "--chart-loans": "light-dark(#4a3aa7, #9085e9)",
-  "--chart-repayments": "light-dark(#0f766e, #2dd4bf)",
-} as CSSProperties;
-
-function isoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+/** For "All time", start from the first month that has any money in it. */
+function trimAllTime(report: FinancialReport): FinancialReport {
+  const first = report.monthly.findIndex(
+    (m) =>
+      m.deposits ||
+      m.withdrawals ||
+      m.loansPaidOut ||
+      m.repayments ||
+      m.income ||
+      m.closingBalance,
+  );
+  if (first <= 0) return report;
+  const monthly = report.monthly.slice(first);
+  return { ...report, monthly, from: `${monthly[0].month}-01` };
 }
-
-const PRESETS: { label: string; range: () => { from: string; to: string } }[] =
-  [
-    {
-      label: "This month",
-      range: () => {
-        const now = new Date();
-        return {
-          from: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)),
-          to: isoDate(now),
-        };
-      },
-    },
-    {
-      label: "This year",
-      range: () => {
-        const now = new Date();
-        return { from: `${now.getFullYear()}-01-01`, to: isoDate(now) };
-      },
-    },
-    {
-      label: "Last 12 months",
-      range: () => {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-        return { from: isoDate(start), to: isoDate(now) };
-      },
-    },
-  ];
 
 export default function ReportsPage() {
   const member = useAuthStore((state) => state.member);
@@ -76,16 +63,28 @@ export default function ReportsPage() {
   const coopId = member?.cooperativeId ?? member?.id;
   const isCoopSide =
     member?.role === "admin" || member?.permissionModules != null;
+  const allowed = isCoopSide && access !== null;
 
-  const [range, setRange] = useState(PRESETS[1].range);
-  const { data, isLoading, isError, error, refetch, isFetching } =
-    useFinancialReport(
-      isCoopSide && access !== null ? coopId : undefined,
-      range,
-    );
+  const [range, setRange] = useState<ReportRange>(() => period("year"));
+  const [compare, setCompare] = useState(true);
+  const [tab, setTab] = useState<ReportTab>("overview");
+  const [statementFor, setStatementFor] = useState<string | null>(null);
+
+  const before = compare ? previousPeriod(range) : null;
+  const current = useFinancialReport(allowed ? coopId : undefined, range);
+  const previous = useFinancialReport(allowed ? coopId : undefined, before);
+
+  const report = useMemo(
+    () =>
+      current.data && range.key === "all"
+        ? trimAllTime(current.data)
+        : current.data,
+    [current.data, range.key],
+  );
+  const prev = before ? (previous.data ?? null) : null;
 
   if (!member) return null;
-  if (!isCoopSide || access === null) {
+  if (!allowed) {
     return (
       <div className="pt-6">
         <p className="text-sm text-muted-foreground">
@@ -95,422 +94,125 @@ export default function ReportsPage() {
     );
   }
 
+  const download = (fn: (r: FinancialReport) => void, what: string) => {
+    if (!report) return;
+    try {
+      fn(report);
+      toast.success(`${what} downloaded.`);
+    } catch (err) {
+      toast.error(`Couldn't build the ${what.toLowerCase()}`, {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  };
+
+  const shownRange =
+    report && range.key === "all" ? { ...range, from: report.from } : range;
+  const statementMember =
+    report?.members.find((m) => m.memberId === statementFor) ?? null;
+
   return (
-    <div className="space-y-4 pt-6">
+    <div className="space-y-6 pt-6 pb-12" style={REPORT_COLORS}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">
+          <h2 className="text-[2rem] leading-tight font-bold tracking-tight text-foreground">
             Financial report
-          </h1>
-          <p className="text-sm text-muted-foreground">
+          </h2>
+          <p className="mt-1.5 text-muted-foreground">
             Savings, loans, repayments and income for your co-operative.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          {current.isFetching && report ? (
+            <Loader2
+              className="size-4 animate-spin text-muted-foreground"
+              aria-label="Updating"
+            />
+          ) : null}
           <Button
             variant="outline"
-            size="sm"
-            disabled={!data}
-            onClick={() => {
-              if (!data) return;
-              try {
-                exportFinancialReportExcel(data);
-              } catch (err) {
-                toast.error("Couldn't export", {
-                  description: err instanceof Error ? err.message : undefined,
-                });
-              }
-            }}
+            disabled={!report}
+            onClick={() => download(exportFinancialReportExcel, "Excel report")}
           >
             <FileSpreadsheet className="size-4" aria-hidden="true" />
             Excel
           </Button>
           <Button
             variant="outline"
-            size="sm"
-            disabled={!data}
-            onClick={() => {
-              if (!data) return;
-              try {
-                exportFinancialReportPdf(data);
-              } catch (err) {
-                toast.error("Couldn't export", {
-                  description: err instanceof Error ? err.message : undefined,
-                });
-              }
-            }}
+            disabled={!report}
+            onClick={() => download(exportFinancialReportPdf, "PDF report")}
           >
-            <FileText className="size-4" aria-hidden="true" />
+            <Download className="size-4" aria-hidden="true" />
             PDF
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="report-from">From</Label>
-            <Input
-              id="report-from"
-              type="date"
-              value={range.from}
-              max={range.to}
-              onChange={(event) =>
-                event.target.value &&
-                setRange((r) => ({ ...r, from: event.target.value }))
-              }
-              className="h-10 w-40"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="report-to">To</Label>
-            <Input
-              id="report-to"
-              type="date"
-              value={range.to}
-              min={range.from}
-              onChange={(event) =>
-                event.target.value &&
-                setRange((r) => ({ ...r, to: event.target.value }))
-              }
-              className="h-10 w-40"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {PRESETS.map((preset) => {
-              const presetRange = preset.range();
-              const active =
-                presetRange.from === range.from && presetRange.to === range.to;
-              return (
-                <Button
-                  key={preset.label}
-                  variant={active ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setRange(presetRange)}
-                >
-                  {preset.label}
-                </Button>
-              );
-            })}
-          </div>
-          {isFetching && data ? (
-            <Loader2
-              className="size-4 animate-spin text-muted-foreground"
-              aria-label="Updating"
-            />
-          ) : null}
-        </CardContent>
-      </Card>
+      <ReportFilters
+        range={shownRange}
+        onRangeChange={setRange}
+        compare={compare}
+        onCompareChange={setCompare}
+      />
 
       <QueryBoundary
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        onRetry={() => refetch()}
-        isRetrying={isFetching}
+        isLoading={current.isLoading}
+        isError={current.isError}
+        error={current.error}
+        onRetry={() => current.refetch()}
+        isRetrying={current.isFetching}
         errorTitle="Couldn't load the report"
       >
-        {data ? <ReportBody report={data} /> : null}
-      </QueryBoundary>
-    </div>
-  );
-}
+        {report ? (
+          <div className="space-y-6">
+            <ReportKpis report={report} previous={prev} />
 
-function ReportBody({ report }: { report: FinancialReport }) {
-  const money = (value: number) => formatMoney(value, report.currency);
-  const { savings, loans, income } = report;
-
-  const chartData = useMemo(
-    () =>
-      report.monthly.map((m) => ({
-        ...m,
-        label: new Date(`${m.month}-01T00:00:00`).toLocaleDateString("en-GB", {
-          month: "short",
-          year: "2-digit",
-        }),
-      })),
-    [report.monthly],
-  );
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Section
-          title="Savings"
-          rows={[
-            [
-              "Deposits",
-              `${money(savings.deposits)} · ${savings.depositCount}`,
-            ],
-            [
-              "Withdrawals",
-              `${money(savings.withdrawals)} · ${savings.withdrawalCount}`,
-            ],
-            ["Taken for Within loans", money(savings.withinLoanDebits)],
-            ["Returned from Within loans", money(savings.withinLoanCredits)],
-            ["Net change", money(savings.netChange)],
-          ]}
-          total={["Total savings at period end", money(savings.closingBalance)]}
-        />
-        <Section
-          title="Loans"
-          rows={[
-            ["Applications", String(loans.applications)],
-            ["Paid out", `${loans.paidOut} · ${money(loans.principalPaidOut)}`],
-            ["Paid to members (after charges)", money(loans.netPaidOut)],
-            ["Rejected", String(loans.rejected)],
-            [
-              "Repayments collected",
-              `${money(loans.repaymentsCollected)} · ${loans.repaymentCount}`,
-            ],
-            ["Active loans (today)", String(loans.activeLoans)],
-          ]}
-          total={["Outstanding (today)", money(loans.outstandingBalance)]}
-          warning={
-            loans.overdueLoans > 0
-              ? `${loans.overdueLoans} overdue loan${loans.overdueLoans === 1 ? "" : "s"} · ${money(loans.overdueOutstanding)}`
-              : undefined
-          }
-        />
-        <Section
-          title="Income"
-          rows={[
-            ["Interest earned", money(income.interestEarned)],
-            ["Loan charges", money(income.loanCharges)],
-            ["Savings charges", money(income.savingsCharges)],
-            ["Withdrawal fees", money(income.withdrawalFees)],
-          ]}
-          total={["Total income", money(income.total)]}
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Month by month</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-72 w-full" style={CHART_COLOR_VARS}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ left: 8, right: 8 }}>
-                <CartesianGrid
-                  vertical={false}
-                  strokeDasharray="3 3"
-                  className="stroke-border"
-                />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={12}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={12}
-                  width={72}
-                  tickFormatter={(value: number) =>
-                    new Intl.NumberFormat("en", { notation: "compact" }).format(
-                      value,
-                    )
-                  }
-                />
-                <Tooltip formatter={(value) => money(Number(value))} />
-                <Legend />
-                <Bar
-                  dataKey="deposits"
-                  name="Deposits"
-                  fill="var(--chart-deposits)"
-                  radius={[3, 3, 0, 0]}
-                />
-                <Bar
-                  dataKey="withdrawals"
-                  name="Withdrawals"
-                  fill="var(--chart-withdrawals)"
-                  radius={[3, 3, 0, 0]}
-                />
-                <Bar
-                  dataKey="loansPaidOut"
-                  name="Loans paid out"
-                  fill="var(--chart-loans)"
-                  radius={[3, 3, 0, 0]}
-                />
-                <Bar
-                  dataKey="repayments"
-                  name="Repayments"
-                  fill="var(--chart-repayments)"
-                  radius={[3, 3, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>By loan type</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {report.byLoanType.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No loan activity in this period.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground">
-                      <th className="py-2 font-medium">Loan type</th>
-                      <th className="py-2 text-right font-medium">Paid out</th>
-                      <th className="py-2 text-right font-medium">Principal</th>
-                      <th className="py-2 text-right font-medium">Repaid</th>
-                      <th className="py-2 text-right font-medium">
-                        Outstanding
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.byLoanType.map((line) => (
-                      <tr
-                        key={line.loanType}
-                        className="border-b border-border last:border-0"
-                      >
-                        <td className="py-2 font-medium text-foreground">
-                          {line.loanType}
-                        </td>
-                        <td className="py-2 text-right">{line.loansPaidOut}</td>
-                        <td className="py-2 text-right">
-                          {money(line.principal)}
-                        </td>
-                        <td className="py-2 text-right">
-                          {money(line.repaid)}
-                        </td>
-                        <td className="py-2 text-right">
-                          {money(line.outstanding)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Overdue loans</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {report.overdue.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No loans are overdue.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground">
-                      <th className="py-2 font-medium">Member</th>
-                      <th className="py-2 font-medium">Loan type</th>
-                      <th className="py-2 text-right font-medium">
-                        Outstanding
-                      </th>
-                      <th className="py-2 text-right font-medium">Overdue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.overdue.map((loan) => (
-                      <tr
-                        key={loan.loanId}
-                        className="border-b border-border last:border-0"
-                      >
-                        <td className="py-2">
-                          <Link
-                            href={`/loans/request/${loan.loanId}`}
-                            className="font-medium text-primary underline-offset-4 hover:underline"
-                          >
-                            {loan.memberName}
-                          </Link>
-                        </td>
-                        <td className="py-2">{loan.loanType}</td>
-                        <td className="py-2 text-right">
-                          {money(loan.outstanding)}
-                        </td>
-                        <td className="py-2 text-right text-destructive">
-                          {loan.overdueInstallments} installment
-                          {loan.overdueInstallments === 1 ? "" : "s"}
-                          {loan.oldestDueDate
-                            ? ` since ${formatDateLong(new Date(loan.oldestDueDate))}`
-                            : ""}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        {formatDateLong(new Date(report.from))} –{" "}
-        {formatDateLong(new Date(report.to))}. Outstanding and overdue figures
-        are as of today. Generated{" "}
-        {new Date(report.generatedAt).toLocaleString("en-GB")}.
-      </p>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  rows,
-  total,
-  warning,
-}: {
-  title: string;
-  rows: [string, string][];
-  total: [string, string];
-  warning?: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <dl className="space-y-2 text-sm">
-          {rows.map(([label, value]) => (
-            <div
-              key={label}
-              className="flex items-center justify-between gap-4"
+            <Tabs
+              value={tab}
+              onValueChange={(value) => setTab(value as ReportTab)}
             >
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="text-right font-medium text-foreground">
-                {value}
-              </dd>
-            </div>
-          ))}
-          <div className="flex items-center justify-between gap-4 border-t border-border pt-2">
-            <dt className="font-medium text-foreground">{total[0]}</dt>
-            <dd className="text-right text-base font-semibold text-foreground">
-              {total[1]}
-            </dd>
+              <TabsList>
+                <TabsTab value="overview">Overview</TabsTab>
+                <TabsTab value="savings">Savings</TabsTab>
+                <TabsTab value="loans">Loans</TabsTab>
+                <TabsTab value="income">Income</TabsTab>
+                <TabsTab value="members">Members</TabsTab>
+                <TabsIndicator />
+              </TabsList>
+              <TabsPanel value="overview" className="pt-5">
+                <OverviewTab report={report} onGotoTab={setTab} />
+              </TabsPanel>
+              <TabsPanel value="savings" className="pt-5">
+                <SavingsTab report={report} onOpenStatement={setStatementFor} />
+              </TabsPanel>
+              <TabsPanel value="loans" className="pt-5">
+                <LoansTab report={report} previous={prev} />
+              </TabsPanel>
+              <TabsPanel value="income" className="pt-5">
+                <IncomeTab report={report} previous={prev} />
+              </TabsPanel>
+              <TabsPanel value="members" className="pt-5">
+                <MembersTab report={report} onOpenStatement={setStatementFor} />
+              </TabsPanel>
+            </Tabs>
+
+            <p className="text-sm text-muted-foreground/80">
+              {periodLabel(report)}. Figures marked “Today” are as of today.
+              Generated {new Date(report.generatedAt).toLocaleString("en-GB")}.
+            </p>
           </div>
-        </dl>
-        {warning ? (
-          <p
-            className={cn(
-              "rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive",
-            )}
-          >
-            {warning}
-          </p>
         ) : null}
-      </CardContent>
-    </Card>
+      </QueryBoundary>
+
+      {coopId ? (
+        <MemberStatementDialog
+          coopId={coopId}
+          orgName={report?.cooperativeName ?? ""}
+          member={statementMember}
+          range={shownRange}
+          onClose={() => setStatementFor(null)}
+        />
+      ) : null}
+    </div>
   );
 }
