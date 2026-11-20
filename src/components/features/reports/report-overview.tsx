@@ -321,7 +321,7 @@ function Attention({
       href: "/loans",
     });
   }
-  const now = Date.now();
+  const now = new Date(r.generatedAt).getTime();
   const quiet = r.members.filter(
     (m) =>
       !m.lastDeposit ||
